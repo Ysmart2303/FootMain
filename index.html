@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/style.css">
+    <title>FootMain</title>
+</head>
+<body>
+    
+    <header>
+        <p>
+            FootMain
+        </p>
+
+        <div id="links">
+            <a href="">Inicio</a>
+            <a href="">Ranking</a>
+            <a href="">Historico</a>
+        </div>
+
+    </header>
+
+    <main>
+        <section id="inicio">
+            <div class="player-card">
+                <div class="player-card__header">
+                    <span>Perfil do jogador</span>
+                    <strong id="perfil-nome">Jogador</strong>
+                </div>
+                <div class="player-card__meta">
+                    <span>Idade: <strong id="perfil-idade">0</strong></span>
+                    <span>Temporada: <strong id="perfil-ano">2024</strong></span>
+                </div>
+            </div>
+
+            <div id="inputs">
+                <label for="nome">Nome:</label>
+                <input placeholder="Ex: Marcos" id="nome">
+                <label for="idade">Idade atual</label>
+                <input type="number" placeholder="Ex: 12" id="idade" min="0" value="0">
+                <label for="idade-limite">Idade limite</label>
+                <input type="number" id="idade-limite" min="1" value="40">
+            </div>
+
+            <div id="posi">
+
+                <div>
+                    <input type="radio" name="posicao" id="ata">
+                    <label for="ata">Atacante</label>
+                </div>
+                <div>
+                    <input type="radio" name="posicao" id="me">
+                    <label for="me">Meio Campo</label>
+                </div>
+                <div>
+                    <input type="radio" name="posicao" id="zag">
+                    <label for="zag">Zagueiro</label>
+                </div>
+                <div>
+                    <input type="radio" name="posicao" id="go">
+                    <label for="go">Goleiro</label>
+                </div>
+
+            </div>
+
+            <div id="resultados">
+                <div id="nomes">
+                    <p>Jogos:</p>
+                    <p>Gols:</p>
+                    <p>Assistências:</p>
+                    <p>Prêmios:</p>
+                </div>
+
+                <div id="dados">
+                    <p id="jogos">0</p>
+                    <p id="gols">0</p>
+                    <p id="assi">0</p>
+                    <p id="prem">0</p>
+                </div>
+            </div>
+
+            <div id="resumo-final" class="resumo-final" hidden>
+                <h3>Carreira encerrada</h3>
+                <p><strong id="resumo-nome">Jogador</strong></p>
+                <p>Posição: <strong id="resumo-posicao">-</strong></p>
+                <p>Idade limite: <strong id="resumo-idade-limite">0</strong> anos</p>
+                <div class="resumo-grid">
+                    <span>Jogos</span>
+                    <strong id="resumo-jogos">0</strong>
+                    <span>Gols</span>
+                    <strong id="resumo-gols">0</strong>
+                    <span>Assistências</span>
+                    <strong id="resumo-assistencias">0</strong>
+                    <span>Prêmios</span>
+                    <strong id="resumo-premios">0</strong>
+                </div>
+                <div class="resumo-trofeus">
+                    <div>
+                        <span>Coletivos</span>
+                        <strong id="resumo-coletivos">Nenhum</strong>
+                    </div>
+                    <div>
+                        <span>Individuais</span>
+                        <strong id="resumo-individuais">Nenhum</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="acoes-simulacao">
+                <button onclick="gerar()" id="gerar">Gerar</button>
+                <button onclick="simularTudo()" id="simularTudo" type="button">Simular tudo</button>
+            </div>
+        </section>
+
+        <section id="historico">
+            <h2>Histórico de temporadas</h2>
+            <div class="filtro-ranking">
+                <label for="filtro-historico">Comparar temporadas por:</label>
+                <select id="filtro-historico">
+                    <option value="ordem" selected>Ordem original</option>
+                    <option value="gols">Gols</option>
+                    <option value="assistencias">Assistências</option>
+                    <option value="premios">Prêmios</option>
+                </select>
+            </div>
+            <button id="limparHistorico" type="button">Limpar histórico</button>
+            <ul id="lista-temporadas"></ul>
+        </section>
+
+        <section id="ranking">
+            <h2>Ranking das melhores carreiras</h2>
+            <div class="filtro-ranking">
+                <label for="filtro-ranking">Comparar por:</label>
+                <select id="filtro-ranking">
+                    <option value="pontuacao" selected>Pontuação</option>
+                    <option value="gols">Gols</option>
+                    <option value="assistencias">Assistências</option>
+                    <option value="premios">Prêmios</option>
+                </select>
+            </div>
+            <button id="limparRanking" type="button">Limpar ranking</button>
+            <ol id="lista-ranking"></ol>
+        </section>
+    </main>
+
+    <footer>Ysmart2303 / 2026</footer>
+
+    <script src="/js/script.js"></script>
+</body>
+</html>
