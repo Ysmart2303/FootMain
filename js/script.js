@@ -6,32 +6,63 @@ const IDADE_LIMITE_PADRAO = 40;
 const posicoes = {
     ata: {
         nome: "Atacante",
-        jogos: [45, 55],
-        gols: [5, 60],
-        assistencias: [4, 18]
+        jogos: [[45, 53], [54, 62], [63, 70]],
+        gols: [[5, 40], [41, 80], [81, 100]],
+        assistencias: [[4, 14], [15, 24], [25, 35]]
     },
     me: {
         nome: "Meio Campo",
-        jogos: [40, 55],
-        gols: [3, 15],
-        assistencias: [7, 24]
+        jogos: [[40, 45], [46, 50], [51, 55]],
+        gols: [[3, 16], [17, 30], [31, 45]],
+        assistencias: [[7, 21], [22, 35], [36, 50]]
     },
     zag: {
         nome: "Zagueiro",
-        jogos: [40, 55],
-        gols: [0, 6],
-        assistencias: [1, 8]
+        jogos: [[40, 45], [46, 50], [51, 55]],
+        gols: [[0, 5], [6, 10], [11, 15]],
+        assistencias: [[1, 7], [8, 14], [15, 20]]
     },
     go: {
         nome: "Goleiro",
-        jogos: [22, 60],
-        gols: [0, 3],
-        assistencias: [1, 3]
+        jogos: [[22, 34], [35, 47], [48, 60]],
+        gols: [[0, 8], [9, 17], [18, 25]],
+        assistencias: [[1, 2], [3, 4], [5, 10]]
     }
 };
 
-function numeroAleatorio(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+function sortearIndicePonderado(pesos) {
+    const pesoTotal = pesos.reduce((total, peso) => total + peso, 0);
+    let sorteio = Math.random() * pesoTotal;
+
+    for (let indice = 0; indice < pesos.length; indice++) {
+        if (sorteio < pesos[indice]) {
+            return indice;
+        }
+
+        sorteio -= pesos[indice];
+    }
+
+    throw new Error("Não foi possível sortear um subconjunto.");
+}
+
+function sortearValorPorSubconjunto(subconjuntos) {
+    const pesosSubconjuntos = subconjuntos.map((_, indice) => (subconjuntos.length - indice) ** 2);
+    const indiceSorteado = sortearIndicePonderado(pesosSubconjuntos);
+    const [min, max] = subconjuntos[indiceSorteado];
+    const quantidade = max - min + 1;
+    const pesoTotal = (quantidade * (quantidade + 1)) / 2;
+    let sorteio = Math.random() * pesoTotal;
+
+    for (let valor = min; valor <= max; valor++) {
+        const peso = max - valor + 1;
+        if (sorteio < peso) {
+            return valor;
+        }
+
+        sorteio -= peso;
+    }
+
+    throw new Error("Não foi possível sortear um valor do subconjunto.");
 }
 
 function lerHistorico() {
@@ -394,9 +425,9 @@ function obterNomeAtual() {
 
 function criarTemporada(nome, idade, ano, posicao) {
     const dados = posicoes[posicao];
-    const jogos = numeroAleatorio(dados.jogos[0], dados.jogos[1]);
-    const gols = numeroAleatorio(dados.gols[0], dados.gols[1]);
-    const assistencias = numeroAleatorio(dados.assistencias[0], dados.assistencias[1]);
+    const jogos = sortearValorPorSubconjunto(dados.jogos);
+    const gols = sortearValorPorSubconjunto(dados.gols);
+    const assistencias = sortearValorPorSubconjunto(dados.assistencias);
     const trofeus = gerarTrofeusTemporada(dados.nome, jogos, gols, assistencias, ano);
 
     return {

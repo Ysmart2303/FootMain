@@ -339,6 +339,12 @@ button:hover {
     gap: 12px;
 }
 
+#lista-temporadas {
+    max-height: 420px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
 .filtro-ranking {
     display: flex;
     align-items: center;
