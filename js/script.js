@@ -133,26 +133,30 @@ function calcularPontuacao(carreira) {
     );
 }
 
+function sortearPremio(chance) {
+    return Math.random() < chance;
+}
+
 function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano) {
     const trofeusColetivos = [];
     const trofeusIndividuais = [];
     const temporadaAtual = Number(ano) || ANO_INICIAL;
     const cicloCopaDoMundo = (temporadaAtual - ANO_INICIAL) % 4 === 0;
 
-    if (jogos >= 35) trofeusColetivos.push("Copa Continental");
-    if (jogos >= 30) trofeusColetivos.push("Liga Nacional");
-    if (jogos >= 25) trofeusColetivos.push("Copa Nacional");
-    if (jogos >= 35 && cicloCopaDoMundo) trofeusColetivos.push("Copa do Mundo");
+    if (jogos >= 35 && sortearPremio(0.18)) trofeusColetivos.push("Copa Continental");
+    if (jogos >= 30 && sortearPremio(0.28)) trofeusColetivos.push("Liga Nacional");
+    if (jogos >= 25 && sortearPremio(0.22)) trofeusColetivos.push("Copa Nacional");
+    if (jogos >= 35 && cicloCopaDoMundo && sortearPremio(0.12)) trofeusColetivos.push("Copa do Mundo");
 
-    if (posicao !== "Goleiro" && trofeusColetivos.length >= 3 && (gols >= 20 || assistencias >= 15 || gols + assistencias >= 25) && Math.random() < 0.42) {
+    if (posicao !== "Goleiro" && trofeusColetivos.length > 0 && (gols >= 20 || assistencias >= 15 || gols + assistencias >= 25) && sortearPremio(0.12)) {
         trofeusIndividuais.push("Bola de Ouro");
     }
 
-    if (gols > jogos && Math.random() < 0.5) {
+    if (gols > jogos && sortearPremio(0.2)) {
         trofeusIndividuais.push("Chuteira de Ouro");
     }
 
-    if (posicao === "Goleiro" && jogos >= 30 && Math.random() < 0.34) {
+    if (posicao === "Goleiro" && jogos >= 30 && sortearPremio(0.18)) {
         trofeusIndividuais.push("Luva de Ouro");
     }
 
@@ -238,9 +242,7 @@ function renderRanking() {
         .join("");
 }
 
-function proximoAno() {
-    const historico = lerHistorico();
-
+function proximoAno(historico = lerHistorico()) {
     if (historico.length === 0) {
         return ANO_INICIAL;
     }
@@ -313,9 +315,7 @@ function renderHistorico() {
         .join("");
 }
 
-function proximaIdade() {
-    const historico = lerHistorico();
-
+function proximaIdade(historico = lerHistorico()) {
     if (historico.length === 0) {
         const idadeInicial = Number(document.getElementById("idade").value) || 0;
         return idadeInicial;
@@ -423,6 +423,15 @@ function obterNomeAtual() {
     return "Jogador";
 }
 
+function obterHistoricoDaCarreira(nome, dadosPosicao) {
+    const historico = lerHistorico();
+    const pertenceACarreiraAtual = historico.every(
+        (temporada) => temporada.nome === nome && temporada.posicao === dadosPosicao.nome
+    );
+
+    return pertenceACarreiraAtual ? historico : [];
+}
+
 function criarTemporada(nome, idade, ano, posicao) {
     const dados = posicoes[posicao];
     const jogos = sortearValorPorSubconjunto(dados.jogos);
@@ -458,10 +467,22 @@ function gerar() {
     }
 
     const nome = obterNomeAtual();
-    const historico = lerHistorico();
+    const dadosPosicao = posicoes[posicaoSelecionada.id];
+    const historicoAnterior = lerHistorico();
+    const historico = obterHistoricoDaCarreira(nome, dadosPosicao);
     const idadeLimite = obterIdadeLimite();
-    const idade = proximaIdade();
-    const ano = proximoAno();
+    const idadeInput = document.getElementById("idade");
+    const idadeInformada = Number(idadeInput.value) || 0;
+    const identidadeMudou = historicoAnterior.length > 0 && historico.length === 0;
+    const ultimaIdadeAnterior = Number(historicoAnterior[historicoAnterior.length - 1]?.idade) || 0;
+    if (
+        (identidadeMudou && idadeInformada === ultimaIdadeAnterior) ||
+        (historico.length === 0 && idadeInformada >= idadeLimite)
+    ) {
+        idadeInput.value = "0";
+    }
+    const idade = proximaIdade(historico);
+    const ano = proximoAno(historico);
 
     if (idade >= idadeLimite) {
         mostrarResumoFinal(nome, idadeLimite, ano, historico, posicoes[posicaoSelecionada.id].nome);
@@ -498,9 +519,33 @@ function simularTudo() {
     }
 
     const nome = obterNomeAtual();
+    const dadosPosicao = posicoes[posicaoSelecionada.id];
     const idadeLimite = obterIdadeLimite();
-    let historico = lerHistorico();
-    let idade = historico.length === 0 ? Number(document.getElementById("idade").value) || 0 : Number(historico[historico.length - 1].idade) + 1;
+    const historicoAnterior = lerHistorico();
+    let historico = obterHistoricoDaCarreira(nome, dadosPosicao);
+    const idadeInput = document.getElementById("idade");
+    let idadeInicial = Number(idadeInput.value) || 0;
+    const identidadeMudou = historicoAnterior.length > 0 && historico.length === 0;
+    const ultimaIdadeAnterior = Number(historicoAnterior[historicoAnterior.length - 1]?.idade) || 0;
+
+    if (
+        (identidadeMudou && idadeInicial === ultimaIdadeAnterior) ||
+        (historico.length === 0 && idadeInicial >= idadeLimite)
+    ) {
+        idadeInicial = 0;
+    }
+
+    if (historico.length > 0) {
+        const ultimaIdade = Number(historico[historico.length - 1].idade) || 0;
+        if (ultimaIdade + 1 >= idadeLimite) {
+            historico = [];
+            if (idadeInicial >= idadeLimite) {
+                idadeInicial = 0;
+            }
+        }
+    }
+
+    let idade = historico.length === 0 ? idadeInicial : Number(historico[historico.length - 1].idade) + 1;
     let ano = historico.length === 0 ? ANO_INICIAL : Math.max(...historico.map((temporada) => Number(temporada.ano) || ANO_INICIAL)) + 1;
 
     while (idade < idadeLimite) {
