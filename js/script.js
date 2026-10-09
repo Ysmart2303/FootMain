@@ -1,5 +1,6 @@
 const STORAGE_KEY = "footmain_temporadas";
 const STORAGE_KEY_RANKING = "footmain_ranking";
+const STORAGE_KEY_CARREIRA_ATUAL = "footmain_carreira_atual";
 const ANO_INICIAL = 2026;
 const IDADE_LIMITE_PADRAO = 40;
 
@@ -65,15 +66,6 @@ function sortearValorPorSubconjunto(subconjuntos) {
     throw new Error("Não foi possível sortear um valor do subconjunto.");
 }
 
-function lerHistorico() {
-    const historico = localStorage.getItem(STORAGE_KEY);
-    return historico ? JSON.parse(historico) : [];
-}
-
-function salvarHistorico(historico) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(historico));
-}
-
 function gerarIdRanking() {
     if (typeof crypto !== "undefined" && crypto.randomUUID) {
         return crypto.randomUUID();
@@ -82,19 +74,168 @@ function gerarIdRanking() {
     return `ranking-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+function safeStorageGet(chave) {
+    try {
+        return localStorage.getItem(chave);
+    } catch (erro) {
+        console.error(`Não foi possível ler ${chave}:`, erro);
+        return null;
+    }
+}
+
+function safeStorageSet(chave, valor) {
+    try {
+        localStorage.setItem(chave, valor);
+        return true;
+    } catch (erro) {
+        console.error(`Não foi possível salvar ${chave}:`, erro);
+        return false;
+    }
+}
+
+function normalizarNome(valor) {
+    return typeof valor === "string" ? valor.trim() : "";
+}
+
+function normalizarPosicao(valor) {
+    if (typeof valor !== "string") {
+        return null;
+    }
+
+    const valorNormalizado = valor.trim().toLowerCase();
+    const chave = Object.entries(posicoes).find(([, dados]) => dados.nome.toLowerCase() === valorNormalizado);
+    if (chave) {
+        return chave[0];
+    }
+
+    return posicoes[valorNormalizado] ? valorNormalizado : null;
+}
+
+function validarTemporada(temporada) {
+    if (!temporada || typeof temporada !== "object") {
+        return null;
+    }
+
+    const nome = normalizarNome(temporada.nome) || "Jogador";
+    const posicaoNormalizada = normalizarPosicao(temporada.posicao) || normalizarPosicao(temporada.posicaoKey) || "ata";
+    const dadosPosicao = posicoes[posicaoNormalizada] || posicoes.ata;
+    const idade = Number.isFinite(Number(temporada.idade)) ? Math.max(0, Math.floor(Number(temporada.idade))) : 0;
+    const ano = Number.isFinite(Number(temporada.ano)) ? Math.floor(Number(temporada.ano)) : ANO_INICIAL;
+    const jogos = Number.isFinite(Number(temporada.jogos)) ? Math.max(0, Math.floor(Number(temporada.jogos))) : 0;
+    const gols = Number.isFinite(Number(temporada.gols)) ? Math.max(0, Math.floor(Number(temporada.gols))) : 0;
+    const assistencias = Number.isFinite(Number(temporada.assistencias)) ? Math.max(0, Math.floor(Number(temporada.assistencias))) : 0;
+    const trofeusColetivos = Array.isArray(temporada.trofeusColetivos) ? temporada.trofeusColetivos.filter((trofeu) => typeof trofeu === "string") : [];
+    const trofeusIndividuais = Array.isArray(temporada.trofeusIndividuais) ? temporada.trofeusIndividuais.filter((trofeu) => typeof trofeu === "string") : [];
+
+    return {
+        nome,
+        idade,
+        posicao: dadosPosicao.nome,
+        posicaoKey: posicaoNormalizada,
+        ano,
+        jogos,
+        gols,
+        assistencias,
+        trofeusColetivos,
+        trofeusIndividuais,
+        data: typeof temporada.data === "string" && temporada.data ? temporada.data : new Date().toLocaleString("pt-BR"),
+        carreiraId: typeof temporada.carreiraId === "string" && temporada.carreiraId ? temporada.carreiraId : "legacy"
+    };
+}
+
+function lerHistorico() {
+    const historicoRaw = safeStorageGet(STORAGE_KEY);
+    if (!historicoRaw) {
+        return [];
+    }
+
+    try {
+        const historico = JSON.parse(historicoRaw);
+        if (!Array.isArray(historico)) {
+            return [];
+        }
+
+        return historico
+            .map((temporada) => validarTemporada(temporada))
+            .filter(Boolean);
+    } catch (erro) {
+        console.error("Erro ao ler o histórico salvo:", erro);
+        return [];
+    }
+}
+
+function salvarHistorico(historico) {
+    if (!Array.isArray(historico)) {
+        return false;
+    }
+
+    const historicoValidado = historico
+        .map((temporada) => validarTemporada(temporada))
+        .filter(Boolean);
+
+    return safeStorageSet(STORAGE_KEY, JSON.stringify(historicoValidado));
+}
+
+function obterCarreiraAtual() {
+    const carreiraRaw = safeStorageGet(STORAGE_KEY_CARREIRA_ATUAL);
+    const carreiraPadrao = { id: gerarIdRanking(), nome: "Jogador", posicao: "Atacante", idadeLimite: IDADE_LIMITE_PADRAO };
+
+    if (!carreiraRaw) {
+        return carreiraPadrao;
+    }
+
+    try {
+        const carreira = JSON.parse(carreiraRaw);
+        if (!carreira || typeof carreira !== "object") {
+            return carreiraPadrao;
+        }
+
+        return {
+            id: typeof carreira.id === "string" && carreira.id ? carreira.id : gerarIdRanking(),
+            nome: normalizarNome(carreira.nome) || "Jogador",
+            posicao: typeof carreira.posicao === "string" ? carreira.posicao : "Atacante",
+            idadeLimite: Number.isFinite(Number(carreira.idadeLimite)) ? Math.max(1, Math.floor(Number(carreira.idadeLimite))) : IDADE_LIMITE_PADRAO
+        };
+    } catch (erro) {
+        console.error("Erro ao ler a carreira atual:", erro);
+        return carreiraPadrao;
+    }
+}
+
+function salvarCarreiraAtual(carreira) {
+    const carreiraAtual = carreira || obterCarreiraAtual();
+    return safeStorageSet(STORAGE_KEY_CARREIRA_ATUAL, JSON.stringify({
+        id: typeof carreiraAtual.id === "string" && carreiraAtual.id ? carreiraAtual.id : gerarIdRanking(),
+        nome: normalizarNome(carreiraAtual.nome) || "Jogador",
+        posicao: typeof carreiraAtual.posicao === "string" ? carreiraAtual.posicao : "Atacante",
+        idadeLimite: Number.isFinite(Number(carreiraAtual.idadeLimite)) ? Math.max(1, Math.floor(Number(carreiraAtual.idadeLimite))) : IDADE_LIMITE_PADRAO
+    }));
+}
+
 function normalizarRanking(ranking) {
     if (!Array.isArray(ranking)) {
         return [];
     }
 
-    return ranking.map((carreira) => ({
-        ...carreira,
-        id: carreira.id || gerarIdRanking()
-    }));
+    return ranking
+        .filter((carreira) => carreira && typeof carreira === "object")
+        .map((carreira) => ({
+            ...carreira,
+            id: carreira.id || gerarIdRanking(),
+            nome: normalizarNome(carreira.nome) || "Jogador",
+            posicao: typeof carreira.posicao === "string" ? carreira.posicao : "-",
+            idadeLimite: Number.isFinite(Number(carreira.idadeLimite)) ? Math.max(1, Math.floor(Number(carreira.idadeLimite))) : IDADE_LIMITE_PADRAO,
+            jogos: Number.isFinite(Number(carreira.jogos)) ? Math.max(0, Math.floor(Number(carreira.jogos))) : 0,
+            gols: Number.isFinite(Number(carreira.gols)) ? Math.max(0, Math.floor(Number(carreira.gols))) : 0,
+            assistencias: Number.isFinite(Number(carreira.assistencias)) ? Math.max(0, Math.floor(Number(carreira.assistencias))) : 0,
+            premios: Number.isFinite(Number(carreira.premios)) ? Math.max(0, Math.floor(Number(carreira.premios))) : 0,
+            trofeusColetivos: Array.isArray(carreira.trofeusColetivos) ? carreira.trofeusColetivos.filter((trofeu) => typeof trofeu === "string") : [],
+            trofeusIndividuais: Array.isArray(carreira.trofeusIndividuais) ? carreira.trofeusIndividuais.filter((trofeu) => typeof trofeu === "string") : []
+        }));
 }
 
 function lerRanking() {
-    const ranking = localStorage.getItem(STORAGE_KEY_RANKING);
+    const ranking = safeStorageGet(STORAGE_KEY_RANKING);
     if (!ranking) {
         return [];
     }
@@ -108,7 +249,11 @@ function lerRanking() {
 }
 
 function salvarRanking(ranking) {
-    localStorage.setItem(STORAGE_KEY_RANKING, JSON.stringify(normalizarRanking(ranking)));
+    if (!Array.isArray(ranking)) {
+        return false;
+    }
+
+    return safeStorageSet(STORAGE_KEY_RANKING, JSON.stringify(normalizarRanking(ranking)));
 }
 
 function removerItemRanking(id) {
@@ -208,22 +353,11 @@ function renderRanking() {
             const premios = contarPremios(carreira);
 
             const trofeusHtml = [
-                ...(trofeusColetivos.length
-                    ? [
-                          `<span class="ranking-trofeu coletivo">${formatarTrofeus(trofeusColetivos)}</span>`
-                      ]
-                    : []),
-                ...(trofeusIndividuais.length
-                    ? [
-                          `<span class="ranking-trofeu individual">${formatarTrofeus(trofeusIndividuais)}</span>`
-                      ]
-                    : [])
+                ...(trofeusColetivos.length ? [`<span class="ranking-trofeu coletivo">${formatarTrofeus(trofeusColetivos)}</span>`] : []),
+                ...(trofeusIndividuais.length ? [`<span class="ranking-trofeu individual">${formatarTrofeus(trofeusIndividuais)}</span>`] : [])
             ];
 
-            const conteudoTrofeus = trofeusHtml.length
-                ? trofeusHtml.join("")
-                : '<span class="ranking-trofeu coletivo">Nenhum</span>';
-
+            const conteudoTrofeus = trofeusHtml.length ? trofeusHtml.join("") : '<span class="ranking-trofeu coletivo">Nenhum</span>';
             const medalha = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "#";
             const classeTop = index === 0 ? "top-1" : index === 1 ? "top-2" : index === 2 ? "top-3" : "";
 
@@ -261,11 +395,28 @@ function atualizarResumoJogador(nome, idade, ano) {
     if (perfilAno) perfilAno.textContent = ano ?? ANO_INICIAL;
 }
 
+function lerHistoricoAtiva() {
+    const carreiraAtual = obterCarreiraAtual();
+    const historico = lerHistorico();
+
+    if (!carreiraAtual.id || historico.length === 0) {
+        return historico;
+    }
+
+    return historico.filter((temporada) => {
+        if (temporada.carreiraId) {
+            return temporada.carreiraId === carreiraAtual.id;
+        }
+
+        return temporada.nome === carreiraAtual.nome || temporada.nome === "Jogador";
+    });
+}
+
 function renderHistorico() {
     const lista = document.getElementById("lista-temporadas");
     const filtroHistorico = document.getElementById("filtro-historico");
     const criterio = filtroHistorico?.value || "ordem";
-    const historico = lerHistorico();
+    const historico = lerHistoricoAtiva();
 
     if (!lista) return;
 
@@ -315,7 +466,7 @@ function renderHistorico() {
         .join("");
 }
 
-function proximaIdade(historico = lerHistorico()) {
+function proximaIdade(historico = lerHistoricoAtiva()) {
     if (historico.length === 0) {
         const idadeInicial = Number(document.getElementById("idade").value) || 0;
         return idadeInicial;
@@ -325,15 +476,27 @@ function proximaIdade(historico = lerHistorico()) {
     return ultimaIdade + 1;
 }
 
+function validarNumeroInteiro(valor, fallback, minimo = 0) {
+    const numero = Number(valor);
+
+    if (!Number.isFinite(numero)) {
+        return fallback;
+    }
+
+    const arredondado = Math.floor(numero);
+    return Math.max(minimo, arredondado);
+}
+
 function obterIdadeLimite() {
     const idadeLimiteInput = document.getElementById("idade-limite");
-    const valor = Number(idadeLimiteInput ? idadeLimiteInput.value : "");
+    const valor = idadeLimiteInput ? idadeLimiteInput.value : "";
+    const numero = Number(valor);
 
-    if (!Number.isFinite(valor) || valor <= 0) {
+    if (!Number.isFinite(numero) || numero <= 0) {
         return IDADE_LIMITE_PADRAO;
     }
 
-    return Math.floor(valor);
+    return Math.max(1, Math.floor(numero));
 }
 
 function somarTotaisHistorico(historico) {
@@ -352,6 +515,7 @@ function somarTotaisHistorico(historico) {
 function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao) {
     const totais = somarTotaisHistorico(historico);
     const resumoFinal = document.getElementById("resumo-final");
+    const carreiraAtual = obterCarreiraAtual();
 
     const trofeus = historico.reduce(
         (resultado, temporada) => {
@@ -363,7 +527,7 @@ function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao) {
     );
 
     const carreira = {
-        id: gerarIdRanking(),
+        id: carreiraAtual.id || gerarIdRanking(),
         nome,
         posicao: posicao || "-",
         idadeLimite,
@@ -399,8 +563,12 @@ function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao) {
     document.getElementById("resumo-individuais").textContent = formatarTrofeus(trofeus.individuais);
 
     const rankingAtual = lerRanking();
-    rankingAtual.push(carreira);
-    salvarRanking(rankingAtual);
+    const jaExiste = rankingAtual.some((registro) => String(registro.id) === String(carreira.id));
+    if (!jaExiste) {
+        rankingAtual.push(carreira);
+        salvarRanking(rankingAtual);
+    }
+
     renderRanking();
 
     if (resumoFinal) {
@@ -409,10 +577,16 @@ function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao) {
 }
 
 function obterNomeAtual() {
-    const nomeDigitado = document.getElementById("nome").value.trim();
+    const campoNome = document.getElementById("nome");
+    const nomeDigitado = campoNome ? campoNome.value.trim() : "";
 
     if (nomeDigitado) {
         return nomeDigitado;
+    }
+
+    const carreiraAtual = obterCarreiraAtual();
+    if (carreiraAtual.nome && carreiraAtual.nome !== "Jogador") {
+        return carreiraAtual.nome;
     }
 
     const historico = lerHistorico();
@@ -423,17 +597,49 @@ function obterNomeAtual() {
     return "Jogador";
 }
 
+function validarDadosJogador({ nome, idade, idadeLimite, posicao }) {
+    const nomeValidado = normalizarNome(nome);
+    if (!nomeValidado) {
+        return { valido: false, mensagem: "Informe um nome válido para o jogador." };
+    }
+
+    const idadeNumero = Number(idade);
+    if (!Number.isFinite(idadeNumero) || idadeNumero < 0 || idadeNumero > 99) {
+        return { valido: false, mensagem: "Informe uma idade inicial válida entre 0 e 99 anos." };
+    }
+
+    const idadeLimiteNumero = Number(idadeLimite);
+    if (!Number.isFinite(idadeLimiteNumero) || idadeLimiteNumero <= idadeNumero) {
+        return { valido: false, mensagem: "A idade limite deve ser maior que a idade inicial." };
+    }
+
+    if (!posicao || !(posicao in posicoes)) {
+        return { valido: false, mensagem: "Selecione uma posição válida para a carreira." };
+    }
+
+    return { valido: true, nome: nomeValidado, idade: Math.floor(idadeNumero), idadeLimite: Math.floor(idadeLimiteNumero), posicao };
+}
+
 function obterHistoricoDaCarreira(nome, dadosPosicao) {
     const historico = lerHistorico();
-    const pertenceACarreiraAtual = historico.every(
-        (temporada) => temporada.nome === nome && temporada.posicao === dadosPosicao.nome
-    );
+    const carreiraAtual = obterCarreiraAtual();
 
-    return pertenceACarreiraAtual ? historico : [];
+    if (!carreiraAtual.id || historico.length === 0) {
+        return historico;
+    }
+
+    return historico.filter((temporada) => {
+        if (temporada.carreiraId) {
+            return temporada.carreiraId === carreiraAtual.id;
+        }
+
+        return temporada.nome === nome && temporada.posicao === dadosPosicao.nome;
+    });
 }
 
 function criarTemporada(nome, idade, ano, posicao) {
     const dados = posicoes[posicao];
+    const carreiraAtual = obterCarreiraAtual();
     const jogos = sortearValorPorSubconjunto(dados.jogos);
     const gols = sortearValorPorSubconjunto(dados.gols);
     const assistencias = sortearValorPorSubconjunto(dados.assistencias);
@@ -443,124 +649,153 @@ function criarTemporada(nome, idade, ano, posicao) {
         nome,
         idade,
         posicao: dados.nome,
+        posicaoKey: posicao,
         ano,
         jogos,
         gols,
         assistencias,
         trofeusColetivos: trofeus.trofeusColetivos,
         trofeusIndividuais: trofeus.trofeusIndividuais,
-        data: new Date().toLocaleString("pt-BR")
+        data: new Date().toLocaleString("pt-BR"),
+        carreiraId: carreiraAtual.id || gerarIdRanking()
     };
 }
 
+let processamentoEmAndamento = false;
+
 function gerar() {
-    const posicaoSelecionada = document.querySelector('input[name="posicao"]:checked');
-    const resumoFinal = document.getElementById("resumo-final");
-
-    if (resumoFinal) {
-        resumoFinal.hidden = true;
-    }
-
-    if (!posicaoSelecionada) {
-        alert("Selecione uma posição antes de gerar o jogador.");
+    if (processamentoEmAndamento) {
         return;
     }
 
-    const nome = obterNomeAtual();
-    const dadosPosicao = posicoes[posicaoSelecionada.id];
-    const historicoAnterior = lerHistorico();
-    const historico = obterHistoricoDaCarreira(nome, dadosPosicao);
-    const idadeLimite = obterIdadeLimite();
-    const idadeInput = document.getElementById("idade");
-    const idadeInformada = Number(idadeInput.value) || 0;
-    const identidadeMudou = historicoAnterior.length > 0 && historico.length === 0;
-    const ultimaIdadeAnterior = Number(historicoAnterior[historicoAnterior.length - 1]?.idade) || 0;
-    if (
-        (identidadeMudou && idadeInformada === ultimaIdadeAnterior) ||
-        (historico.length === 0 && idadeInformada >= idadeLimite)
-    ) {
-        idadeInput.value = "0";
+    processamentoEmAndamento = true;
+
+    try {
+        const posicaoSelecionada = document.querySelector('input[name="posicao"]:checked');
+        const resumoFinal = document.getElementById("resumo-final");
+
+        if (resumoFinal) {
+            resumoFinal.hidden = true;
+        }
+
+        if (!posicaoSelecionada) {
+            alert("Selecione uma posição antes de gerar o jogador.");
+            return;
+        }
+
+        const idadeInput = document.getElementById("idade");
+        const nomeInput = document.getElementById("nome");
+        const nome = normalizarNome(nomeInput ? nomeInput.value : "") || obterNomeAtual();
+        const dadosPosicao = posicoes[posicaoSelecionada.id];
+        const idadeLimite = obterIdadeLimite();
+        const idadeInformada = Number(idadeInput ? idadeInput.value : "") || 0;
+        const dadosValidos = validarDadosJogador({ nome, idade: idadeInformada, idadeLimite, posicao: posicaoSelecionada.id });
+
+        if (!dadosValidos.valido) {
+            alert(dadosValidos.mensagem);
+            return;
+        }
+
+        const carreiraAtual = obterCarreiraAtual();
+        carreiraAtual.nome = nome;
+        carreiraAtual.posicao = dadosPosicao.nome;
+        carreiraAtual.idadeLimite = idadeLimite;
+        salvarCarreiraAtual(carreiraAtual);
+
+        const historico = obterHistoricoDaCarreira(nome, dadosPosicao);
+        const idade = historico.length === 0 ? dadosValidos.idade : (Number(historico[historico.length - 1].idade) || 0) + 1;
+        const ano = proximoAno(historico);
+
+        if (idade >= idadeLimite) {
+            mostrarResumoFinal(nome, idadeLimite, ano, historico, dadosPosicao.nome);
+            return;
+        }
+
+        const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id);
+        const historicoAtualizado = [...historico, temporada];
+
+        document.getElementById("nome").value = nome;
+        document.getElementById("idade").value = idade;
+        atualizarResumoJogador(nome, idade, ano);
+        document.getElementById("jogos").textContent = temporada.jogos;
+        document.getElementById("gols").textContent = temporada.gols;
+        document.getElementById("assi").textContent = temporada.assistencias;
+        document.getElementById("prem").textContent = contarPremios(temporada);
+
+        salvarHistorico(historicoAtualizado);
+        renderHistorico();
+    } finally {
+        processamentoEmAndamento = false;
     }
-    const idade = proximaIdade(historico);
-    const ano = proximoAno(historico);
-
-    if (idade >= idadeLimite) {
-        mostrarResumoFinal(nome, idadeLimite, ano, historico, posicoes[posicaoSelecionada.id].nome);
-        return;
-    }
-
-    document.getElementById("nome").value = nome;
-    document.getElementById("idade").value = idade;
-    atualizarResumoJogador(nome, idade, ano);
-
-    const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id);
-
-    document.getElementById("jogos").textContent = temporada.jogos;
-    document.getElementById("gols").textContent = temporada.gols;
-    document.getElementById("assi").textContent = temporada.assistencias;
-    document.getElementById("prem").textContent = contarPremios(temporada);
-
-    historico.push(temporada);
-    salvarHistorico(historico);
-    renderHistorico();
 }
 
 function simularTudo() {
-    const posicaoSelecionada = document.querySelector('input[name="posicao"]:checked');
-    const resumoFinal = document.getElementById("resumo-final");
-
-    if (resumoFinal) {
-        resumoFinal.hidden = true;
-    }
-
-    if (!posicaoSelecionada) {
-        alert("Selecione uma posição antes de simular a carreira completa.");
+    if (processamentoEmAndamento) {
         return;
     }
 
-    const nome = obterNomeAtual();
-    const dadosPosicao = posicoes[posicaoSelecionada.id];
-    const idadeLimite = obterIdadeLimite();
-    const historicoAnterior = lerHistorico();
-    let historico = obterHistoricoDaCarreira(nome, dadosPosicao);
-    const idadeInput = document.getElementById("idade");
-    let idadeInicial = Number(idadeInput.value) || 0;
-    const identidadeMudou = historicoAnterior.length > 0 && historico.length === 0;
-    const ultimaIdadeAnterior = Number(historicoAnterior[historicoAnterior.length - 1]?.idade) || 0;
+    processamentoEmAndamento = true;
 
-    if (
-        (identidadeMudou && idadeInicial === ultimaIdadeAnterior) ||
-        (historico.length === 0 && idadeInicial >= idadeLimite)
-    ) {
-        idadeInicial = 0;
-    }
+    try {
+        const posicaoSelecionada = document.querySelector('input[name="posicao"]:checked');
+        const resumoFinal = document.getElementById("resumo-final");
 
-    if (historico.length > 0) {
-        const ultimaIdade = Number(historico[historico.length - 1].idade) || 0;
-        if (ultimaIdade + 1 >= idadeLimite) {
-            historico = [];
-            if (idadeInicial >= idadeLimite) {
-                idadeInicial = 0;
-            }
+        if (resumoFinal) {
+            resumoFinal.hidden = true;
         }
+
+        if (!posicaoSelecionada) {
+            alert("Selecione uma posição antes de simular a carreira completa.");
+            return;
+        }
+
+        const nomeInput = document.getElementById("nome");
+        const nome = normalizarNome(nomeInput ? nomeInput.value : "") || obterNomeAtual();
+        const dadosPosicao = posicoes[posicaoSelecionada.id];
+        const idadeLimite = obterIdadeLimite();
+        const idadeInicial = Number(document.getElementById("idade").value) || 0;
+        const dadosValidos = validarDadosJogador({ nome, idade: idadeInicial, idadeLimite, posicao: posicaoSelecionada.id });
+
+        if (!dadosValidos.valido) {
+            alert(dadosValidos.mensagem);
+            return;
+        }
+
+        const carreiraAtual = obterCarreiraAtual();
+        carreiraAtual.nome = nome;
+        carreiraAtual.posicao = dadosPosicao.nome;
+        carreiraAtual.idadeLimite = idadeLimite;
+        salvarCarreiraAtual(carreiraAtual);
+
+        let historico = obterHistoricoDaCarreira(nome, dadosPosicao);
+        let idade = historico.length === 0 ? dadosValidos.idade : Number(historico[historico.length - 1].idade) + 1;
+        let ano = proximoAno(historico);
+
+        while (idade < idadeLimite) {
+            const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id);
+            historico.push(temporada);
+            idade = Number(historico[historico.length - 1].idade) + 1;
+            ano = proximoAno(historico);
+        }
+
+        if (historico.length > 0) {
+            const ultimaTemporada = historico[historico.length - 1];
+            const idadeUltima = Number(ultimaTemporada.idade) || 0;
+            document.getElementById("idade").value = idadeUltima;
+            atualizarResumoJogador(nome, idadeUltima, ano);
+        }
+
+        salvarHistorico(historico);
+        renderHistorico();
+        mostrarResumoFinal(nome, idadeLimite, ano, historico, dadosPosicao.nome);
+    } finally {
+        processamentoEmAndamento = false;
     }
-
-    let idade = historico.length === 0 ? idadeInicial : Number(historico[historico.length - 1].idade) + 1;
-    let ano = historico.length === 0 ? ANO_INICIAL : Math.max(...historico.map((temporada) => Number(temporada.ano) || ANO_INICIAL)) + 1;
-
-    while (idade < idadeLimite) {
-        historico.push(criarTemporada(nome, idade, ano, posicaoSelecionada.id));
-        idade = historico.length === 0 ? Number(document.getElementById("idade").value) || 0 : Number(historico[historico.length - 1].idade) + 1;
-        ano = historico.length === 0 ? ANO_INICIAL : Math.max(...historico.map((temporada) => Number(temporada.ano) || ANO_INICIAL)) + 1;
-    }
-
-    salvarHistorico(historico);
-    renderHistorico();
-    mostrarResumoFinal(nome, idadeLimite, ano, historico, posicoes[posicaoSelecionada.id].nome);
 }
 
 function limparHistorico() {
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY_CARREIRA_ATUAL);
     document.getElementById("nome").value = "";
     document.getElementById("idade").value = "0";
     document.getElementById("idade-limite").value = IDADE_LIMITE_PADRAO;
@@ -620,7 +855,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const idadeInicial = Number(document.getElementById("idade").value) || 0;
-    atualizarResumoJogador("Jogador", idadeInicial, ANO_INICIAL);
+    const carreiraAtual = obterCarreiraAtual();
+    const nomeAtual = normalizarNome(carreiraAtual.nome) || "Jogador";
+    document.getElementById("nome").value = nomeAtual === "Jogador" ? "" : nomeAtual;
+    atualizarResumoJogador(nomeAtual === "Jogador" ? "Jogador" : nomeAtual, idadeInicial, ANO_INICIAL);
     renderHistorico();
     renderRanking();
 });
