@@ -563,11 +563,17 @@ function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao) {
     document.getElementById("resumo-individuais").textContent = formatarTrofeus(trofeus.individuais);
 
     const rankingAtual = lerRanking();
-    const jaExiste = rankingAtual.some((registro) => String(registro.id) === String(carreira.id));
-    if (!jaExiste) {
+    const indiceExistente = rankingAtual.findIndex(
+        (registro) => String(registro.id) === String(carreira.id)
+    );
+
+    if (indiceExistente >= 0) {
+        rankingAtual[indiceExistente] = carreira;
+    } else {
         rankingAtual.push(carreira);
-        salvarRanking(rankingAtual);
     }
+
+    salvarRanking(rankingAtual);
 
     renderRanking();
 
@@ -706,7 +712,7 @@ function gerar() {
         const idade = historico.length === 0 ? dadosValidos.idade : (Number(historico[historico.length - 1].idade) || 0) + 1;
         const ano = proximoAno(historico);
 
-        if (idade >= idadeLimite) {
+        if (idade > idadeLimite) {
             mostrarResumoFinal(nome, idadeLimite, ano, historico, dadosPosicao.nome);
             return;
         }
@@ -765,13 +771,25 @@ function simularTudo() {
         carreiraAtual.nome = nome;
         carreiraAtual.posicao = dadosPosicao.nome;
         carreiraAtual.idadeLimite = idadeLimite;
+
+        // Simulação completa sempre começa uma NOVA carreira:
+        // gera um id novo para não colidir com o ranking anterior.
+        carreiraAtual.id = gerarIdRanking();
         salvarCarreiraAtual(carreiraAtual);
 
-        let historico = obterHistoricoDaCarreira(nome, dadosPosicao);
-        let idade = historico.length === 0 ? dadosValidos.idade : Number(historico[historico.length - 1].idade) + 1;
-        let ano = proximoAno(historico);
+        // Como o id é inédito, nenhuma temporada antiga é removida por engano;
+        // apenas limpamos eventuais sobras com esse id (não deve haver).
+        const historicoExistente = lerHistorico();
+        const historicoDeOutrasCarreiras = historicoExistente.filter(
+            (temporada) => temporada.carreiraId !== carreiraAtual.id
+        );
+        salvarHistorico(historicoDeOutrasCarreiras);
 
-        while (idade < idadeLimite) {
+        let historico = [];
+        let idade = dadosValidos.idade;
+        let ano = ANO_INICIAL;
+
+        while (idade <= idadeLimite) {
             const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id);
             historico.push(temporada);
             idade = Number(historico[historico.length - 1].idade) + 1;
