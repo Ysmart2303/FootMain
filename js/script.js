@@ -337,7 +337,10 @@ function renderRanking() {
     if (!listaRanking) return;
 
     const criterio = filtroRanking?.value || "pontuacao";
+    const filtroPosicao = document.getElementById("filtro-posicao-ranking");
+    const posicaoSelecionada = filtroPosicao?.value || "todas";
     const ranking = lerRanking()
+        .filter((carreira) => posicaoSelecionada === "todas" || carreira.posicao === posicaoSelecionada)
         .sort((a, b) => (Number(b[criterio]) || 0) - (Number(a[criterio]) || 0))
         .slice(0, 5);
 
@@ -831,6 +834,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const botaoLimparRanking = document.getElementById("limparRanking");
     const listaRanking = document.getElementById("lista-ranking");
     const filtroRanking = document.getElementById("filtro-ranking");
+    const filtroPosicaoRanking = document.getElementById("filtro-posicao-ranking");
     const filtroHistorico = document.getElementById("filtro-historico");
 
     if (botaoLimpar) {
@@ -847,6 +851,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (filtroRanking) {
         filtroRanking.addEventListener("change", renderRanking);
+    }
+
+    if (filtroPosicaoRanking) {
+        filtroPosicaoRanking.addEventListener("change", renderRanking);
     }
 
     if (listaRanking) {
