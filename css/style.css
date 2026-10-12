@@ -725,3 +725,107 @@ button {
         gap: 8px;
     }
 }
+
+/* Detalhes da trajetória dentro de cada item do ranking */
+#lista-ranking .detalhes-carreira {
+    margin-top: 14px;
+    border-top: 1px solid rgba(148, 163, 184, 0.25);
+    padding-top: 12px;
+}
+
+#lista-ranking .detalhes-carreira summary {
+    color: #86efac;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 5px 0;
+}
+
+#lista-ranking .resumo-estatisticas-carreira {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin: 12px 0 16px;
+}
+
+#lista-ranking .resumo-estatisticas-carreira div {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+    padding: 10px;
+    border-radius: 9px;
+    background: rgba(34, 197, 94, 0.08);
+    border: 1px solid rgba(34, 197, 94, 0.18);
+}
+
+#lista-ranking .resumo-estatisticas-carreira span,
+#lista-ranking .temporada-carreira-detalhe small {
+    color: #cbd5e1;
+    font-size: 0.82rem;
+}
+
+#lista-ranking .resumo-estatisticas-carreira strong {
+    color: #f8fafc;
+    overflow-wrap: anywhere;
+}
+
+#lista-ranking .detalhes-carreira h4 {
+    margin: 12px 0 8px;
+    color: #f8fafc;
+}
+
+#lista-ranking .lista-detalhes-temporadas {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#lista-ranking .temporada-carreira-detalhe {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px 10px;
+    padding: 10px;
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.65);
+}
+
+#lista-ranking .temporada-carreira-detalhe strong,
+#lista-ranking .temporada-carreira-detalhe small {
+    grid-column: 1 / -1;
+}
+
+#lista-ranking .temporada-carreira-detalhe strong {
+    color: #86efac;
+}
+
+#lista-ranking .temporada-carreira-detalhe small {
+    overflow-wrap: anywhere;
+}
+
+#lista-ranking .detalhes-sem-historico {
+    color: #cbd5e1;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 420px) {
+    #lista-ranking .resumo-estatisticas-carreira {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Caixa rolável para consultar as temporadas sem alongar demais o ranking. */
+#lista-ranking .lista-detalhes-temporadas {
+    max-height: 420px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 2px 8px 2px 0;
+    scrollbar-width: thin;
+}
+
+#lista-ranking .melhor-temporada-detalhe small {
+    color: #cbd5e1;
+    font-size: 0.82rem;
+    font-weight: 400;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
