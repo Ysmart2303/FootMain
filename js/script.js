@@ -230,7 +230,8 @@ function normalizarRanking(ranking) {
             assistencias: Number.isFinite(Number(carreira.assistencias)) ? Math.max(0, Math.floor(Number(carreira.assistencias))) : 0,
             premios: Number.isFinite(Number(carreira.premios)) ? Math.max(0, Math.floor(Number(carreira.premios))) : 0,
             trofeusColetivos: Array.isArray(carreira.trofeusColetivos) ? carreira.trofeusColetivos.filter((trofeu) => typeof trofeu === "string") : [],
-            trofeusIndividuais: Array.isArray(carreira.trofeusIndividuais) ? carreira.trofeusIndividuais.filter((trofeu) => typeof trofeu === "string") : []
+            trofeusIndividuais: Array.isArray(carreira.trofeusIndividuais) ? carreira.trofeusIndividuais.filter((trofeu) => typeof trofeu === "string") : [],
+            temporadas: Array.isArray(carreira.temporadas) ? carreira.temporadas.map(validarTemporada).filter(Boolean) : []
         }));
 }
 
@@ -330,6 +331,66 @@ function contarPremios(temporada) {
     return trofeusColetivos + trofeusIndividuais;
 }
 
+function escaparHTML(valor) {
+    return String(valor ?? "").replace(/[&<>"']/g, (caractere) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    })[caractere]);
+}
+
+function obterTemporadasDaCarreira(carreira) {
+    if (Array.isArray(carreira.temporadas) && carreira.temporadas.length > 0) {
+        return carreira.temporadas.slice().sort((a, b) => a.ano - b.ano);
+    }
+
+    // Compatibilidade com carreiras antigas salvas antes da inclusão dos detalhes.
+    return lerHistorico()
+        .filter((temporada) => temporada.carreiraId === carreira.id)
+        .sort((a, b) => a.ano - b.ano);
+}
+
+function renderDetalhesCarreira(carreira) {
+    const temporadas = obterTemporadasDaCarreira(carreira);
+    const totalTemporadas = temporadas.length;
+    const totalTitulos = (carreira.trofeusColetivos || []).length;
+    const mediaGols = carreira.jogos > 0 ? (carreira.gols / carreira.jogos).toFixed(2).replace(".", ",") : "0,00";
+    const melhorTemporada = temporadas.reduce((melhor, temporada) => !melhor || (Number(temporada.gols) || 0) > (Number(melhor.gols) || 0) ? temporada : melhor, null);
+    const titulosMelhorTemporada = melhorTemporada
+        ? [
+            ...(Array.isArray(melhorTemporada.trofeusColetivos) ? melhorTemporada.trofeusColetivos : []),
+            ...(Array.isArray(melhorTemporada.trofeusIndividuais) ? melhorTemporada.trofeusIndividuais : [])
+        ]
+        : [];
+
+    const listaTemporadas = totalTemporadas
+        ? temporadas.map((temporada) => {
+            const trofeus = [...(temporada.trofeusColetivos || []), ...(temporada.trofeusIndividuais || [])];
+            return `<div class="temporada-carreira-detalhe">
+                <strong>${escaparHTML(temporada.ano)} · ${escaparHTML(temporada.idade)} anos</strong>
+                <span>${temporada.jogos} jogos</span>
+                <span>${temporada.gols} gols</span>
+                <span>${temporada.assistencias} assistências</span>
+                <small>${trofeus.length ? escaparHTML(trofeus.join(", ")) : "Sem títulos nesta temporada"}</small>
+            </div>`;
+        }).join("")
+        : '<p class="detalhes-sem-historico">Os dados por temporada não estão disponíveis para esta carreira antiga.</p>';
+
+    return `<details class="detalhes-carreira">
+        <summary>Ver trajetória completa</summary>
+        <div class="resumo-estatisticas-carreira">
+            <div><span>Temporadas</span><strong>${totalTemporadas || "—"}</strong></div>
+            <div><span>Média de gols por jogo</span><strong>${mediaGols}</strong></div>
+            <div><span>Títulos coletivos</span><strong>${totalTitulos}</strong></div>
+            <div class="melhor-temporada-detalhe">
+                <span>Melhor temporada</span>
+                <strong>${melhorTemporada ? `${escaparHTML(melhorTemporada.ano)} · ${Number(melhorTemporada.gols) || 0} gols` : "—"}</strong>
+                ${melhorTemporada ? `<span>${Number(melhorTemporada.assistencias) || 0} assistências</span><small>${titulosMelhorTemporada.length ? `Títulos conquistados: ${escaparHTML(titulosMelhorTemporada.join(", "))}` : "Nenhum título conquistado nesta temporada"}</small>` : ""}
+            </div>
+        </div>
+        <h4>Temporada por temporada</h4>
+        <div class="lista-detalhes-temporadas">${listaTemporadas}</div>
+    </details>`;
+}
+
 function renderRanking() {
     const listaRanking = document.getElementById("lista-ranking");
     const filtroRanking = document.getElementById("filtro-ranking");
@@ -354,12 +415,10 @@ function renderRanking() {
             const trofeusColetivos = Array.isArray(carreira.trofeusColetivos) ? carreira.trofeusColetivos : [];
             const trofeusIndividuais = Array.isArray(carreira.trofeusIndividuais) ? carreira.trofeusIndividuais : [];
             const premios = contarPremios(carreira);
-
             const trofeusHtml = [
-                ...(trofeusColetivos.length ? [`<span class="ranking-trofeu coletivo">${formatarTrofeus(trofeusColetivos)}</span>`] : []),
-                ...(trofeusIndividuais.length ? [`<span class="ranking-trofeu individual">${formatarTrofeus(trofeusIndividuais)}</span>`] : [])
+                ...(trofeusColetivos.length ? [`<span class="ranking-trofeu coletivo">${escaparHTML(formatarTrofeus(trofeusColetivos))}</span>`] : []),
+                ...(trofeusIndividuais.length ? [`<span class="ranking-trofeu individual">${escaparHTML(formatarTrofeus(trofeusIndividuais))}</span>`] : [])
             ];
-
             const conteudoTrofeus = trofeusHtml.length ? trofeusHtml.join("") : '<span class="ranking-trofeu coletivo">Nenhum</span>';
             const medalha = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "#";
             const classeTop = index === 0 ? "top-1" : index === 1 ? "top-2" : index === 2 ? "top-3" : "";
@@ -367,12 +426,14 @@ function renderRanking() {
             return `
                 <li class="${classeTop}">
                     <span class="rank-medal">${medalha}</span>
-                    <strong>#${index + 1} - ${carreira.nome}</strong>
-                    <p>Posição: ${carreira.posicao} | Pontuação: ${carreira.pontuacao}</p>
+                    <strong>#${index + 1} - ${escaparHTML(carreira.nome)}</strong>
+                    <p>Posição: ${escaparHTML(carreira.posicao)} | Pontuação: ${carreira.pontuacao}</p>
                     <p>Jogos: ${carreira.jogos} | Gols: ${carreira.gols} | Assistências: ${carreira.assistencias} | Prêmios: ${premios}</p>
+                    <p>Títulos coletivos: ${trofeusColetivos.length} | Títulos individuais: ${trofeusIndividuais.length}</p>
                     <div class="ranking-trofeus">${conteudoTrofeus}</div>
                     <small>Idade limite: ${carreira.idadeLimite} anos</small>
-                    <button type="button" class="remover-ranking" data-id="${carreira.id || ""}" aria-label="Apagar ${carreira.nome} do ranking">Apagar</button>
+                    ${renderDetalhesCarreira(carreira)}
+                    <button type="button" class="remover-ranking" data-id="${escaparHTML(carreira.id || "")}" aria-label="Apagar ${escaparHTML(carreira.nome)} do ranking">Apagar</button>
                 </li>
             `;
         })
@@ -540,6 +601,9 @@ function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao) {
         premios: totais.premios,
         trofeusColetivos: trofeus.coletivos,
         trofeusIndividuais: trofeus.individuais,
+        // Cópia permanente para os detalhes do ranking continuarem disponíveis
+        // mesmo quando o histórico temporário da tela for limpo.
+        temporadas: historico.map((temporada) => ({ ...temporada })),
         pontuacao: 0,
         data: new Date().toLocaleString("pt-BR")
     };
