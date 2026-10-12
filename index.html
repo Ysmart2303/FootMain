@@ -16,7 +16,8 @@
         <div id="links">
             <a href="#inicio">Inicio</a>
             <a href="#ranking">Ranking</a>
-            <a href="#historico">Historico</a>
+            <a href="#historico">Histórico</a>
+            <a href="#conquistas">Conquistas</a>
         </div>
 
     </header>
@@ -149,6 +150,28 @@
             </div>
             <button id="limparRanking" type="button">Limpar ranking</button>
             <ol id="lista-ranking"></ol>
+        </section>
+
+        <section id="conquistas">
+            <h2>Conquistas e recordes</h2>
+            <p class="conquistas-intro">Acompanhe os objetivos desbloqueados por cada carreira e os maiores feitos registrados no FootMain.</p>
+            <div class="conquistas-resumo">
+                <div><span>Desbloqueadas</span><strong id="conquistas-desbloqueadas">0</strong></div>
+                <div><span>Total disponível</span><strong id="conquistas-total">30</strong></div>
+                <div><span>Conclusão</span><strong id="conquistas-percentual">0%</strong></div>
+            </div>
+            <div class="filtro-ranking filtro-conquistas">
+                <label for="filtro-carreira-conquistas">Carreira:</label>
+                <select id="filtro-carreira-conquistas">
+                    <option value="">Selecione uma carreira</option>
+                </select>
+            </div>
+            <h3>Conquistas da carreira</h3>
+            <div id="lista-conquistas" class="grade-conquistas"></div>
+            <h3>Recordes históricos</h3>
+            <p class="conquistas-intro">Os recordes são calculados com base nas carreiras salvas no ranking e nas temporadas disponíveis.</p>
+            <div id="lista-recordes" class="grade-recordes"></div>
+            <div id="notificacao-conquista" class="notificacao-conquista" role="status" aria-live="polite" hidden></div>
         </section>
     </main>
 
