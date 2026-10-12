@@ -391,6 +391,145 @@ function renderDetalhesCarreira(carreira) {
     </details>`;
 }
 
+
+const CONQUISTAS = [
+    { id: "gols-25", nome: "Primeiros passos", descricao: "Marque 25 gols na carreira.", categoria: "Gols", icone: "⚽", metrica: "gols", meta: 25 },
+    { id: "gols-50", nome: "Artilheiro", descricao: "Marque 50 gols na carreira.", categoria: "Gols", icone: "⚽", metrica: "gols", meta: 50 },
+    { id: "gols-100", nome: "Centenário", descricao: "Marque 100 gols na carreira.", categoria: "Gols", icone: "🎯", metrica: "gols", meta: 100 },
+    { id: "gols-250", nome: "Matador", descricao: "Marque 250 gols na carreira.", categoria: "Gols", icone: "🥅", metrica: "gols", meta: 250 },
+    { id: "gols-500", nome: "Lenda do gol", descricao: "Marque 500 gols na carreira.", categoria: "Gols", icone: "👑", metrica: "gols", meta: 500 },
+    { id: "gols-750", nome: "Imparável", descricao: "Marque 750 gols na carreira.", categoria: "Gols", icone: "🔥", metrica: "gols", meta: 750 },
+
+    { id: "ass-25", nome: "Bom garçom", descricao: "Distribua 25 assistências.", categoria: "Assistências", icone: "🅰️", metrica: "assistencias", meta: 25 },
+    { id: "ass-50", nome: "Garçom", descricao: "Distribua 50 assistências.", categoria: "Assistências", icone: "🅰️", metrica: "assistencias", meta: 50 },
+    { id: "ass-100", nome: "Mestre das assistências", descricao: "Distribua 100 assistências.", categoria: "Assistências", icone: "🎯", metrica: "assistencias", meta: 100 },
+    { id: "ass-250", nome: "Criador de jogadas", descricao: "Distribua 250 assistências.", categoria: "Assistências", icone: "✨", metrica: "assistencias", meta: 250 },
+    { id: "ass-500", nome: "Maestro", descricao: "Distribua 500 assistências.", categoria: "Assistências", icone: "🎼", metrica: "assistencias", meta: 500 },
+
+    { id: "jogos-50", nome: "Presença constante", descricao: "Dispute 50 jogos.", categoria: "Jogos", icone: "👟", metrica: "jogos", meta: 50 },
+    { id: "jogos-100", nome: "Camisa 100", descricao: "Dispute 100 jogos.", categoria: "Jogos", icone: "👕", metrica: "jogos", meta: 100 },
+    { id: "jogos-250", nome: "Titular absoluto", descricao: "Dispute 250 jogos.", categoria: "Jogos", icone: "🏟️", metrica: "jogos", meta: 250 },
+    { id: "jogos-500", nome: "Veterano dos gramados", descricao: "Dispute 500 jogos.", categoria: "Jogos", icone: "🧤", metrica: "jogos", meta: 500 },
+    { id: "jogos-1000", nome: "Ícone do futebol", descricao: "Dispute 1.000 jogos.", categoria: "Jogos", icone: "🌟", metrica: "jogos", meta: 1000 },
+
+    { id: "titulos-1", nome: "Primeiro troféu", descricao: "Conquiste seu primeiro título coletivo ou individual.", categoria: "Títulos", icone: "🏆", metrica: "titulos", meta: 1 },
+    { id: "titulos-5", nome: "Colecionador", descricao: "Conquiste 5 títulos.", categoria: "Títulos", icone: "🏆", metrica: "titulos", meta: 5 },
+    { id: "titulos-10", nome: "Vitrine cheia", descricao: "Conquiste 10 títulos.", categoria: "Títulos", icone: "🥇", metrica: "titulos", meta: 10 },
+    { id: "titulos-25", nome: "Rei das taças", descricao: "Conquiste 25 títulos.", categoria: "Títulos", icone: "👑", metrica: "titulos", meta: 25 },
+    { id: "titulos-50", nome: "Lenda dos títulos", descricao: "Conquiste 50 títulos.", categoria: "Títulos", icone: "💎", metrica: "titulos", meta: 50 },
+
+    { id: "temp-1", nome: "Estreia profissional", descricao: "Conclua sua primeira temporada.", categoria: "Longevidade", icone: "📅", metrica: "temporadas", meta: 1 },
+    { id: "temp-5", nome: "Já é de casa", descricao: "Conclua 5 temporadas.", categoria: "Longevidade", icone: "📅", metrica: "temporadas", meta: 5 },
+    { id: "temp-10", nome: "Veterano", descricao: "Conclua 10 temporadas.", categoria: "Longevidade", icone: "🗓️", metrica: "temporadas", meta: 10 },
+    { id: "temp-15", nome: "Carreira duradoura", descricao: "Conclua 15 temporadas.", categoria: "Longevidade", icone: "⏳", metrica: "temporadas", meta: 15 },
+    { id: "temp-20", nome: "Lenda eterna", descricao: "Conclua 20 temporadas.", categoria: "Longevidade", icone: "♾️", metrica: "temporadas", meta: 20 },
+
+    { id: "premios-1", nome: "Reconhecimento", descricao: "Receba seu primeiro prêmio individual ou coletivo.", categoria: "Prêmios", icone: "🎖️", metrica: "premios", meta: 1 },
+    { id: "premios-5", nome: "Nome respeitado", descricao: "Receba 5 prêmios.", categoria: "Prêmios", icone: "🎖️", metrica: "premios", meta: 5 },
+    { id: "premios-10", nome: "Estrela consagrada", descricao: "Receba 10 prêmios.", categoria: "Prêmios", icone: "🌟", metrica: "premios", meta: 10 },
+    { id: "premios-25", nome: "Prateleira de honra", descricao: "Receba 25 prêmios.", categoria: "Prêmios", icone: "🏅", metrica: "premios", meta: 25 }
+];
+
+function obterMetricasCarreira(carreira) {
+    const temporadas = obterTemporadasDaCarreira(carreira);
+    const titulos = (Array.isArray(carreira.trofeusColetivos) ? carreira.trofeusColetivos.length : 0)
+        + (Array.isArray(carreira.trofeusIndividuais) ? carreira.trofeusIndividuais.length : 0);
+    return {
+        gols: Number(carreira.gols) || 0,
+        assistencias: Number(carreira.assistencias) || 0,
+        jogos: Number(carreira.jogos) || 0,
+        titulos,
+        temporadas: temporadas.length,
+        premios: Number(carreira.premios) || titulos,
+        pontuacao: Number(carreira.pontuacao) || calcularPontuacao(carreira)
+    };
+}
+
+function renderConquistas() {
+    const seletor = document.getElementById("filtro-carreira-conquistas");
+    const lista = document.getElementById("lista-conquistas");
+    const listaRecordes = document.getElementById("lista-recordes");
+    if (!seletor || !lista || !listaRecordes) return;
+
+    const ranking = lerRanking();
+    const selecaoAnterior = seletor.value;
+    const ordenadas = ranking.slice().reverse();
+    seletor.innerHTML = ordenadas.length
+        ? ordenadas.map((carreira) => `<option value="${escaparHTML(carreira.id)}">${escaparHTML(carreira.nome)} — ${escaparHTML(carreira.posicao)}</option>`).join("")
+        : '<option value="">Nenhuma carreira salva</option>';
+
+    if (ordenadas.some((carreira) => String(carreira.id) === selecaoAnterior)) {
+        seletor.value = selecaoAnterior;
+    }
+
+    const carreira = ordenadas.find((item) => String(item.id) === String(seletor.value)) || ordenadas[0];
+    if (carreira && !seletor.value) seletor.value = String(carreira.id);
+
+    if (!carreira) {
+        lista.innerHTML = '<p class="conquistas-vazio">Finalize uma carreira para começar a desbloquear conquistas.</p>';
+        document.getElementById("conquistas-desbloqueadas").textContent = "0";
+        document.getElementById("conquistas-total").textContent = String(CONQUISTAS.length);
+        document.getElementById("conquistas-percentual").textContent = "0%";
+    } else {
+        const metricas = obterMetricasCarreira(carreira);
+        const desbloqueadas = CONQUISTAS.filter((conquista) => metricas[conquista.metrica] >= conquista.meta);
+        const percentual = Math.round((desbloqueadas.length / CONQUISTAS.length) * 100);
+        document.getElementById("conquistas-desbloqueadas").textContent = String(desbloqueadas.length);
+        document.getElementById("conquistas-total").textContent = String(CONQUISTAS.length);
+        document.getElementById("conquistas-percentual").textContent = `${percentual}%`;
+
+        lista.innerHTML = CONQUISTAS.map((conquista) => {
+            const valor = metricas[conquista.metrica] || 0;
+            const desbloqueada = valor >= conquista.meta;
+            const progresso = Math.min(100, Math.round((valor / conquista.meta) * 100));
+            const valorExibido = conquista.metrica === "pontuacao" ? Math.floor(valor).toLocaleString("pt-BR") : valor.toLocaleString("pt-BR");
+            return `<article class="conquista-card ${desbloqueada ? "desbloqueada" : "bloqueada"}">
+                <div class="conquista-icone">${desbloqueada ? conquista.icone : "🔒"}</div>
+                <div class="conquista-conteudo">
+                    <span class="conquista-categoria">${escaparHTML(conquista.categoria)}</span>
+                    <strong>${escaparHTML(conquista.nome)}</strong>
+                    <p>${escaparHTML(conquista.descricao)}</p>
+                    <div class="conquista-progresso"><span style="width:${progresso}%"></span></div>
+                    <small>${valorExibido} / ${conquista.meta.toLocaleString("pt-BR")}${desbloqueada ? " · Desbloqueada" : ""}</small>
+                </div>
+            </article>`;
+        }).join("");
+    }
+
+    const temporadasDeTodas = ordenadas.flatMap((item) => obterTemporadasDaCarreira(item).map((temporada) => ({
+        ...temporada,
+        carreiraNome: item.nome,
+        pontosTemporada: calcularPontuacao({
+            jogos: temporada.jogos,
+            gols: temporada.gols,
+            assistencias: temporada.assistencias,
+            premios: contarPremios(temporada),
+            trofeusColetivos: temporada.trofeusColetivos || [],
+            trofeusIndividuais: temporada.trofeusIndividuais || []
+        }),
+        titulosTemporada: (temporada.trofeusColetivos || []).length + (temporada.trofeusIndividuais || []).length
+    })));
+
+    const recordes = [
+        { nome: "Mais gols em uma temporada", campo: "gols", sufixo: "gols", melhor: temporadasDeTodas.reduce((a, b) => !a || b.gols > a.gols ? b : a, null) },
+        { nome: "Mais assistências em uma temporada", campo: "assistencias", sufixo: "assistências", melhor: temporadasDeTodas.reduce((a, b) => !a || b.assistencias > a.assistencias ? b : a, null) },
+        { nome: "Mais títulos em uma temporada", campo: "titulosTemporada", sufixo: "títulos", melhor: temporadasDeTodas.reduce((a, b) => !a || b.titulosTemporada > a.titulosTemporada ? b : a, null) },
+        { nome: "Maior pontuação em uma temporada", campo: "pontosTemporada", sufixo: "pontos", melhor: temporadasDeTodas.reduce((a, b) => !a || b.pontosTemporada > a.pontosTemporada ? b : a, null) },
+        { nome: "Carreira com mais gols", campo: "gols", sufixo: "gols", melhor: ordenadas.reduce((a, b) => !a || b.gols > a.gols ? b : a, null), carreira: true }
+    ];
+
+    listaRecordes.innerHTML = recordes.map((recorde) => {
+        const melhor = recorde.melhor;
+        const valor = melhor ? Number(melhor[recorde.campo]) || 0 : 0;
+        return `<article class="recorde-card">
+            <span class="recorde-icone">🏆</span>
+            <div><strong>${escaparHTML(recorde.nome)}</strong>
+            <p>${melhor ? `${valor.toLocaleString("pt-BR")} ${recorde.sufixo}` : "Ainda sem dados"}</p>
+            <small>${melhor ? `${escaparHTML(recorde.carreira ? melhor.nome : melhor.carreiraNome)}${recorde.carreira ? "" : ` · ${escaparHTML(melhor.ano)}`}` : "Finalize uma carreira para registrar recordes"}</small></div>
+        </article>`;
+    }).join("");
+}
+
 function renderRanking() {
     const listaRanking = document.getElementById("lista-ranking");
     const filtroRanking = document.getElementById("filtro-ranking");
@@ -407,6 +546,7 @@ function renderRanking() {
 
     if (ranking.length === 0) {
         listaRanking.innerHTML = "<li>Nenhuma carreira finalizada ainda.</li>";
+        renderConquistas();
         return;
     }
 
@@ -438,6 +578,8 @@ function renderRanking() {
             `;
         })
         .join("");
+
+    renderConquistas();
 }
 
 function proximoAno(historico = lerHistorico()) {
@@ -643,6 +785,16 @@ function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao) {
     salvarRanking(rankingAtual);
 
     renderRanking();
+
+    const notificacaoConquista = document.getElementById("notificacao-conquista");
+    if (notificacaoConquista) {
+        const metricasConquista = obterMetricasCarreira(carreira);
+        const conquistasObtidas = CONQUISTAS.filter((conquista) => metricasConquista[conquista.metrica] >= conquista.meta);
+        notificacaoConquista.textContent = conquistasObtidas.length
+            ? `Carreira registrada! ${conquistasObtidas.length} de ${CONQUISTAS.length} conquistas desbloqueadas nesta carreira.`
+            : "Carreira registrada! Continue jogando para desbloquear conquistas.";
+        notificacaoConquista.hidden = false;
+    }
 
     if (resumoFinal) {
         resumoFinal.hidden = false;
@@ -900,6 +1052,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const filtroRanking = document.getElementById("filtro-ranking");
     const filtroPosicaoRanking = document.getElementById("filtro-posicao-ranking");
     const filtroHistorico = document.getElementById("filtro-historico");
+    const filtroCarreiraConquistas = document.getElementById("filtro-carreira-conquistas");
+
+    if (filtroCarreiraConquistas) {
+        filtroCarreiraConquistas.addEventListener("change", renderConquistas);
+    }
 
     if (botaoLimpar) {
         botaoLimpar.addEventListener("click", limparHistorico);
