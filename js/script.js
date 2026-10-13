@@ -451,6 +451,9 @@ function renderConquistas() {
     const listaRecordes = document.getElementById("lista-recordes");
     if (!seletor || !lista || !listaRecordes) return;
 
+    const filtroCategoria = document.getElementById("filtro-categoria-conquistas");
+    const categoriaSelecionada = filtroCategoria?.value || "todas";
+
     const ranking = lerRanking();
     const selecaoAnterior = seletor.value;
     const ordenadas = ranking.slice().reverse();
@@ -472,30 +475,46 @@ function renderConquistas() {
         document.getElementById("conquistas-percentual").textContent = "0%";
     } else {
         const metricas = obterMetricasCarreira(carreira);
+
+        // O percentual e a contagem SEMPRE consideram todas as conquistas,
+        // independente do filtro de categoria ativo.
         const desbloqueadas = CONQUISTAS.filter((conquista) => metricas[conquista.metrica] >= conquista.meta);
         const percentual = Math.round((desbloqueadas.length / CONQUISTAS.length) * 100);
         document.getElementById("conquistas-desbloqueadas").textContent = String(desbloqueadas.length);
         document.getElementById("conquistas-total").textContent = String(CONQUISTAS.length);
         document.getElementById("conquistas-percentual").textContent = `${percentual}%`;
 
-        lista.innerHTML = CONQUISTAS.map((conquista) => {
-            const valor = metricas[conquista.metrica] || 0;
-            const desbloqueada = valor >= conquista.meta;
-            const progresso = Math.min(100, Math.round((valor / conquista.meta) * 100));
-            const valorExibido = conquista.metrica === "pontuacao" ? Math.floor(valor).toLocaleString("pt-BR") : valor.toLocaleString("pt-BR");
-            return `<article class="conquista-card ${desbloqueada ? "desbloqueada" : "bloqueada"}">
-                <div class="conquista-icone">${desbloqueada ? conquista.icone : "🔒"}</div>
-                <div class="conquista-conteudo">
-                    <span class="conquista-categoria">${escaparHTML(conquista.categoria)}</span>
-                    <strong>${escaparHTML(conquista.nome)}</strong>
-                    <p>${escaparHTML(conquista.descricao)}</p>
-                    <div class="conquista-progresso"><span style="width:${progresso}%"></span></div>
-                    <small>${valorExibido} / ${conquista.meta.toLocaleString("pt-BR")}${desbloqueada ? " · Desbloqueada" : ""}</small>
-                </div>
-            </article>`;
-        }).join("");
+        // Filtro apenas para exibição.
+        const conquistasVisiveis = categoriaSelecionada === "todas"
+            ? CONQUISTAS
+            : CONQUISTAS.filter((conquista) => conquista.categoria === categoriaSelecionada);
+
+        if (conquistasVisiveis.length === 0) {
+            lista.innerHTML = '<p class="conquistas-vazio">Nenhuma conquista nesta categoria.</p>';
+        } else {
+            lista.innerHTML = conquistasVisiveis.map((conquista) => {
+                const valor = metricas[conquista.metrica] || 0;
+                const desbloqueada = valor >= conquista.meta;
+                const progresso = Math.min(100, Math.round((valor / conquista.meta) * 100));
+                const valorExibido = conquista.metrica === "pontuacao"
+                    ? Math.floor(valor).toLocaleString("pt-BR")
+                    : valor.toLocaleString("pt-BR");
+
+                return `<article class="conquista-card ${desbloqueada ? "desbloqueada" : "bloqueada"}">
+                    <div class="conquista-icone">${desbloqueada ? conquista.icone : "🔒"}</div>
+                    <div class="conquista-conteudo">
+                        <span class="conquista-categoria">${escaparHTML(conquista.categoria)}</span>
+                        <strong>${escaparHTML(conquista.nome)}</strong>
+                        <p>${escaparHTML(conquista.descricao)}</p>
+                        <div class="conquista-progresso"><span style="width:${progresso}%"></span></div>
+                        <small>${valorExibido} / ${conquista.meta.toLocaleString("pt-BR")}${desbloqueada ? " · Desbloqueada" : ""}</small>
+                    </div>
+                </article>`;
+            }).join("");
+        }
     }
 
+    // ----- Recordes -----
     const temporadasDeTodas = ordenadas.flatMap((item) => obterTemporadasDaCarreira(item).map((temporada) => ({
         ...temporada,
         carreiraNome: item.nome,
@@ -1053,7 +1072,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const filtroPosicaoRanking = document.getElementById("filtro-posicao-ranking");
     const filtroHistorico = document.getElementById("filtro-historico");
     const filtroCarreiraConquistas = document.getElementById("filtro-carreira-conquistas");
-
+    const filtroCategoriaConquistas = document.getElementById("filtro-categoria-conquistas");
+    
+    if (filtroCategoriaConquistas) {
+        filtroCategoriaConquistas.addEventListener("change", renderConquistas);
+    }
+  
     if (filtroCarreiraConquistas) {
         filtroCarreiraConquistas.addEventListener("change", renderConquistas);
     }
