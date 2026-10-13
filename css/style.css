@@ -726,6 +726,13 @@ button {
     }
 }
 
+@media (max-width: 600px) {
+    #lista-conquistas,
+    #lista-recordes {
+        max-height: 380px;
+    }
+}
+
 /* Detalhes da trajetória dentro de cada item do ranking */
 #lista-ranking .detalhes-carreira {
     margin-top: 14px;
@@ -1043,4 +1050,41 @@ button {
 
 .notificacao-conquista[hidden] {
     display: none;
+}
+
+/* Conquistas e recordes com altura limitada + scroll (igual ao histórico) */
+#lista-conquistas,
+#lista-recordes {
+    max-height: 480px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 8px;
+    scrollbar-width: thin;
+}
+
+/* Scroll combinando com o tema */
+#lista-conquistas::-webkit-scrollbar,
+#lista-recordes::-webkit-scrollbar,
+#lista-temporadas::-webkit-scrollbar {
+    width: 8px;
+}
+
+#lista-conquistas::-webkit-scrollbar-track,
+#lista-recordes::-webkit-scrollbar-track,
+#lista-temporadas::-webkit-scrollbar-track {
+    background: rgba(148, 163, 184, 0.08);
+    border-radius: 999px;
+}
+
+#lista-conquistas::-webkit-scrollbar-thumb,
+#lista-recordes::-webkit-scrollbar-thumb,
+#lista-temporadas::-webkit-scrollbar-thumb {
+    background: rgba(96, 165, 250, 0.4);
+    border-radius: 999px;
+}
+
+#lista-conquistas::-webkit-scrollbar-thumb:hover,
+#lista-recordes::-webkit-scrollbar-thumb:hover,
+#lista-temporadas::-webkit-scrollbar-thumb:hover {
+    background: rgba(96, 165, 250, 0.65);
 }
