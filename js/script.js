@@ -259,6 +259,17 @@ function salvarRanking(ranking) {
 
 function removerItemRanking(id) {
     const rankingAtual = lerRanking();
+    const carreira = rankingAtual.find((item) => String(item.id) === String(id));
+    const nomeCarreira = carreira ? carreira.nome : "esta carreira";
+
+    const confirmado = confirm(
+        `Tem certeza que deseja apagar "${nomeCarreira}" do ranking?\n\nEsta ação não pode ser desfeita.`
+    );
+
+    if (!confirmado) {
+        return;
+    }
+
     const rankingFiltrado = rankingAtual.filter((carreira) => String(carreira.id) !== String(id));
 
     salvarRanking(rankingFiltrado);
@@ -1078,6 +1089,21 @@ function simularTudo() {
 }
 
 function limparHistorico() {
+    const historico = lerHistorico();
+
+    if (historico.length === 0) {
+        alert("Não há histórico para limpar.");
+        return;
+    }
+
+    const confirmado = confirm(
+        "Tem certeza que deseja limpar TODO o histórico de temporadas?\n\nEsta ação não pode ser desfeita."
+    );
+
+    if (!confirmado) {
+        return;
+    }
+
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(STORAGE_KEY_CARREIRA_ATUAL);
     document.getElementById("nome").value = "";
@@ -1088,6 +1114,21 @@ function limparHistorico() {
 }
 
 function limparRanking() {
+    const ranking = lerRanking();
+
+    if (ranking.length === 0) {
+        alert("Não há carreiras no ranking para limpar.");
+        return;
+    }
+
+    const confirmado = confirm(
+        "Tem certeza que deseja limpar TODO o ranking de carreiras?\n\nEsta ação não pode ser desfeita."
+    );
+
+    if (!confirmado) {
+        return;
+    }
+
     localStorage.removeItem(STORAGE_KEY_RANKING);
     renderRanking();
 }
