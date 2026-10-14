@@ -188,6 +188,18 @@
 
     <footer><a href="https://github.com/Ysmart2303">Ysmart2303</a> / 2026</footer>
 
-    <script src="js/script.js" defer></script>
+<div id="modal-confirmacao" class="modal-overlay" hidden>
+    <div class="modal-caixa" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+        <div class="modal-icone">⚠️</div>
+        <h3 id="modal-titulo">Confirmar ação</h3>
+        <p id="modal-mensagem">Tem certeza?</p>
+        <div class="modal-acoes">
+            <button type="button" id="modal-cancelar" class="modal-btn modal-btn--cancelar">Cancelar</button>
+            <button type="button" id="modal-confirmar" class="modal-btn modal-btn--confirmar">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/script.js" defer></script>
 </body>
 </html>
