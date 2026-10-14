@@ -283,19 +283,39 @@ function sortearPremio(chance) {
     return Math.random() < chance;
 }
 
-function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano) {
+function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, temporadasAnteriores = []) {
     const trofeusColetivos = [];
     const trofeusIndividuais = [];
     const temporadaAtual = Number(ano) || ANO_INICIAL;
     const cicloCopaDoMundo = (temporadaAtual - ANO_INICIAL) % 4 === 0;
+    // O Mundial de Clubes acontece a cada quatro anos, começando em 2029.
+    const anoCopaDoMundoDeClubes = temporadaAtual >= 2029 && (temporadaAtual - 2029) % 4 === 0;
 
     if (jogos >= 35 && sortearPremio(0.18)) trofeusColetivos.push("Copa Continental");
     if (jogos >= 30 && sortearPremio(0.28)) trofeusColetivos.push("Liga Nacional");
     if (jogos >= 25 && sortearPremio(0.22)) trofeusColetivos.push("Copa Nacional");
     if (jogos >= 35 && cicloCopaDoMundo && sortearPremio(0.12)) trofeusColetivos.push("Copa do Mundo");
 
+    const ganhouContinentalNestaTemporada = trofeusColetivos.includes("Copa Continental");
+    const inicioCicloMundial = ANO_INICIAL + Math.floor((temporadaAtual - ANO_INICIAL) / 4) * 4;
+    const ganhouContinentalNoCiclo = ganhouContinentalNestaTemporada || temporadasAnteriores.some((temporada) =>
+        Number(temporada.ano) >= inicioCicloMundial && Number(temporada.ano) <= temporadaAtual &&
+        Array.isArray(temporada.trofeusColetivos) && temporada.trofeusColetivos.includes("Copa Continental")
+    );
+
+    if (jogos >= 35 && ganhouContinentalNestaTemporada && sortearPremio(0.35)) {
+        trofeusColetivos.push("Intercontinental");
+    }
+    if (jogos >= 35 && anoCopaDoMundoDeClubes && ganhouContinentalNoCiclo && sortearPremio(0.20)) {
+        trofeusColetivos.push("Copa do Mundo de Clubes");
+    }
+
     if (posicao !== "Goleiro" && trofeusColetivos.length >= 2 && (gols >= 20 || assistencias >= 15 || gols + assistencias >= 25) && sortearPremio(0.25)) {
         trofeusIndividuais.push("Bola de Ouro");
+    }
+
+    if (Number(idade) <= 20 && Number(idade) >= 0 && (gols >= 10 || assistencias >= 8 || gols + assistencias >= 15) && sortearPremio(0.18)) {
+        trofeusIndividuais.push("Golden Boy");
     }
 
     if (gols > jogos && sortearPremio(0.5)) {
@@ -885,13 +905,13 @@ function obterHistoricoDaCarreira(nome, dadosPosicao) {
     });
 }
 
-function criarTemporada(nome, idade, ano, posicao) {
+function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = []) {
     const dados = posicoes[posicao];
     const carreiraAtual = obterCarreiraAtual();
     const jogos = sortearValorPorSubconjunto(dados.jogos);
     const gols = sortearValorPorSubconjunto(dados.gols);
     const assistencias = sortearValorPorSubconjunto(dados.assistencias);
-    const trofeus = gerarTrofeusTemporada(dados.nome, jogos, gols, assistencias, ano);
+    const trofeus = gerarTrofeusTemporada(dados.nome, jogos, gols, assistencias, ano, idade, temporadasAnteriores);
 
     return {
         nome,
@@ -959,7 +979,7 @@ function gerar() {
             return;
         }
 
-        const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id);
+        const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id, historico);
         const historicoAtualizado = [...historico, temporada];
 
         document.getElementById("nome").value = nome;
@@ -1032,7 +1052,7 @@ function simularTudo() {
         let ano = ANO_INICIAL;
 
         while (idade <= idadeLimite) {
-            const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id);
+            const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id, historico);
             historico.push(temporada);
             idade = Number(historico[historico.length - 1].idade) + 1;
             ano = proximoAno(historico);
