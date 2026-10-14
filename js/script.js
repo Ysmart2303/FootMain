@@ -314,7 +314,11 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
         trofeusIndividuais.push("Bola de Ouro");
     }
 
-    if (Number(idade) <= 20 && Number(idade) >= 0 && (gols >= 10 || assistencias >= 8 || gols + assistencias >= 15) && sortearPremio(0.18)) {
+    const jaGanhouGoldenBoy = temporadasAnteriores.some((temporada) =>
+        Array.isArray(temporada.trofeusIndividuais) && temporada.trofeusIndividuais.includes("Golden Boy")
+    );
+
+    if (!jaGanhouGoldenBoy && Number(idade) <= 20 && Number(idade) >= 0 && (gols >= 10 || assistencias >= 8 || gols + assistencias >= 15) && sortearPremio(0.18)) {
         trofeusIndividuais.push("Golden Boy");
     }
 
