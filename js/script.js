@@ -257,13 +257,65 @@ function salvarRanking(ranking) {
     return safeStorageSet(STORAGE_KEY_RANKING, JSON.stringify(normalizarRanking(ranking)));
 }
 
-function removerItemRanking(id) {
+function confirmarAcao(mensagem, titulo = "Confirmar ação") {
+    return new Promise((resolve) => {
+        const overlay = document.getElementById("modal-confirmacao");
+        const tituloEl = document.getElementById("modal-titulo");
+        const mensagemEl = document.getElementById("modal-mensagem");
+        const btnCancelar = document.getElementById("modal-cancelar");
+        const btnConfirmar = document.getElementById("modal-confirmar");
+
+        if (!overlay || !btnCancelar || !btnConfirmar) {
+            // Fallback: se o modal não existir, usa o confirm() nativo.
+            resolve(confirm(mensagem));
+            return;
+        }
+
+        tituloEl.textContent = titulo;
+        mensagemEl.textContent = mensagem;
+
+        const fechar = (resultado) => {
+            overlay.hidden = true;
+            document.removeEventListener("keydown", aoTeclar);
+            btnCancelar.removeEventListener("click", aoCancelar);
+            btnConfirmar.removeEventListener("click", aoConfirmar);
+            overlay.removeEventListener("click", aoClicarFora);
+            resolve(resultado);
+        };
+
+        const aoCancelar = () => fechar(false);
+        const aoConfirmar = () => fechar(true);
+        const aoClicarFora = (evento) => {
+            if (evento.target === overlay) {
+                fechar(false);
+            }
+        };
+        const aoTeclar = (evento) => {
+            if (evento.key === "Escape") {
+                fechar(false);
+            } else if (evento.key === "Enter") {
+                fechar(true);
+            }
+        };
+
+        btnCancelar.addEventListener("click", aoCancelar);
+        btnConfirmar.addEventListener("click", aoConfirmar);
+        overlay.addEventListener("click", aoClicarFora);
+        document.addEventListener("keydown", aoTeclar);
+
+        overlay.hidden = false;
+        btnConfirmar.focus();
+    });
+}
+
+async function removerItemRanking(id) {
     const rankingAtual = lerRanking();
     const carreira = rankingAtual.find((item) => String(item.id) === String(id));
     const nomeCarreira = carreira ? carreira.nome : "esta carreira";
 
-    const confirmado = confirm(
-        `Tem certeza que deseja apagar "${nomeCarreira}" do ranking?\n\nEsta ação não pode ser desfeita.`
+    const confirmado = await confirmarAcao(
+        `Tem certeza que deseja apagar "${nomeCarreira}" do ranking?\n\nEsta ação não pode ser desfeita.`,
+        "Apagar carreira"
     );
 
     if (!confirmado) {
@@ -1088,16 +1140,17 @@ function simularTudo() {
     }
 }
 
-function limparHistorico() {
+async function limparHistorico() {
     const historico = lerHistorico();
 
     if (historico.length === 0) {
-        alert("Não há histórico para limpar.");
+        await confirmarAcao("Não há histórico para limpar.", "Nada para apagar");
         return;
     }
 
-    const confirmado = confirm(
-        "Tem certeza que deseja limpar TODO o histórico de temporadas?\n\nEsta ação não pode ser desfeita."
+    const confirmado = await confirmarAcao(
+        "Tem certeza que deseja limpar TODO o histórico de temporadas?\n\nEsta ação não pode ser desfeita.",
+        "Limpar histórico"
     );
 
     if (!confirmado) {
@@ -1113,16 +1166,17 @@ function limparHistorico() {
     renderHistorico();
 }
 
-function limparRanking() {
+async function limparRanking() {
     const ranking = lerRanking();
 
     if (ranking.length === 0) {
-        alert("Não há carreiras no ranking para limpar.");
+        await confirmarAcao("Não há carreiras no ranking para limpar.", "Nada para apagar");
         return;
     }
 
-    const confirmado = confirm(
-        "Tem certeza que deseja limpar TODO o ranking de carreiras?\n\nEsta ação não pode ser desfeita."
+    const confirmado = await confirmarAcao(
+        "Tem certeza que deseja limpar TODO o ranking de carreiras?\n\nEsta ação não pode ser desfeita.",
+        "Limpar ranking"
     );
 
     if (!confirmado) {
