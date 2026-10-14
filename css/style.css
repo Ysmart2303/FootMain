@@ -1170,3 +1170,119 @@ button {
 #lista-temporadas::-webkit-scrollbar-thumb:hover {
     background: rgba(96, 165, 250, 0.65);
 }
+
+/* ==============================
+   Modal de confirmação
+   ============================== */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(2, 8, 23, 0.75);
+    backdrop-filter: blur(4px);
+    animation: modalFadeIn 0.18s ease;
+}
+
+.modal-overlay[hidden] {
+    display: none;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes modalSlideIn {
+    from { opacity: 0; transform: translateY(12px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal-caixa {
+    width: min(100%, 420px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 26px 22px 22px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.96));
+    border: 1px solid rgba(250, 204, 21, 0.35);
+    box-shadow: 0 24px 60px rgba(2, 8, 23, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    animation: modalSlideIn 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+}
+
+.modal-icone {
+    width: 54px;
+    height: 54px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    font-size: 1.7rem;
+    background: rgba(250, 204, 21, 0.12);
+    border: 1px solid rgba(250, 204, 21, 0.35);
+}
+
+.modal-caixa h3 {
+    color: #facc15;
+    font-size: 1.15rem;
+    text-align: center;
+    letter-spacing: 0.02em;
+}
+
+.modal-caixa p {
+    color: #cbd5e1;
+    text-align: center;
+    line-height: 1.5;
+    font-size: 0.95rem;
+    white-space: pre-line;
+}
+
+.modal-acoes {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    margin-top: 8px;
+}
+
+.modal-btn {
+    flex: 1;
+    padding: 11px 16px;
+    border-radius: 11px;
+    font-weight: 800;
+    font-size: 0.95rem;
+    transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+}
+
+.modal-btn--cancelar {
+    background: rgba(148, 163, 184, 0.15);
+    color: #e2e8f0;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.modal-btn--cancelar:hover {
+    background: rgba(148, 163, 184, 0.25);
+}
+
+.modal-btn--confirmar {
+    background: linear-gradient(135deg, #ef4444, #b91c1c);
+    color: #fff;
+    border: none;
+}
+
+.modal-btn--confirmar:hover {
+    opacity: 0.92;
+}
+
+@media (max-width: 420px) {
+    .modal-caixa {
+        padding: 22px 16px 18px;
+    }
+
+    .modal-acoes {
+        flex-direction: column-reverse;
+    }
+}
