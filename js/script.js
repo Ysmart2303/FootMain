@@ -294,15 +294,15 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano) {
     if (jogos >= 25 && sortearPremio(0.22)) trofeusColetivos.push("Copa Nacional");
     if (jogos >= 35 && cicloCopaDoMundo && sortearPremio(0.12)) trofeusColetivos.push("Copa do Mundo");
 
-    if (posicao !== "Goleiro" && trofeusColetivos.length > 0 && (gols >= 20 || assistencias >= 15 || gols + assistencias >= 25) && sortearPremio(0.12)) {
+    if (posicao !== "Goleiro" && trofeusColetivos.length >= 2 && (gols >= 20 || assistencias >= 15 || gols + assistencias >= 25) && sortearPremio(0.25)) {
         trofeusIndividuais.push("Bola de Ouro");
     }
 
-    if (gols > jogos && sortearPremio(0.2)) {
+    if (gols > jogos && sortearPremio(0.5)) {
         trofeusIndividuais.push("Chuteira de Ouro");
     }
 
-    if (posicao === "Goleiro" && jogos >= 30 && sortearPremio(0.18)) {
+    if (posicao === "Goleiro" && jogos >= 30 && sortearPremio(0.3)) {
         trofeusIndividuais.push("Luva de Ouro");
     }
 
@@ -401,8 +401,6 @@ const CONQUISTAS = [
     { id: "gols-750", nome: "Imparável", descricao: "Marque 750 gols na carreira.", categoria: "Gols", icone: "🌋", metrica: "gols", meta: 750 },
     { id: "gols-1000", nome: "Novo Pelé", descricao: "Marque 1000 gols na carreira.", categoria: "Gols", icone: "👑", metrica: "gols", meta: 1000 },
 
-
-
     { id: "ass-25", nome: "Bom garçom", descricao: "Distribua 25 assistências.", categoria: "Assistências", icone: "🅰️", metrica: "assistencias", meta: 25 },
     { id: "ass-50", nome: "Garçom", descricao: "Distribua 50 assistências.", categoria: "Assistências", icone: "🅰️", metrica: "assistencias", meta: 50 },
     { id: "ass-100", nome: "Mestre das assistências", descricao: "Distribua 100 assistências.", categoria: "Assistências", icone: "🎯", metrica: "assistencias", meta: 100 },
@@ -415,11 +413,17 @@ const CONQUISTAS = [
     { id: "jogos-500", nome: "Veterano dos gramados", descricao: "Dispute 500 jogos.", categoria: "Jogos", icone: "🧤", metrica: "jogos", meta: 500 },
     { id: "jogos-1000", nome: "Ícone do futebol", descricao: "Dispute 1.000 jogos.", categoria: "Jogos", icone: "🌟", metrica: "jogos", meta: 1000 },
 
-    { id: "titulos-1", nome: "Primeiro troféu", descricao: "Conquiste seu primeiro título coletivo ou individual.", categoria: "Títulos", icone: "🏆", metrica: "titulos", meta: 1 },
-    { id: "titulos-5", nome: "Colecionador", descricao: "Conquiste 5 títulos.", categoria: "Títulos", icone: "🏆", metrica: "titulos", meta: 5 },
-    { id: "titulos-10", nome: "Vitrine cheia", descricao: "Conquiste 10 títulos.", categoria: "Títulos", icone: "🥇", metrica: "titulos", meta: 10 },
-    { id: "titulos-25", nome: "Rei das taças", descricao: "Conquiste 25 títulos.", categoria: "Títulos", icone: "👑", metrica: "titulos", meta: 25 },
-    { id: "titulos-50", nome: "Lenda dos títulos", descricao: "Conquiste 50 títulos.", categoria: "Títulos", icone: "💎", metrica: "titulos", meta: 50 },
+    { id: "coletivos-1", nome: "Primeira taça", descricao: "Conquiste seu primeiro título coletivo.", categoria: "Títulos coletivos", icone: "🏆", metrica: "titulosColetivos", meta: 1 },
+    { id: "coletivos-5", nome: "Vitrine de taças", descricao: "Conquiste 5 títulos coletivos.", categoria: "Títulos coletivos", icone: "🏆", metrica: "titulosColetivos", meta: 5 },
+    { id: "coletivos-10", nome: "Colecionador de taças", descricao: "Conquiste 10 títulos coletivos.", categoria: "Títulos coletivos", icone: "🥇", metrica: "titulosColetivos", meta: 10 },
+    { id: "coletivos-20", nome: "Rei das competições", descricao: "Conquiste 20 títulos coletivos.", categoria: "Títulos coletivos", icone: "👑", metrica: "titulosColetivos", meta: 20 },
+    { id: "coletivos-30", nome: "Dinastia vencedora", descricao: "Conquiste 30 títulos coletivos.", categoria: "Títulos coletivos", icone: "💎", metrica: "titulosColetivos", meta: 30 },
+
+    { id: "individuais-1", nome: "Talento reconhecido", descricao: "Conquiste seu primeiro título individual.", categoria: "Títulos individuais", icone: "🌟", metrica: "titulosIndividuais", meta: 1 },
+    { id: "individuais-5", nome: "Destaque da temporada", descricao: "Conquiste 5 títulos individuais.", categoria: "Títulos individuais", icone: "🎖️", metrica: "titulosIndividuais", meta: 5 },
+    { id: "individuais-10", nome: "Estrela consagrada", descricao: "Conquiste 10 títulos individuais.", categoria: "Títulos individuais", icone: "🥇", metrica: "titulosIndividuais", meta: 10 },
+    { id: "individuais-15", nome: "Lenda individual", descricao: "Conquiste 15 títulos individuais.", categoria: "Títulos individuais", icone: "🏅", metrica: "titulosIndividuais", meta: 15 },
+    { id: "individuais-20", nome: "Melhor dos melhores", descricao: "Conquiste 20 títulos individuais.", categoria: "Títulos individuais", icone: "👑", metrica: "titulosIndividuais", meta: 20 },
 
     { id: "temp-1", nome: "Estreia profissional", descricao: "Conclua sua primeira temporada.", categoria: "Longevidade", icone: "📅", metrica: "temporadas", meta: 1 },
     { id: "temp-5", nome: "Já é de casa", descricao: "Conclua 5 temporadas.", categoria: "Longevidade", icone: "📅", metrica: "temporadas", meta: 5 },
@@ -427,21 +431,18 @@ const CONQUISTAS = [
     { id: "temp-15", nome: "Carreira duradoura", descricao: "Conclua 15 temporadas.", categoria: "Longevidade", icone: "⏳", metrica: "temporadas", meta: 15 },
     { id: "temp-20", nome: "Lenda eterna", descricao: "Conclua 20 temporadas.", categoria: "Longevidade", icone: "♾️", metrica: "temporadas", meta: 20 },
 
-    { id: "premios-1", nome: "Reconhecimento", descricao: "Receba seu primeiro prêmio individual ou coletivo.", categoria: "Prêmios", icone: "🎖️", metrica: "premios", meta: 1 },
-    { id: "premios-5", nome: "Nome respeitado", descricao: "Receba 5 prêmios.", categoria: "Prêmios", icone: "🎖️", metrica: "premios", meta: 5 },
-    { id: "premios-10", nome: "Estrela consagrada", descricao: "Receba 10 prêmios.", categoria: "Prêmios", icone: "🌟", metrica: "premios", meta: 10 },
-    { id: "premios-25", nome: "Prateleira de honra", descricao: "Receba 25 prêmios.", categoria: "Prêmios", icone: "🏅", metrica: "premios", meta: 25 }
 ];
 
 function obterMetricasCarreira(carreira) {
     const temporadas = obterTemporadasDaCarreira(carreira);
-    const titulos = (Array.isArray(carreira.trofeusColetivos) ? carreira.trofeusColetivos.length : 0)
-        + (Array.isArray(carreira.trofeusIndividuais) ? carreira.trofeusIndividuais.length : 0);
+    const titulosColetivos = Array.isArray(carreira.trofeusColetivos) ? carreira.trofeusColetivos.length : 0;
+    const titulosIndividuais = Array.isArray(carreira.trofeusIndividuais) ? carreira.trofeusIndividuais.length : 0;
     return {
         gols: Number(carreira.gols) || 0,
         assistencias: Number(carreira.assistencias) || 0,
         jogos: Number(carreira.jogos) || 0,
-        titulos,
+        titulosColetivos,
+        titulosIndividuais,
         temporadas: temporadas.length,
         premios: Number(carreira.premios) || titulos,
         pontuacao: Number(carreira.pontuacao) || calcularPontuacao(carreira)
