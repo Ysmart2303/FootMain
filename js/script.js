@@ -1277,9 +1277,7 @@ function simularTudo() {
         const posicaoSelecionada = document.querySelector('input[name="posicao"]:checked');
         const resumoFinal = document.getElementById("resumo-final");
 
-        if (resumoFinal) {
-            resumoFinal.hidden = true;
-        }
+        if (resumoFinal) resumoFinal.hidden = true;
 
         if (!posicaoSelecionada) {
             alert("Selecione uma posição antes de simular a carreira completa.");
@@ -1306,23 +1304,35 @@ function simularTudo() {
         carreiraAtual.idadeLimite = idadeLimite;
         carreiraAtual.nacionalidade = nacionalidade;
 
-        // Simulação completa sempre começa uma NOVA carreira:
-        // gera um id novo para não colidir com o ranking anterior.
-        carreiraAtual.id = gerarIdRanking();
+        // Se "gerar" já criou temporadas para esta carreira, continuamos dela.
+        // Se ainda não há temporadas, iniciamos uma carreira nova.
+        const historicoCompleto = lerHistorico();
+        let historico = historicoCompleto.filter(
+            (temporada) => temporada.carreiraId === carreiraAtual.id
+        );
+        const continuandoCarreira = historico.length > 0;
+
+        if (!continuandoCarreira) {
+            carreiraAtual.id = gerarIdRanking();
+            historico = [];
+        }
         salvarCarreiraAtual(carreiraAtual);
 
-        // Como o id é inédito, nenhuma temporada antiga é removida por engano;
-        // apenas limpamos eventuais sobras com esse id (não deve haver).
-        const historicoExistente = lerHistorico();
-        const historicoDeOutrasCarreiras = historicoExistente.filter(
-            (temporada) => temporada.carreiraId !== carreiraAtual.id
-        );
-        salvarHistorico(historicoDeOutrasCarreiras);
+        let idade;
+        let ano;
+        let clubeAtual;
 
-        let historico = [];
-        let idade = dadosValidos.idade;
-        let ano = ANO_INICIAL;
-        let clubeAtual = sortearClubeParaTemporada("", true);
+        if (continuandoCarreira) {
+            const ultimaTemporada = historico[historico.length - 1];
+            idade = (Number(ultimaTemporada.idade) || 0) + 1;
+            ano = proximoAno(historico);
+            clubeAtual = ultimaTemporada.clube || carreiraAtual.clube;
+        } else {
+            idade = dadosValidos.idade;
+            ano = ANO_INICIAL;
+            clubeAtual = sortearClubeParaTemporada("", true);
+        }
+
         carreiraAtual.clube = clubeAtual;
         salvarCarreiraAtual(carreiraAtual);
 
@@ -1345,7 +1355,11 @@ function simularTudo() {
             atualizarResumoJogador(nome, idadeUltima, ano, nacionalidade, ultimaTemporada.clube);
         }
 
-        salvarHistorico(historico);
+        // Substitui apenas as temporadas da carreira atual e preserva as outras.
+        const historicoDeOutrasCarreiras = lerHistorico().filter(
+            (temporada) => temporada.carreiraId !== carreiraAtual.id
+        );
+        salvarHistorico([...historicoDeOutrasCarreiras, ...historico]);
         renderHistorico();
         mostrarResumoFinal(nome, idadeLimite, ano, historico, dadosPosicao.nome);
     } finally {
