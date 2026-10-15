@@ -2,6 +2,47 @@ const STORAGE_KEY = "footmain_temporadas";
 const STORAGE_KEY_RANKING = "footmain_ranking";
 const STORAGE_KEY_CARREIRA_ATUAL = "footmain_carreira_atual";
 
+const CLUBES = [
+    { id: "manchester-city", nome: "Manchester City", liga: "Premier League" },
+    { id: "arsenal", nome: "Arsenal", liga: "Premier League" },
+    { id: "liverpool", nome: "Liverpool", liga: "Premier League" },
+    { id: "chelsea", nome: "Chelsea", liga: "Premier League" },
+    { id: "manchester-united", nome: "Manchester United", liga: "Premier League" },
+    { id: "real-madrid", nome: "Real Madrid", liga: "La Liga" },
+    { id: "barcelona", nome: "Barcelona", liga: "La Liga" },
+    { id: "atletico-madrid", nome: "Atlético de Madrid", liga: "La Liga" },
+    { id: "athletic-bilbao", nome: "Athletic Club", liga: "La Liga" },
+    { id: "real-sociedad", nome: "Real Sociedad", liga: "La Liga" },
+    { id: "inter", nome: "Inter de Milão", liga: "Serie A" },
+    { id: "milan", nome: "Milan", liga: "Serie A" },
+    { id: "juventus", nome: "Juventus", liga: "Serie A" },
+    { id: "napoli", nome: "Napoli", liga: "Serie A" },
+    { id: "roma", nome: "Roma", liga: "Serie A" },
+    { id: "bayern-munich", nome: "Bayern de Munique", liga: "Bundesliga" },
+    { id: "borussia-dortmund", nome: "Borussia Dortmund", liga: "Bundesliga" },
+    { id: "bayer-leverkusen", nome: "Bayer Leverkusen", liga: "Bundesliga" },
+    { id: "rb-leipzig", nome: "RB Leipzig", liga: "Bundesliga" },
+    { id: "stuttgart", nome: "Stuttgart", liga: "Bundesliga" },
+    { id: "paris-saint-germain", nome: "Paris Saint-Germain", liga: "Ligue 1" },
+    { id: "marseille", nome: "Marseille", liga: "Ligue 1" },
+    { id: "monaco", nome: "Monaco", liga: "Ligue 1" },
+    { id: "lille", nome: "Lille", liga: "Ligue 1" },
+    { id: "lyon", nome: "Lyon", liga: "Ligue 1" }
+];
+
+function obterClube(clubeId) {
+    return CLUBES.find((clube) => clube.id === clubeId) || null;
+}
+
+function sortearClubes(quantidade, clubeExcluir = "") {
+    const disponiveis = CLUBES.filter((clube) => clube.id !== clubeExcluir);
+    for (let indice = 0; indice < quantidade; indice++) {
+        const indiceAleatorio = indice + Math.floor(Math.random() * (disponiveis.length - indice));
+        [disponiveis[indice], disponiveis[indiceAleatorio]] = [disponiveis[indiceAleatorio], disponiveis[indice]];
+    }
+    return disponiveis.slice(0, quantidade);
+}
+
 function sortearIndicePonderado(pesos) {
     const pesoTotal = pesos.reduce((total, peso) => total + peso, 0);
     let sorteio = Math.random() * pesoTotal;
@@ -104,6 +145,7 @@ function validarTemporada(temporada) {
         posicao: dadosPosicao.nome,
         posicaoKey: posicaoNormalizada,
         nacionalidade: SELECOES.some((selecao) => selecao.id === temporada.nacionalidade) ? temporada.nacionalidade : "",
+        clube: obterClube(temporada.clube)?.id || "",
         ano,
         jogos,
         gols,
@@ -167,7 +209,8 @@ function obterCarreiraAtual() {
             nome: normalizarNome(carreira.nome) || "Jogador",
             posicao: typeof carreira.posicao === "string" ? carreira.posicao : "Atacante",
             idadeLimite: Number.isFinite(Number(carreira.idadeLimite)) ? Math.max(1, Math.floor(Number(carreira.idadeLimite))) : IDADE_LIMITE_PADRAO,
-            nacionalidade: SELECOES.some((selecao) => selecao.id === carreira.nacionalidade) ? carreira.nacionalidade : ""
+            nacionalidade: SELECOES.some((selecao) => selecao.id === carreira.nacionalidade) ? carreira.nacionalidade : "",
+            clube: obterClube(carreira.clube)?.id || ""
         };
     } catch (erro) {
         console.error("Erro ao ler a carreira atual:", erro);
@@ -182,7 +225,8 @@ function salvarCarreiraAtual(carreira) {
         nome: normalizarNome(carreiraAtual.nome) || "Jogador",
         posicao: typeof carreiraAtual.posicao === "string" ? carreiraAtual.posicao : "Atacante",
         idadeLimite: Number.isFinite(Number(carreiraAtual.idadeLimite)) ? Math.max(1, Math.floor(Number(carreiraAtual.idadeLimite))) : IDADE_LIMITE_PADRAO,
-        nacionalidade: SELECOES.some((selecao) => selecao.id === carreiraAtual.nacionalidade) ? carreiraAtual.nacionalidade : ""
+        nacionalidade: SELECOES.some((selecao) => selecao.id === carreiraAtual.nacionalidade) ? carreiraAtual.nacionalidade : "",
+        clube: obterClube(carreiraAtual.clube)?.id || ""
     }));
 }
 
@@ -199,6 +243,7 @@ function normalizarRanking(ranking) {
             nome: normalizarNome(carreira.nome) || "Jogador",
             posicao: typeof carreira.posicao === "string" ? carreira.posicao : "-",
             nacionalidade: SELECOES.some((selecao) => selecao.id === carreira.nacionalidade) ? carreira.nacionalidade : "",
+            clube: obterClube(carreira.clube)?.id || "",
             idadeLimite: Number.isFinite(Number(carreira.idadeLimite)) ? Math.max(1, Math.floor(Number(carreira.idadeLimite))) : IDADE_LIMITE_PADRAO,
             jogos: Number.isFinite(Number(carreira.jogos)) ? Math.max(0, Math.floor(Number(carreira.jogos))) : 0,
             gols: Number.isFinite(Number(carreira.gols)) ? Math.max(0, Math.floor(Number(carreira.gols))) : 0,
@@ -516,6 +561,7 @@ function renderDetalhesCarreira(carreira) {
             const trofeus = [...(temporada.trofeusColetivos || []), ...(temporada.trofeusIndividuais || [])];
             return `<div class="temporada-carreira-detalhe">
                 <strong>${escaparHTML(temporada.ano)} · ${escaparHTML(temporada.idade)} anos</strong>
+                <span>${escaparHTML(obterClube(temporada.clube)?.nome || "Clube não definido")}</span>
                 <span>${temporada.jogos} jogos</span>
                 <span>${temporada.gols} gols</span>
                 <span>${temporada.assistencias} assistências</span>
@@ -740,7 +786,7 @@ function renderRanking() {
                 <li class="${classeTop}">
                     <span class="rank-medal">${medalha}</span>
                     <strong>#${index + 1} - ${escaparHTML(carreira.nome)}</strong>
-                    <p>Posição: ${escaparHTML(carreira.posicao)} | Seleção: ${escaparHTML(SELECOES.find((selecao) => selecao.id === carreira.nacionalidade)?.nome || "Não definida")} | Pontuação: ${carreira.pontuacao}</p>
+                    <p>Posição: ${escaparHTML(carreira.posicao)} | Seleção: ${escaparHTML(SELECOES.find((selecao) => selecao.id === carreira.nacionalidade)?.nome || "Não definida")} | Último clube: ${escaparHTML(obterClube(carreira.clube)?.nome || "Não definido")} | Pontuação: ${carreira.pontuacao}</p>
                     <p>Jogos: ${carreira.jogos} | Gols: ${carreira.gols} | Assistências: ${carreira.assistencias} | Prêmios: ${premios}</p>
                     <p>Títulos coletivos: ${trofeusColetivos.length} | Títulos individuais: ${trofeusIndividuais.length}</p>
                     <div class="ranking-trofeus">${conteudoTrofeus}</div>
@@ -764,17 +810,20 @@ function proximoAno(historico = lerHistorico()) {
     return Math.max(...maioresAnos) + 1;
 }
 
-function atualizarResumoJogador(nome, idade, ano, nacionalidade = obterCarreiraAtual().nacionalidade) {
+function atualizarResumoJogador(nome, idade, ano, nacionalidade = obterCarreiraAtual().nacionalidade, clubeId = obterCarreiraAtual().clube) {
     const perfilNome = document.getElementById("perfil-nome");
     const perfilIdade = document.getElementById("perfil-idade");
     const perfilAno = document.getElementById("perfil-ano");
     const perfilSelecao = document.getElementById("perfil-selecao");
     const selecao = SELECOES.find((item) => item.id === nacionalidade);
+    const perfilClube = document.getElementById("perfil-clube");
+    const clube = obterClube(clubeId);
 
     if (perfilNome) perfilNome.textContent = nome || "Jogador";
     if (perfilIdade) perfilIdade.textContent = idade ?? 0;
     if (perfilAno) perfilAno.textContent = ano ?? ANO_INICIAL;
     if (perfilSelecao) perfilSelecao.textContent = selecao ? selecao.nome : "Não definida";
+    if (perfilClube) perfilClube.textContent = clube ? clube.nome : "Ainda não escolhido";
 }
 
 function lerHistoricoAtiva() {
@@ -835,6 +884,7 @@ function renderHistorico() {
                 <li>
                     <strong>Temporada ${temporada.ano}</strong>
                     <span> - ${temporada.posicao}</span>
+                    <span> - ${escaparHTML(obterClube(temporada.clube)?.nome || "Clube não definido")}</span>
                     <p>Jogador: ${temporada.nome} | Idade: ${temporada.idade} anos</p>
                     <p>Jogos: ${temporada.jogos} | Gols: ${temporada.gols} | Assistências: ${temporada.assistencias} | Prêmios: ${premios}</p>
                     <p class="titulo-categoria">Títulos coletivos:</p>
@@ -913,6 +963,7 @@ function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao) {
         nome,
         posicao: posicao || "-",
         nacionalidade: carreiraAtual.nacionalidade,
+        clube: carreiraAtual.clube,
         idadeLimite,
         jogos: totais.jogos,
         gols: totais.gols,
@@ -931,7 +982,7 @@ function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao) {
 
     document.getElementById("nome").value = nome;
     document.getElementById("idade").value = idadeLimite;
-    atualizarResumoJogador(nome, idadeLimite, anoAtual, carreiraAtual.nacionalidade);
+    atualizarResumoJogador(nome, idadeLimite, anoAtual, carreiraAtual.nacionalidade, carreiraAtual.clube);
 
     document.getElementById("jogos").textContent = totais.jogos;
     document.getElementById("gols").textContent = totais.gols;
@@ -943,6 +994,8 @@ function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao) {
     const resumoSelecao = document.getElementById("resumo-selecao");
     const selecao = SELECOES.find((item) => item.id === carreiraAtual.nacionalidade);
     if (resumoSelecao) resumoSelecao.textContent = selecao ? selecao.nome : "Não definida";
+    const resumoClube = document.getElementById("resumo-clube");
+    if (resumoClube) resumoClube.textContent = obterClube(carreiraAtual.clube)?.nome || "Não definido";
     document.getElementById("resumo-idade-limite").textContent = idadeLimite;
     document.getElementById("resumo-jogos").textContent = totais.jogos;
     document.getElementById("resumo-gols").textContent = totais.gols;
@@ -1046,7 +1099,7 @@ function obterHistoricoDaCarreira(nome, dadosPosicao) {
     });
 }
 
-function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], nacionalidade = "") {
+function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], nacionalidade = "", clubeId = "") {
     const cfg = getConfig();
     const dados = posicoes[posicao];
     const carreiraAtual = obterCarreiraAtual();
@@ -1063,6 +1116,7 @@ function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], na
         posicao: dados.nome,
         posicaoKey: posicao,
         nacionalidade,
+        clube: obterClube(clubeId)?.id || "",
         ano,
         jogos,
         gols,
@@ -1074,9 +1128,97 @@ function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], na
     };
 }
 
+function escolherClubeParaTemporada(clubeAtual, temporadaInicial) {
+    const overlay = document.getElementById("modal-confirmacao");
+    const tituloEl = document.getElementById("modal-titulo");
+    const mensagemEl = document.getElementById("modal-mensagem");
+    const opcoesEl = document.getElementById("modal-opcoes-clube");
+    const btnCancelar = document.getElementById("modal-cancelar");
+    const btnConfirmar = document.getElementById("modal-confirmar");
+    const icone = overlay?.querySelector(".modal-icone");
+
+    if (!overlay || !tituloEl || !mensagemEl || !opcoesEl || !btnCancelar || !btnConfirmar) {
+        throw new Error("O diálogo para escolha de clube não está disponível.");
+    }
+
+    const ofertas = sortearClubes(3, clubeAtual);
+    const opcoes = temporadaInicial
+        ? ofertas
+        : [{ id: clubeAtual, nome: `Permanecer no ${obterClube(clubeAtual)?.nome || "clube atual"}`, liga: "" }, ...ofertas];
+
+    return new Promise((resolve) => {
+        const tituloAnterior = tituloEl.textContent;
+        const mensagemAnterior = mensagemEl.textContent;
+        const cancelarAnterior = btnCancelar.textContent;
+        const confirmarAnterior = btnConfirmar.textContent;
+        const classeConfirmarAnterior = btnConfirmar.className;
+        const iconeAnterior = icone?.textContent;
+
+        opcoesEl.innerHTML = opcoes.map((clube, indice) => `
+            <label class="opcao-clube">
+                <input type="radio" name="escolha-clube" value="${escaparHTML(clube.id)}" ${indice === 0 ? "checked" : ""}>
+                <span><strong>${escaparHTML(clube.nome)}</strong>${clube.liga ? `<small>${escaparHTML(clube.liga)}</small>` : ""}</span>
+            </label>
+        `).join("");
+        tituloEl.textContent = temporadaInicial ? "Escolha seu primeiro clube" : "Decisão para a nova temporada";
+        mensagemEl.textContent = temporadaInicial
+            ? "Estes são os três clubes disponíveis para começar sua carreira."
+            : "Você pode permanecer no clube atual ou escolher uma das três propostas.";
+        btnCancelar.textContent = "Cancelar";
+        btnConfirmar.textContent = "Confirmar clube";
+        btnConfirmar.className = "modal-btn modal-btn--confirmar modal-btn--clube";
+        if (icone) icone.textContent = "⚽";
+        opcoesEl.hidden = false;
+
+        const fechar = (clubeId) => {
+            overlay.hidden = true;
+            document.removeEventListener("keydown", aoTeclar);
+            btnCancelar.removeEventListener("click", aoCancelar);
+            btnConfirmar.removeEventListener("click", aoConfirmar);
+            overlay.removeEventListener("click", aoClicarFora);
+            tituloEl.textContent = tituloAnterior;
+            mensagemEl.textContent = mensagemAnterior;
+            btnCancelar.textContent = cancelarAnterior;
+            btnConfirmar.textContent = confirmarAnterior;
+            btnConfirmar.className = classeConfirmarAnterior;
+            if (icone) icone.textContent = iconeAnterior;
+            opcoesEl.hidden = true;
+            opcoesEl.replaceChildren();
+            resolve(clubeId);
+        };
+
+        const aoCancelar = () => fechar(null);
+        const aoConfirmar = () => {
+            const selecionado = opcoesEl.querySelector('input[name="escolha-clube"]:checked');
+            fechar(selecionado?.value || null);
+        };
+        const aoClicarFora = (evento) => {
+            if (evento.target === overlay) fechar(null);
+        };
+        const aoTeclar = (evento) => {
+            if (evento.key === "Escape") fechar(null);
+            else if (evento.key === "Enter") aoConfirmar();
+        };
+
+        btnCancelar.addEventListener("click", aoCancelar);
+        btnConfirmar.addEventListener("click", aoConfirmar);
+        overlay.addEventListener("click", aoClicarFora);
+        document.addEventListener("keydown", aoTeclar);
+        overlay.hidden = false;
+        opcoesEl.querySelector('input[name="escolha-clube"]:checked')?.focus();
+    });
+}
+
+function sortearClubeParaTemporada(clubeAtual, temporadaInicial) {
+    const candidatos = temporadaInicial
+        ? sortearClubes(3)
+        : [{ id: clubeAtual }, ...sortearClubes(3, clubeAtual)];
+    return candidatos[Math.floor(Math.random() * candidatos.length)].id;
+}
+
 let processamentoEmAndamento = false;
 
-function gerar() {
+async function gerar() {
     if (processamentoEmAndamento) {
         return;
     }
@@ -1121,18 +1263,25 @@ function gerar() {
         const historico = obterHistoricoDaCarreira(nome, dadosPosicao);
         const idade = historico.length === 0 ? dadosValidos.idade : (Number(historico[historico.length - 1].idade) || 0) + 1;
         const ano = proximoAno(historico);
+        const clubeAtual = obterClube(historico[historico.length - 1]?.clube)?.id || carreiraAtual.clube;
+        const temporadaInicial = historico.length === 0 || !obterClube(clubeAtual);
 
         if (idade > idadeLimite) {
             mostrarResumoFinal(nome, idadeLimite, ano, historico, dadosPosicao.nome);
             return;
         }
 
-        const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id, historico, nacionalidade);
+        const clubeEscolhido = await escolherClubeParaTemporada(clubeAtual, temporadaInicial);
+        if (!clubeEscolhido) return;
+
+        carreiraAtual.clube = clubeEscolhido;
+        salvarCarreiraAtual(carreiraAtual);
+        const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id, historico, nacionalidade, clubeEscolhido);
         const historicoAtualizado = [...historico, temporada];
 
         document.getElementById("nome").value = nome;
         document.getElementById("idade").value = idade;
-        atualizarResumoJogador(nome, idade, ano, nacionalidade);
+        atualizarResumoJogador(nome, idade, ano, nacionalidade, clubeEscolhido);
         document.getElementById("jogos").textContent = temporada.jogos;
         document.getElementById("gols").textContent = temporada.gols;
         document.getElementById("assi").textContent = temporada.assistencias;
@@ -1201,9 +1350,15 @@ function simularTudo() {
         let historico = [];
         let idade = dadosValidos.idade;
         let ano = ANO_INICIAL;
+        let clubeAtual = sortearClubeParaTemporada("", true);
+        carreiraAtual.clube = clubeAtual;
+        salvarCarreiraAtual(carreiraAtual);
 
         while (idade <= idadeLimite) {
-            const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id, historico, nacionalidade);
+            if (historico.length > 0) {
+                clubeAtual = sortearClubeParaTemporada(clubeAtual, false);
+            }
+            const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id, historico, nacionalidade, clubeAtual);
             historico.push(temporada);
             idade = Number(historico[historico.length - 1].idade) + 1;
             ano = proximoAno(historico);
@@ -1212,8 +1367,10 @@ function simularTudo() {
         if (historico.length > 0) {
             const ultimaTemporada = historico[historico.length - 1];
             const idadeUltima = Number(ultimaTemporada.idade) || 0;
+            carreiraAtual.clube = ultimaTemporada.clube;
+            salvarCarreiraAtual(carreiraAtual);
             document.getElementById("idade").value = idadeUltima;
-            atualizarResumoJogador(nome, idadeUltima, ano, nacionalidade);
+            atualizarResumoJogador(nome, idadeUltima, ano, nacionalidade, ultimaTemporada.clube);
         }
 
         salvarHistorico(historico);
@@ -1366,7 +1523,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const idadeInicial = Number(document.getElementById("idade").value) || 0;
     const nomeAtual = normalizarNome(carreiraAtual.nome) || "Jogador";
     document.getElementById("nome").value = nomeAtual === "Jogador" ? "" : nomeAtual;
-    atualizarResumoJogador(nomeAtual === "Jogador" ? "Jogador" : nomeAtual, idadeInicial, ANO_INICIAL, carreiraAtual.nacionalidade);
+    atualizarResumoJogador(nomeAtual === "Jogador" ? "Jogador" : nomeAtual, idadeInicial, ANO_INICIAL, carreiraAtual.nacionalidade, carreiraAtual.clube);
     renderHistorico();
     renderRanking();
 });

@@ -34,6 +34,7 @@
                     <span>Idade: <strong id="perfil-idade">0</strong></span>
                     <span>Temporada: <strong id="perfil-ano">2024</strong></span>
                     <span>Seleção: <strong id="perfil-selecao">Não definida</strong></span>
+                    <span>Clube: <strong id="perfil-clube">Ainda não escolhido</strong></span>
                 </div>
             </div>
 
@@ -92,6 +93,7 @@
                 <p><strong id="resumo-nome">Jogador</strong></p>
                 <p>Posição: <strong id="resumo-posicao">-</strong></p>
                 <p>Seleção: <strong id="resumo-selecao">-</strong></p>
+                <p>Último clube: <strong id="resumo-clube">-</strong></p>
                 <p>Idade limite: <strong id="resumo-idade-limite">0</strong> anos</p>
                 <div class="resumo-grid">
                     <span>Jogos</span>
@@ -200,6 +202,7 @@
         <div class="modal-icone">⚠️</div>
         <h3 id="modal-titulo">Confirmar ação</h3>
         <p id="modal-mensagem">Tem certeza?</p>
+        <div id="modal-opcoes-clube" class="modal-opcoes-clube" role="radiogroup" aria-labelledby="modal-titulo" hidden></div>
         <div class="modal-acoes">
             <button type="button" id="modal-cancelar" class="modal-btn modal-btn--cancelar">Cancelar</button>
             <button type="button" id="modal-confirmar" class="modal-btn modal-btn--confirmar">Confirmar</button>
