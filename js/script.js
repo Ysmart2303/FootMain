@@ -1,35 +1,6 @@
 const STORAGE_KEY = "footmain_temporadas";
 const STORAGE_KEY_RANKING = "footmain_ranking";
 const STORAGE_KEY_CARREIRA_ATUAL = "footmain_carreira_atual";
-const ANO_INICIAL = 2026;
-const IDADE_LIMITE_PADRAO = 40;
-
-const posicoes = {
-    ata: {
-        nome: "Atacante",
-        jogos: [[45, 53], [54, 62], [63, 70]],
-        gols: [[5, 40], [41, 80], [81, 100]],
-        assistencias: [[4, 14], [15, 24], [25, 35]]
-    },
-    me: {
-        nome: "Meio Campo",
-        jogos: [[40, 45], [46, 50], [51, 55]],
-        gols: [[3, 16], [17, 30], [31, 45]],
-        assistencias: [[7, 21], [22, 35], [36, 50]]
-    },
-    zag: {
-        nome: "Zagueiro",
-        jogos: [[40, 45], [46, 50], [51, 55]],
-        gols: [[0, 5], [6, 10], [11, 15]],
-        assistencias: [[1, 7], [8, 14], [15, 20]]
-    },
-    go: {
-        nome: "Goleiro",
-        jogos: [[22, 34], [35, 47], [48, 60]],
-        gols: [[0, 1], [2, 3], [3, 4]],
-        assistencias: [[1, 2], [3, 4], [5, 10]]
-    }
-};
 
 function sortearIndicePonderado(pesos) {
     const pesoTotal = pesos.reduce((total, peso) => total + peso, 0);
@@ -347,49 +318,96 @@ function sortearPremio(chance) {
 }
 
 function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, temporadasAnteriores = []) {
+    const cfg = getConfig();
+    const t = cfg.titulos;
+    const multColetivos = cfg.geral.multiplicadorTitulos;
+    const multIndividuais = cfg.geral.multiplicadorPremios;
+
     const trofeusColetivos = [];
     const trofeusIndividuais = [];
     const temporadaAtual = Number(ano) || ANO_INICIAL;
-    const cicloCopaDoMundo = (temporadaAtual - ANO_INICIAL) % 4 === 0;
-    // O Mundial de Clubes acontece a cada quatro anos, começando em 2029.
-    const anoCopaDoMundoDeClubes = temporadaAtual >= 2029 && (temporadaAtual - 2029) % 4 === 0;
+    const ciclo = Math.max(1, Number(t.cicloCopaDoMundo) || 4);
 
-    if (jogos >= 35 && sortearPremio(0.18)) trofeusColetivos.push("Copa Continental");
-    if (jogos >= 30 && sortearPremio(0.28)) trofeusColetivos.push("Liga Nacional");
-    if (jogos >= 25 && sortearPremio(0.22)) trofeusColetivos.push("Copa Nacional");
-    if (jogos >= 35 && cicloCopaDoMundo && sortearPremio(0.12)) trofeusColetivos.push("Copa do Mundo");
+    // Ciclo da Copa do Mundo (a cada N anos, começando em ANO_INICIAL).
+    const cicloCopaDoMundo = (temporadaAtual - ANO_INICIAL) % ciclo === 0;
+
+    // Ciclo do Mundial de Clubes (a cada N anos, começando em anoInicioMundialClubes).
+    const anoInicioMundial = Number(t.anoInicioMundialClubes) || 2029;
+    const anoCopaDoMundoDeClubes =
+        temporadaAtual >= anoInicioMundial &&
+        (temporadaAtual - anoInicioMundial) % ciclo === 0;
+
+    // -------- Títulos coletivos --------
+    if (jogos >= 35 && sortearPremio(t.chanceCopaContinental * multColetivos)) {
+        trofeusColetivos.push("Copa Continental");
+    }
+    if (jogos >= 30 && sortearPremio(t.chanceLigaNacional * multColetivos)) {
+        trofeusColetivos.push("Liga Nacional");
+    }
+    if (jogos >= 25 && sortearPremio(t.chanceCopaNacional * multColetivos)) {
+        trofeusColetivos.push("Copa Nacional");
+    }
+    if (jogos >= 35 && cicloCopaDoMundo && sortearPremio(t.chanceCopaDoMundo * multColetivos)) {
+        trofeusColetivos.push("Copa do Mundo");
+    }
 
     const ganhouContinentalNestaTemporada = trofeusColetivos.includes("Copa Continental");
-    const inicioCicloMundial = ANO_INICIAL + Math.floor((temporadaAtual - ANO_INICIAL) / 4) * 4;
-    const ganhouContinentalNoCiclo = ganhouContinentalNestaTemporada || temporadasAnteriores.some((temporada) =>
-        Number(temporada.ano) >= inicioCicloMundial && Number(temporada.ano) <= temporadaAtual &&
-        Array.isArray(temporada.trofeusColetivos) && temporada.trofeusColetivos.includes("Copa Continental")
-    );
 
-    if (jogos >= 35 && ganhouContinentalNestaTemporada && sortearPremio(0.35)) {
+    // Início do ciclo mundial atual (para checar se ganhou continental no mesmo ciclo).
+    const inicioCicloMundial =
+        ANO_INICIAL + Math.floor((temporadaAtual - ANO_INICIAL) / ciclo) * ciclo;
+
+    const ganhouContinentalNoCiclo =
+        ganhouContinentalNestaTemporada ||
+        temporadasAnteriores.some(
+            (temporada) =>
+                Number(temporada.ano) >= inicioCicloMundial &&
+                Number(temporada.ano) <= temporadaAtual &&
+                Array.isArray(temporada.trofeusColetivos) &&
+                temporada.trofeusColetivos.includes("Copa Continental")
+        );
+
+    if (jogos >= 35 && ganhouContinentalNestaTemporada &&
+        sortearPremio(t.chanceIntercontinental * multColetivos)) {
         trofeusColetivos.push("Intercontinental");
     }
-    if (jogos >= 35 && anoCopaDoMundoDeClubes && ganhouContinentalNoCiclo && sortearPremio(0.20)) {
+    if (jogos >= 35 && anoCopaDoMundoDeClubes && ganhouContinentalNoCiclo &&
+        sortearPremio(t.chanceMundialClubes * multColetivos)) {
         trofeusColetivos.push("Copa do Mundo de Clubes");
     }
 
-    if (posicao !== "Goleiro" && trofeusColetivos.length >= 2 && (gols >= 20 || assistencias >= 15 || gols + assistencias >= 25) && sortearPremio(0.25)) {
+    // -------- Títulos individuais --------
+    if (
+        posicao !== "Goleiro" &&
+        trofeusColetivos.length >= 2 &&
+        (gols >= 20 || assistencias >= 15 || gols + assistencias >= 25) &&
+        sortearPremio(t.chanceBolaDeOuro * multIndividuais)
+    ) {
         trofeusIndividuais.push("Bola de Ouro");
     }
 
-    const jaGanhouGoldenBoy = temporadasAnteriores.some((temporada) =>
-        Array.isArray(temporada.trofeusIndividuais) && temporada.trofeusIndividuais.includes("Golden Boy")
+    const jaGanhouGoldenBoy = temporadasAnteriores.some(
+        (temporada) =>
+            Array.isArray(temporada.trofeusIndividuais) &&
+            temporada.trofeusIndividuais.includes("Golden Boy")
     );
 
-    if (!jaGanhouGoldenBoy && Number(idade) <= 20 && Number(idade) >= 0 && (gols >= 10 || assistencias >= 8 || gols + assistencias >= 15) && sortearPremio(0.18)) {
+    if (
+        !jaGanhouGoldenBoy &&
+        Number(idade) <= 20 &&
+        Number(idade) >= 0 &&
+        (gols >= 10 || assistencias >= 8 || gols + assistencias >= 15) &&
+        sortearPremio(t.chanceGoldenBoy * multIndividuais)
+    ) {
         trofeusIndividuais.push("Golden Boy");
     }
 
-    if (gols > jogos && sortearPremio(0.5)) {
+    if (gols > jogos && sortearPremio(t.chanceChuteiraDeOuro * multIndividuais)) {
         trofeusIndividuais.push("Chuteira de Ouro");
     }
 
-    if (posicao === "Goleiro" && jogos >= 30 && sortearPremio(0.3)) {
+    if (posicao === "Goleiro" && jogos >= 30 &&
+        sortearPremio(t.chanceLuvaDeOuro * multIndividuais)) {
         trofeusIndividuais.push("Luva de Ouro");
     }
 
@@ -483,7 +501,7 @@ const CONQUISTAS = [
     { id: "gols-25", nome: "Primeiros passos", descricao: "Marque 25 gols na carreira.", categoria: "Gols", icone: "⚽", metrica: "gols", meta: 25 },
     { id: "gols-50", nome: "Artilheiro", descricao: "Marque 50 gols na carreira.", categoria: "Gols", icone: "⚽", metrica: "gols", meta: 50 },
     { id: "gols-100", nome: "Centenário", descricao: "Marque 100 gols na carreira.", categoria: "Gols", icone: "🎯", metrica: "gols", meta: 100 },
-    { id: "gols-250", nome: "Matador", descricao: "Marque 250 gols na carreira.", categoria: "Gols", icone: "🥅", metrica: "gols", meta: 250 },
+        { id: "gols-250", nome: "Matador", descricao: "Marque 250 gols na carreira.", categoria: "Gols", icone: "🥅", metrica: "gols", meta: 250 },
     { id: "gols-500", nome: "Lenda do gol", descricao: "Marque 500 gols na carreira.", categoria: "Gols", icone: "🔥", metrica: "gols", meta: 500 },
     { id: "gols-750", nome: "Imparável", descricao: "Marque 750 gols na carreira.", categoria: "Gols", icone: "🌋", metrica: "gols", meta: 750 },
     { id: "gols-1000", nome: "Novo Pelé", descricao: "Marque 1000 gols na carreira.", categoria: "Gols", icone: "👑", metrica: "gols", meta: 1000 },
@@ -973,11 +991,14 @@ function obterHistoricoDaCarreira(nome, dadosPosicao) {
 }
 
 function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = []) {
+    const cfg = getConfig();
     const dados = posicoes[posicao];
     const carreiraAtual = obterCarreiraAtual();
-    const jogos = sortearValorPorSubconjunto(dados.jogos);
-    const gols = sortearValorPorSubconjunto(dados.gols);
-    const assistencias = sortearValorPorSubconjunto(dados.assistencias);
+
+    const jogos = Math.max(0, Math.round(sortearValorPorSubconjunto(dados.jogos) * cfg.geral.multiplicadorJogos));
+    const gols = Math.max(0, Math.round(sortearValorPorSubconjunto(dados.gols) * cfg.geral.multiplicadorGols));
+    const assistencias = Math.max(0, Math.round(sortearValorPorSubconjunto(dados.assistencias) * cfg.geral.multiplicadorAssistencias));
+
     const trofeus = gerarTrofeusTemporada(dados.nome, jogos, gols, assistencias, ano, idade, temporadasAnteriores);
 
     return {
@@ -1188,6 +1209,9 @@ async function limparRanking() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+
+    aplicarConfiguracoes();
+  
     const botaoLimpar = document.getElementById("limparHistorico");
     const botaoLimparRanking = document.getElementById("limparRanking");
     const listaRanking = document.getElementById("lista-ranking");
@@ -1196,6 +1220,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const filtroHistorico = document.getElementById("filtro-historico");
     const filtroCarreiraConquistas = document.getElementById("filtro-carreira-conquistas");
     const filtroCategoriaConquistas = document.getElementById("filtro-categoria-conquistas");
+  
+    const campoIdade = document.getElementById("idade");
+    const carreiraParaIdade = obterCarreiraAtual();
+    if (campoIdade && (!campoIdade.value || campoIdade.value === "0") && carreiraParaIdade.nome === "Jogador") {
+        campoIdade.value = getConfig().geral.idadeInicialPadrao;
+        atualizarResumoJogador("Jogador", getConfig().geral.idadeInicialPadrao, ANO_INICIAL);
+    }
     
     if (filtroCategoriaConquistas) {
         filtroCategoriaConquistas.addEventListener("change", renderConquistas);
