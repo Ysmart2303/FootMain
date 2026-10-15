@@ -43,6 +43,20 @@ const SCHEMA_CONFIG = [
             { caminho: "titulos.anoInicioMundialClubes", label: "Ano do 1º Mundial de Clubes", tipo: "number", min: 2020, max: 2100, passo: 1 },
             { caminho: "titulos.cicloCopaDoMundo",       label: "Ciclo da Copa (anos)",   tipo: "number", min: 1, max: 8, passo: 1 }
         ]
+    },
+    {
+        id: "selecao",
+        titulo: "Força das seleções",
+        icone: "🌎",
+        descricao: "A força (1 a 100) define a chance proporcional de cada seleção ganhar os torneios em que participa. As cinco competições continentais e as Olimpíadas ocorrem a cada quatro anos, a partir de 2028.",
+        campos: SELECOES.map((selecao) => ({
+            caminho: `selecao.potencias.${selecao.id}`,
+            label: selecao.nome,
+            tipo: "range",
+            min: 1,
+            max: 100,
+            passo: 1
+        }))
     }
 ];
 
@@ -119,11 +133,12 @@ function renderCampos() {
 function renderCampo(campo, valor) {
     const idSeguro = campo.caminho.replace(/\./g, "-");
     if (campo.tipo === "range") {
+        const valorFormatado = campo.passo < 1 ? Number(valor).toFixed(2) : String(Math.round(Number(valor)));
         return `
             <div class="config-campo config-campo--range">
                 <div class="config-campo-topo">
                     <label for="${idSeguro}">${campo.label}</label>
-                    <output id="out-${idSeguro}">${Number(valor).toFixed(2)}</output>
+                    <output id="out-${idSeguro}">${valorFormatado}</output>
                 </div>
                 <input type="range" id="${idSeguro}" data-caminho="${campo.caminho}"
                        min="${campo.min}" max="${campo.max}" step="${campo.passo}" value="${valor}">
@@ -152,7 +167,7 @@ function aoAlterarCampo(evento) {
 
     if (input.type === "range") {
         const out = document.getElementById(`out-${input.id}`);
-        if (out) out.textContent = valor.toFixed(2);
+        if (out) out.textContent = input.step && Number(input.step) < 1 ? valor.toFixed(2) : String(Math.round(valor));
     }
     atualizarJSON();
 }

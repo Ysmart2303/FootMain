@@ -33,6 +33,7 @@
                 <div class="player-card__meta">
                     <span>Idade: <strong id="perfil-idade">0</strong></span>
                     <span>Temporada: <strong id="perfil-ano">2024</strong></span>
+                    <span>Seleção: <strong id="perfil-selecao">Não definida</strong></span>
                 </div>
             </div>
 
@@ -43,6 +44,10 @@
                 <input type="number" placeholder="Ex: 18" id="idade" min="0" value="18">
                 <label for="idade-limite">Idade limite</label>
                 <input type="number" id="idade-limite" min="1" value="40">
+                <label for="nacionalidade">Nacionalidade</label>
+                <select id="nacionalidade">
+                    <option value="">Selecione uma seleção</option>
+                </select>
             </div>
 
             <div id="posi">
@@ -86,6 +91,7 @@
                 <h3>Carreira encerrada</h3>
                 <p><strong id="resumo-nome">Jogador</strong></p>
                 <p>Posição: <strong id="resumo-posicao">-</strong></p>
+                <p>Seleção: <strong id="resumo-selecao">-</strong></p>
                 <p>Idade limite: <strong id="resumo-idade-limite">0</strong> anos</p>
                 <div class="resumo-grid">
                     <span>Jogos</span>

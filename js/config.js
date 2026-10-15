@@ -38,6 +38,29 @@ var posicoes = JSON.parse(JSON.stringify(POSICOES_PADRAO));
 var ANO_INICIAL = 2026;
 var IDADE_LIMITE_PADRAO = 40;
 
+const SELECOES = [
+    { id: "espanha", nome: "Espanha", regiao: "europa" },
+    { id: "argentina", nome: "Argentina", regiao: "americaSul" },
+    { id: "franca", nome: "França", regiao: "europa" },
+    { id: "inglaterra", nome: "Inglaterra", regiao: "europa" },
+    { id: "portugal", nome: "Portugal", regiao: "europa" },
+    { id: "brasil", nome: "Brasil", regiao: "americaSul" },
+    { id: "holanda", nome: "Holanda", regiao: "europa" },
+    { id: "belgica", nome: "Bélgica", regiao: "europa" },
+    { id: "alemanha", nome: "Alemanha", regiao: "europa" },
+    { id: "croacia", nome: "Croácia", regiao: "europa" },
+    { id: "marrocos", nome: "Marrocos", regiao: "africa" },
+    { id: "italia", nome: "Itália", regiao: "europa" },
+    { id: "colombia", nome: "Colômbia", regiao: "americaSul" },
+    { id: "uruguai", nome: "Uruguai", regiao: "americaSul" },
+    { id: "suica", nome: "Suíça", regiao: "europa" },
+    { id: "japao", nome: "Japão", regiao: "asia" },
+    { id: "senegal", nome: "Senegal", regiao: "africa" },
+    { id: "ira", nome: "Irã", regiao: "asia" },
+    { id: "mexico", nome: "México", regiao: "americaNorte" },
+    { id: "estadosUnidos", nome: "Estados Unidos", regiao: "americaNorte" }
+];
+
 /* ---------- Configurações padrão ---------- */
 const CONFIG_PADRAO = {
     geral: {
@@ -63,6 +86,30 @@ const CONFIG_PADRAO = {
         chanceLuvaDeOuro: 0.30,
         anoInicioMundialClubes: 2029,
         cicloCopaDoMundo: 4
+    },
+    selecao: {
+        potencias: {
+            espanha: 99,
+            argentina: 98,
+            franca: 97,
+            inglaterra: 96,
+            portugal: 94,
+            brasil: 93,
+            holanda: 91,
+            belgica: 89,
+            alemanha: 88,
+            croacia: 87,
+            marrocos: 86,
+            italia: 85,
+            colombia: 84,
+            uruguai: 83,
+            suica: 82,
+            japao: 81,
+            senegal: 80,
+            ira: 79,
+            mexico: 78,
+            estadosUnidos: 77
+        }
     }
 };
 

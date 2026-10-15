@@ -164,7 +164,8 @@ main {
     color: #e2e8f0;
 }
 
-#inputs input {
+#inputs input,
+#inputs select {
     border: 1px solid rgba(148, 163, 184, 0.35);
     border-radius: 10px;
     padding: 10px 12px;
@@ -178,7 +179,8 @@ main {
     color: #94a3b8;
 }
 
-#inputs input:focus {
+#inputs input:focus,
+#inputs select:focus {
     border-color: #60a5fa;
     box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
 }
