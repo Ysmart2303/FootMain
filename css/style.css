@@ -1286,3 +1286,252 @@ button {
         flex-direction: column-reverse;
     }
 }
+
+/* ==============================
+   Página de configurações
+   ============================== */
+#configuracoes {
+    background: rgba(15, 23, 42, 0.82);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 22px;
+    box-shadow: 0 14px 35px rgba(2, 8, 23, 0.35);
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+#configuracoes h2 {
+    text-align: center;
+    color: #f8fafc;
+}
+
+.config-intro {
+    color: #cbd5e1;
+    font-size: 0.94rem;
+    line-height: 1.5;
+    text-align: center;
+}
+
+.presets-config { display: flex; flex-direction: column; gap: 10px; }
+
+.presets-lista {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+
+.preset-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(96, 165, 250, 0.12);
+    border: 1px solid rgba(96, 165, 250, 0.3);
+    color: #e0f2fe;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.preset-btn:hover { background: rgba(96, 165, 250, 0.22); transform: translateY(-1px); }
+
+.config-grupo {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 16px;
+    padding: 18px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.config-grupo h3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #f1f5f9;
+    font-size: 1.05rem;
+}
+
+.config-grupo-icone { font-size: 1.2rem; }
+
+.config-grupo-desc {
+    color: #cbd5e1;
+    font-size: 0.86rem;
+    line-height: 1.45;
+}
+
+.config-campos {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 18px;
+}
+
+.config-campo {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.config-campo label {
+    font-weight: 700;
+    color: #e2e8f0;
+    font-size: 0.92rem;
+}
+
+.config-campo input[type="number"] {
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 10px;
+    padding: 9px 12px;
+    background: #0f172a;
+    color: #f8fafc;
+    font: inherit;
+    outline: none;
+}
+
+.config-campo input[type="number"]:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+}
+
+.config-campo-topo {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.config-campo-topo output {
+    font-weight: 800;
+    color: #86efac;
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.config-campo input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    background: rgba(148, 163, 184, 0.25);
+    border-radius: 999px;
+    outline: none;
+    cursor: pointer;
+}
+
+.config-campo input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    border: 2px solid #f8fafc;
+    cursor: pointer;
+}
+
+.config-campo input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    border: 2px solid #f8fafc;
+    cursor: pointer;
+}
+
+.config-avancado {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 16px;
+    padding: 14px 16px;
+}
+
+.config-avancado summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: #86efac;
+    padding: 4px 0;
+}
+
+.config-avancado textarea {
+    width: 100%;
+    min-height: 220px;
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    background: #020817;
+    color: #e2e8f0;
+    font-family: ui-monospace, "Cascadia Code", Menlo, Consolas, monospace;
+    font-size: 0.82rem;
+    resize: vertical;
+    outline: none;
+}
+
+.config-avancado textarea:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+}
+
+.config-avancado-acoes,
+.config-acoes {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 12px;
+}
+
+.btn-perigo {
+    background: linear-gradient(135deg, #ef4444, #b91c1c);
+    color: #fff;
+}
+
+.btn-voltar {
+    display: inline-flex;
+    align-items: center;
+    padding: 12px 24px;
+    border-radius: 12px;
+    text-decoration: none;
+    color: #fff;
+    font-weight: 800;
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+}
+
+.notificacao-config {
+    padding: 12px 14px;
+    border-radius: 11px;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.4;
+}
+
+.notificacao-config[hidden] { display: none; }
+
+.notificacao-config[data-tipo="ok"] {
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.4);
+    color: #bbf7d0;
+}
+
+.notificacao-config[data-tipo="erro"] {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #fecaca;
+}
+
+.notificacao-config[data-tipo="info"] {
+    background: rgba(96, 165, 250, 0.12);
+    border: 1px solid rgba(96, 165, 250, 0.4);
+    color: #bfdbfe;
+}
+
+@media (max-width: 600px) {
+    .config-campos { grid-template-columns: 1fr; }
+    .config-acoes { flex-direction: column; }
+    .config-acoes > * { width: 100%; text-align: center; justify-content: center; }
+}
