@@ -1201,10 +1201,6 @@ async function gerar() {
         const posicaoSelecionada = document.querySelector('input[name="posicao"]:checked');
         const resumoFinal = document.getElementById("resumo-final");
 
-        if (resumoFinal) {
-            resumoFinal.hidden = true;
-        }
-
         if (!posicaoSelecionada) {
             alert("Selecione uma posição antes de gerar o jogador.");
             return;
@@ -1217,22 +1213,38 @@ async function gerar() {
         const nome = normalizarNome(nomeInput ? nomeInput.value : "") || obterNomeAtual();
         const dadosPosicao = posicoes[posicaoSelecionada.id];
         const idadeLimite = obterIdadeLimite();
+        const carreiraAtual = obterCarreiraAtual();
+        const carreiraIdAnterior = carreiraAtual.id;
+        const carreiraFinalizada = lerRanking().some(
+            (carreira) => String(carreira.id) === String(carreiraAtual.id)
+        );
         const idadeInformada = Number(idadeInput ? idadeInput.value : "") || 0;
-        const dadosValidos = validarDadosJogador({ nome, idade: idadeInformada, idadeLimite, posicao: posicaoSelecionada.id, nacionalidade });
+        const idadeInicial = carreiraFinalizada && idadeInformada === carreiraAtual.idadeLimite
+            ? getConfig().geral.idadeInicialPadrao
+            : idadeInformada;
+        const dadosValidos = validarDadosJogador({ nome, idade: idadeInicial, idadeLimite, posicao: posicaoSelecionada.id, nacionalidade });
 
         if (!dadosValidos.valido) {
             alert(dadosValidos.mensagem);
             return;
         }
 
-        const carreiraAtual = obterCarreiraAtual();
+        const historico = carreiraFinalizada
+            ? []
+            : obterHistoricoDaCarreira(nome, dadosPosicao);
+
+        if (carreiraFinalizada) {
+            carreiraAtual.id = gerarIdRanking();
+            carreiraAtual.clube = "";
+        }
         carreiraAtual.nome = nome;
         carreiraAtual.posicao = dadosPosicao.nome;
         carreiraAtual.idadeLimite = idadeLimite;
         carreiraAtual.nacionalidade = nacionalidade;
-        salvarCarreiraAtual(carreiraAtual);
+        if (!carreiraFinalizada) {
+            salvarCarreiraAtual(carreiraAtual);
+        }
 
-        const historico = obterHistoricoDaCarreira(nome, dadosPosicao);
         const idade = historico.length === 0 ? dadosValidos.idade : (Number(historico[historico.length - 1].idade) || 0) + 1;
         const ano = proximoAno(historico);
         const clubeAtual = obterClube(historico[historico.length - 1]?.clube)?.id || carreiraAtual.clube;
@@ -1248,6 +1260,9 @@ async function gerar() {
 
         carreiraAtual.clube = clubeEscolhido;
         salvarCarreiraAtual(carreiraAtual);
+        if (resumoFinal) {
+            resumoFinal.hidden = true;
+        }
         const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id, historico, nacionalidade, clubeEscolhido);
         const historicoAtualizado = [...historico, temporada];
 
@@ -1259,7 +1274,11 @@ async function gerar() {
         document.getElementById("assi").textContent = temporada.assistencias;
         document.getElementById("prem").textContent = contarPremios(temporada);
 
-        salvarHistorico(historicoAtualizado);
+        const historicoDeOutrasCarreiras = lerHistorico().filter(
+            (temporadaSalva) => temporadaSalva.carreiraId !== carreiraIdAnterior
+                && temporadaSalva.carreiraId !== carreiraAtual.id
+        );
+        salvarHistorico([...historicoDeOutrasCarreiras, ...historicoAtualizado]);
         renderHistorico();
     } finally {
         processamentoEmAndamento = false;
