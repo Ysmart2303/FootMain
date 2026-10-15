@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/style.css">
+    <title>FootMain · Configurações</title>
+</head>
+<body>
+
+    <header>
+        <p>FootMain</p>
+        <div id="links">
+            <a href="index.html">Início</a>
+            <a href="index.html#ranking">Ranking</a>
+            <a href="index.html#historico">Histórico</a>
+            <a href="index.html#conquistas">Conquistas</a>
+            <a href="configuracoes.html">Configurações</a>
+        </div>
+    </header>
+
+    <main>
+        <section id="configuracoes">
+            <h2>Configurações da simulação</h2>
+            <p class="config-intro">
+                Ajuste como as carreiras são geradas. Tudo fica guardado no navegador
+                e é aplicado na próxima simulação.
+            </p>
+
+            <div id="presets-config" class="presets-config"></div>
+
+            <div id="grupos-config" class="grupos-config"></div>
+
+            <details class="config-avancado">
+                <summary>Modo avançado (JSON)</summary>
+                <p class="config-intro">Edite manualmente ou cole uma configuração exportada.</p>
+                <textarea id="config-json" spellcheck="false"></textarea>
+                <div class="config-avancado-acoes">
+                    <button type="button" id="aplicar-json">Aplicar JSON</button>
+                    <button type="button" id="copiar-json">Copiar</button>
+                </div>
+            </details>
+
+            <div class="config-acoes">
+                <button type="button" id="resetar-config" class="btn-perigo">Resetar padrões</button>
+                <a href="index.html" class="btn-voltar">Voltar ao jogo</a>
+            </div>
+
+            <div id="notificacao-config" class="notificacao-config" hidden></div>
+        </section>
+    </main>
+
+    <footer><a href="https://github.com/Ysmart2303">Ysmart2303</a> / 2026</footer>
+
+    <script src="js/config.js"></script>
+    <script src="js/configuracoes.js" defer></script>
+</body>
+</html>
