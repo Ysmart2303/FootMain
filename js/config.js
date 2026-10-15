@@ -61,6 +61,34 @@ const SELECOES = [
     { id: "estadosUnidos", nome: "Estados Unidos", regiao: "americaNorte" }
 ];
 
+const CLUBES = [
+    { id: "manchester-city", nome: "Manchester City", liga: "Premier League" },
+    { id: "arsenal", nome: "Arsenal", liga: "Premier League" },
+    { id: "liverpool", nome: "Liverpool", liga: "Premier League" },
+    { id: "chelsea", nome: "Chelsea", liga: "Premier League" },
+    { id: "manchester-united", nome: "Manchester United", liga: "Premier League" },
+    { id: "real-madrid", nome: "Real Madrid", liga: "La Liga" },
+    { id: "barcelona", nome: "Barcelona", liga: "La Liga" },
+    { id: "atletico-madrid", nome: "Atlético de Madrid", liga: "La Liga" },
+    { id: "athletic-bilbao", nome: "Athletic Club", liga: "La Liga" },
+    { id: "real-sociedad", nome: "Real Sociedad", liga: "La Liga" },
+    { id: "inter", nome: "Inter de Milão", liga: "Serie A" },
+    { id: "milan", nome: "Milan", liga: "Serie A" },
+    { id: "juventus", nome: "Juventus", liga: "Serie A" },
+    { id: "napoli", nome: "Napoli", liga: "Serie A" },
+    { id: "roma", nome: "Roma", liga: "Serie A" },
+    { id: "bayern-munich", nome: "Bayern de Munique", liga: "Bundesliga" },
+    { id: "borussia-dortmund", nome: "Borussia Dortmund", liga: "Bundesliga" },
+    { id: "bayer-leverkusen", nome: "Bayer Leverkusen", liga: "Bundesliga" },
+    { id: "rb-leipzig", nome: "RB Leipzig", liga: "Bundesliga" },
+    { id: "stuttgart", nome: "Stuttgart", liga: "Bundesliga" },
+    { id: "paris-saint-germain", nome: "Paris Saint-Germain", liga: "Ligue 1" },
+    { id: "marseille", nome: "Marseille", liga: "Ligue 1" },
+    { id: "monaco", nome: "Monaco", liga: "Ligue 1" },
+    { id: "lille", nome: "Lille", liga: "Ligue 1" },
+    { id: "lyon", nome: "Lyon", liga: "Ligue 1" }
+];
+
 /* ---------- Configurações padrão ---------- */
 const CONFIG_PADRAO = {
     geral: {
