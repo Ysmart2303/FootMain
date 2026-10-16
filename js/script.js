@@ -122,6 +122,7 @@ function validarTemporada(temporada) {
         jogos,
         gols,
         assistencias,
+        atributos: normalizarAtributos(temporada.atributos, posicaoNormalizada, idade),
         trofeusColetivos,
         trofeusIndividuais,
         data: typeof temporada.data === "string" && temporada.data ? temporada.data : new Date().toLocaleString("pt-BR"),
@@ -1071,14 +1072,91 @@ function obterHistoricoDaCarreira(nome, dadosPosicao) {
     });
 }
 
+const ATRIBUTOS_NOMES = {
+    finalizacao: "Finalização", passe: "Passe", drible: "Drible",
+    velocidade: "Velocidade", defesa: "Defesa", fisico: "Físico", reflexos: "Reflexos"
+};
+
+function limitarAtributo(valor) { return Math.max(1, Math.min(99, Math.round(Number(valor) || 1))); }
+
+function normalizarAtributos(atributos, posicao, idade = 18) {
+    const bases = {
+        ata: { finalizacao: 64, passe: 48, drible: 59, velocidade: 63, defesa: 24, fisico: 55, reflexos: 12 },
+        me:  { finalizacao: 48, passe: 65, drible: 62, velocidade: 56, defesa: 45, fisico: 53, reflexos: 12 },
+        zag: { finalizacao: 22, passe: 43, drible: 35, velocidade: 48, defesa: 67, fisico: 66, reflexos: 12 },
+        go:  { finalizacao: 1, passe: 38, drible: 18, velocidade: 38, defesa: 20, fisico: 57, reflexos: 68 }
+    };
+    const base = bases[posicao] || bases.ata;
+    const dados = {};
+    Object.keys(ATRIBUTOS_NOMES).forEach((chave) => {
+        const valor = atributos && Number.isFinite(Number(atributos[chave]))
+            ? Number(atributos[chave])
+            : base[chave] + Math.max(0, Math.min(8, 25 - Number(idade || 18))) * 1.4;
+        dados[chave] = limitarAtributo(valor);
+    });
+    return dados;
+}
+
+function evoluirAtributos(temporadasAnteriores, posicao, idade) {
+    const anterior = temporadasAnteriores.length
+        ? normalizarAtributos(temporadasAnteriores[temporadasAnteriores.length - 1].atributos, posicao, idade - 1)
+        : normalizarAtributos(null, posicao, idade);
+    const resultado = {};
+    Object.keys(ATRIBUTOS_NOMES).forEach((chave) => {
+        let variacao = 0;
+        if (idade <= 27) variacao = Math.random() < 0.72 ? 1 + Math.floor(Math.random() * 3) : 0;
+        else if (idade <= 30) variacao = Math.random() < 0.55 ? 1 : 0;
+        else if (idade <= 34) variacao = -(Math.random() < 0.75 ? 1 + Math.floor(Math.random() * 2) : 0);
+        else variacao = -(1 + Math.floor(Math.random() * 3));
+        if (chave === "reflexos" && posicao !== "go") resultado[chave] = limitarAtributo(Math.min(20, anterior[chave] + (idade <= 27 ? 0 : variacao)));
+        else resultado[chave] = limitarAtributo(anterior[chave] + variacao);
+    });
+    return resultado;
+}
+
+function mediaAtributos(atributos, chaves) {
+    return chaves.reduce((total, chave) => total + (Number(atributos[chave]) || 0), 0) / chaves.length;
+}
+
+function renderAtributos(temporada) {
+    const painel = document.getElementById("painel-atributos");
+    if (!painel) return;
+    if (!temporada) {
+        painel.innerHTML = '<p class="atributos-vazio">Gere uma temporada para acompanhar a evolução do jogador.</p>';
+        return;
+    }
+    const posicao = temporada.posicaoKey || normalizarPosicao(temporada.posicao) || "ata";
+    const atributos = normalizarAtributos(temporada.atributos, posicao, temporada.idade);
+    const anterior = lerHistoricoAtiva().filter((item) => item.ano < temporada.ano).sort((a, b) => b.ano - a.ano)[0];
+    const atributosAnteriores = anterior ? normalizarAtributos(anterior.atributos, anterior.posicaoKey || normalizarPosicao(anterior.posicao) || "ata", anterior.idade) : null;
+    const linhas = Object.entries(ATRIBUTOS_NOMES).map(([chave, nome]) => {
+        const valor = atributos[chave];
+        const diferenca = atributosAnteriores ? valor - atributosAnteriores[chave] : 0;
+        const tendencia = !atributosAnteriores ? "Primeira temporada" : diferenca > 0 ? `+${diferenca} nesta temporada` : diferenca < 0 ? `${diferenca} nesta temporada` : "Estável nesta temporada";
+        const classe = diferenca > 0 ? "atributo-subiu" : diferenca < 0 ? "atributo-caiu" : "";
+        return `<div class="atributo-linha"><div class="atributo-cabecalho"><span>${nome}</span><strong>${valor}<small class="${classe}">${tendencia}</small></strong></div><div class="atributo-trilho"><span class="${classe}" style="width:${valor}%"></span></div></div>`;
+    }).join("");
+    const chavesOverall = posicao === "go" ? ["reflexos", "fisico", "passe", "defesa"] : ["finalizacao", "passe", "drible", "velocidade", "defesa", "fisico"];
+    const media = Math.round(mediaAtributos(atributos, chavesOverall));
+    const fase = temporada.idade < 23 ? "Em desenvolvimento" : temporada.idade <= 28 ? "Pico de evolução" : temporada.idade <= 32 ? "Experiência e maturidade" : "Declínio físico";
+    painel.innerHTML = `<div class="atributos-resumo"><div><span>Overall estimado</span><strong>${media}</strong></div><div><span>Fase da carreira</span><strong>${fase}</strong></div></div><div class="atributos-lista">${linhas}</div>`;
+}
+
 function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], nacionalidade = "", clubeId = "") {
     const cfg = getConfig();
     const dados = posicoes[posicao];
     const carreiraAtual = obterCarreiraAtual();
 
-    const jogos = Math.max(0, Math.round(sortearValorPorSubconjunto(dados.jogos) * cfg.geral.multiplicadorJogos));
-    const gols = Math.max(0, Math.round(sortearValorPorSubconjunto(dados.gols) * cfg.geral.multiplicadorGols));
-    const assistencias = Math.max(0, Math.round(sortearValorPorSubconjunto(dados.assistencias) * cfg.geral.multiplicadorAssistencias));
+    const atributos = evoluirAtributos(temporadasAnteriores, posicao, idade);
+    const mediaAgora = mediaAtributos(atributos, ["finalizacao", "passe", "drible", "velocidade", "defesa", "fisico"]);
+    const fatorDesempenho = Math.max(0.42, Math.min(1.18, 0.72 + mediaAgora / 200));
+    const fatorIdade = idade <= 30 ? 1 : Math.max(0.48, 1 - Math.max(0, idade - 30) * 0.045);
+    const fatorJogos = Math.max(0.5, Math.min(1.08, 0.65 + (atributos.fisico + atributos.velocidade) / 250));
+    const fatorGols = posicao === "go" ? 1 : fatorDesempenho * fatorIdade * Math.max(0.55, Math.min(1.12, 0.65 + atributos.finalizacao / 220 + atributos.drible / 500));
+    const fatorAssistencias = fatorDesempenho * fatorIdade * Math.max(0.55, Math.min(1.12, 0.7 + atributos.passe / 300 + atributos.drible / 500));
+    const jogos = Math.max(0, Math.round(sortearValorPorSubconjunto(dados.jogos) * cfg.geral.multiplicadorJogos * fatorJogos * fatorIdade));
+    const gols = Math.max(0, Math.round(sortearValorPorSubconjunto(dados.gols) * cfg.geral.multiplicadorGols * fatorGols));
+    const assistencias = Math.max(0, Math.round(sortearValorPorSubconjunto(dados.assistencias) * cfg.geral.multiplicadorAssistencias * fatorAssistencias));
 
     const trofeus = gerarTrofeusTemporada(dados.nome, jogos, gols, assistencias, ano, idade, temporadasAnteriores, nacionalidade);
 
@@ -1093,6 +1171,7 @@ function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], na
         jogos,
         gols,
         assistencias,
+        atributos,
         trofeusColetivos: trofeus.trofeusColetivos,
         trofeusIndividuais: trofeus.trofeusIndividuais,
         data: new Date().toLocaleString("pt-BR"),
@@ -1280,6 +1359,7 @@ async function gerar() {
         );
         salvarHistorico([...historicoDeOutrasCarreiras, ...historicoAtualizado]);
         renderHistorico();
+        renderAtributos(temporada);
     } finally {
         processamentoEmAndamento = false;
     }
@@ -1380,6 +1460,7 @@ function simularTudo() {
         );
         salvarHistorico([...historicoDeOutrasCarreiras, ...historico]);
         renderHistorico();
+        renderAtributos(historico[historico.length - 1] || null);
         mostrarResumoFinal(nome, idadeLimite, ano, historico, dadosPosicao.nome);
     } finally {
         processamentoEmAndamento = false;
@@ -1531,4 +1612,6 @@ document.addEventListener("DOMContentLoaded", () => {
     atualizarResumoJogador(nomeAtual === "Jogador" ? "Jogador" : nomeAtual, idadeInicial, ANO_INICIAL, carreiraAtual.nacionalidade, carreiraAtual.clube);
     renderHistorico();
     renderRanking();
+    const historicoInicialAtributos = lerHistoricoAtiva().sort((a, b) => a.ano - b.ano);
+    renderAtributos(historicoInicialAtributos[historicoInicialAtributos.length - 1] || null);
 });
