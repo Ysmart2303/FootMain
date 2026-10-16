@@ -384,9 +384,10 @@ main {
 }
 
 #resultados {
-    width: min(100%, 420px);
+    width: min(100%, 520px);
     display: flex;
-    gap: 30px;
+    flex-wrap: wrap;
+    gap: 20px 30px;
     justify-content: center;
     background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9));
     border: 1px solid rgba(148, 163, 184, 0.2);
@@ -406,6 +407,25 @@ main {
 #dados p {
     font-weight: 600;
     color: #e2e8f0;
+}
+
+.titulos-resultados {
+    flex: 0 0 100%;
+    border-top: 1px solid rgba(148, 163, 184, 0.25);
+    padding-top: 14px;
+    color: #e2e8f0;
+    overflow-wrap: anywhere;
+}
+
+.titulos-resultados strong {
+    display: block;
+    margin-bottom: 8px;
+    color: #facc15;
+}
+
+.titulos-resultados p {
+    margin: 6px 0;
+    line-height: 1.45;
 }
 
 .resumo-final {
