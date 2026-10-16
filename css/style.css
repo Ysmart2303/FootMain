@@ -1578,3 +1578,27 @@ button {
     .config-acoes { flex-direction: column; }
     .config-acoes > * { width: 100%; text-align: center; justify-content: center; }
 }
+
+/* Sistema de atributos e evolução do jogador */
+#inicio { grid-template-areas: "perfil perfil" "inputs posicao" "resultados resultados" "atributos atributos" "acoes acoes" "resumo resumo"; grid-template-rows: min-content repeat(3, min-content); }
+.atributos-painel { grid-area: atributos; min-width: 0; padding: 20px; border: 1px solid rgba(148,163,184,.22); border-radius: 16px; background: linear-gradient(145deg,rgba(15,23,42,.95),rgba(20,35,54,.85)); }
+.atributos-titulo { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:18px; }
+.atributos-titulo h3 { font-size:1.15rem; margin-bottom:6px; color:#f8fafc; }
+.atributos-titulo p { color:#94a3b8; font-size:.88rem; line-height:1.45; }
+.atributos-status { flex-shrink:0; padding:6px 9px; border-radius:999px; color:#bbf7d0; background:rgba(34,197,94,.12); border:1px solid rgba(34,197,94,.25); font-size:.72rem; font-weight:700; }
+.atributos-resumo { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-bottom:18px; }
+.atributos-resumo>div { padding:12px; border-radius:12px; background:rgba(2,8,23,.55); border:1px solid rgba(148,163,184,.15); }
+.atributos-resumo span { display:block; color:#94a3b8; font-size:.78rem; margin-bottom:5px; }
+.atributos-resumo strong { color:#f8fafc; font-size:1.05rem; }
+.atributos-lista { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 20px; }
+.atributo-linha { min-width:0; }
+.atributo-cabecalho { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:7px; color:#dbeafe; font-size:.88rem; }
+.atributo-cabecalho strong { text-align:right; white-space:nowrap; }
+.atributo-cabecalho small { display:block; margin-top:3px; color:#94a3b8; font-size:.68rem; font-weight:500; }
+.atributo-cabecalho small.atributo-subiu { color:#4ade80; }
+.atributo-cabecalho small.atributo-caiu { color:#fb7185; }
+.atributo-trilho { height:8px; overflow:hidden; border-radius:99px; background:rgba(148,163,184,.16); }
+.atributo-trilho span { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#16a34a,#86efac); transition:width .45s ease; }
+.atributo-trilho span.atributo-caiu { background:linear-gradient(90deg,#b91c1c,#fb7185); }
+.atributos-vazio { color:#94a3b8; font-size:.9rem; padding:8px 0; }
+@media (max-width:600px) { .atributos-painel { padding:15px; } .atributos-titulo { flex-direction:column; } .atributos-status { align-self:flex-start; } .atributos-lista { grid-template-columns:1fr; } .atributos-resumo { grid-template-columns:1fr 1fr; } }
