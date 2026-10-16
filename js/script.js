@@ -1040,7 +1040,7 @@ function validarDadosJogador({ nome, idade, idadeLimite, posicao, nacionalidade 
     }
 
     const idadeLimiteNumero = Number(idadeLimite);
-    if (!Number.isFinite(idadeLimiteNumero) || idadeLimiteNumero <= idadeNumero) {
+    if (!Number.isFinite(idadeLimiteNumero) || idadeLimiteNumero < idadeNumero) {
         return { valido: false, mensagem: "A idade limite deve ser maior que a idade inicial." };
     }
 

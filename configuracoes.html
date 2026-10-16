@@ -4,20 +4,47 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="css/style.css">
+    <script src="js/theme-menu.js" defer></script>
     <title>FootMain · Configurações</title>
 </head>
 <body>
 
     <header>
         <p>FootMain</p>
+        <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="side-menu">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+        </button>
         <div id="links">
             <a href="index.html">Início</a>
             <a href="index.html#ranking">Ranking</a>
             <a href="index.html#historico">Histórico</a>
             <a href="index.html#conquistas">Conquistas</a>
-            <a href="configuracoes.html">Configurações</a>
         </div>
+        <a class="settings-link" href="configuracoes.html" aria-label="Configurações" title="Configurações">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M19.14 12.94c.04-.31.06-.62.06-.94s-.02-.63-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.3 7.3 0 0 0-1.63-.94l-.36-2.52a.5.5 0 0 0-.49-.4h-3.84a.5.5 0 0 0-.49.4l-.36 2.52a7.3 7.3 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.61.22L2.64 8.84a.5.5 0 0 0 .12.64l2.03 1.58a6.8 6.8 0 0 0 0 1.88l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.12.21.37.29.61.22l2.39-.96c.5.39 1.04.71 1.63.94l.36 2.52a.5.5 0 0 0 .49.4h3.84a.5.5 0 0 0 .49-.4l.36-2.52c.59-.23 1.13-.55 1.63-.94l2.39.96c.24.07.49-.01.61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58Z"></path>
+                <circle cx="12" cy="12" r="3.5"></circle>
+            </svg>
+        </a>
     </header>
+
+    <button class="menu-backdrop" id="menu-backdrop" type="button" aria-label="Fechar menu" hidden></button>
+    <aside class="side-menu" id="side-menu" aria-labelledby="side-menu-title" aria-hidden="true" inert>
+        <div class="side-menu__header">
+            <h2 id="side-menu-title">Menu</h2>
+            <button class="side-menu__close" id="menu-close" type="button" aria-label="Fechar menu">&times;</button>
+        </div>
+        <section class="theme-picker" aria-labelledby="theme-picker-title">
+            <h3 id="theme-picker-title">Aparência</h3>
+            <p>Escolha o tema do site.</p>
+            <div class="theme-options" role="group" aria-label="Tema do site">
+                <button type="button" data-theme-choice="dark" aria-pressed="true">Escuro</button>
+                <button type="button" data-theme-choice="light" aria-pressed="false">Claro</button>
+            </div>
+        </section>
+    </aside>
 
     <main>
         <section id="configuracoes">

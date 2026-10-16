@@ -28,6 +28,7 @@ header {
 }
 
 header p {
+    padding: 0 48px;
     text-align: center;
     font-size: 2.3rem;
     font-weight: 800;
@@ -52,6 +53,156 @@ header p {
 #links a:hover {
     opacity: 1;
     text-decoration: underline;
+}
+
+.settings-link {
+    position: absolute;
+    top: 14px;
+    right: 18px;
+    display: grid;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border: 1px solid rgba(248, 250, 252, 0.35);
+    border-radius: 50%;
+    color: #f8fafc;
+    opacity: 0.9;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.settings-link:hover,
+.settings-link:focus-visible {
+    background: rgba(248, 250, 252, 0.14);
+    opacity: 1;
+}
+
+.settings-link:focus-visible {
+    outline: 2px solid #f8fafc;
+    outline-offset: 3px;
+}
+
+.settings-link svg {
+    width: 21px;
+    height: 21px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
+}
+
+.menu-toggle {
+    position: absolute;
+    top: 14px;
+    left: 18px;
+    display: grid;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    padding: 8px;
+    border: 1px solid rgba(248, 250, 252, 0.35);
+    border-radius: 50%;
+    background: transparent;
+    color: #f8fafc;
+}
+
+.menu-toggle svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-width: 2;
+}
+
+.menu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1001;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border-radius: 0;
+    background: rgba(2, 8, 23, 0.58);
+    cursor: default;
+}
+
+.menu-backdrop[hidden] {
+    display: none;
+}
+
+.side-menu {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 1002;
+    width: min(320px, 86vw);
+    padding: 24px;
+    background: #0f172a;
+    color: #e2e8f0;
+    box-shadow: 12px 0 32px rgba(2, 8, 23, 0.35);
+    transform: translateX(-105%);
+    visibility: hidden;
+    transition: transform 0.25s ease, visibility 0.25s ease;
+}
+
+.side-menu.is-open {
+    transform: translateX(0);
+    visibility: visible;
+}
+
+.side-menu__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+}
+
+.side-menu__header h2 {
+    font-size: 1.4rem;
+}
+
+.side-menu__close {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: 1px solid rgba(248, 250, 252, 0.2);
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    font-size: 1.6rem;
+    line-height: 1;
+}
+
+.theme-picker {
+    display: grid;
+    gap: 12px;
+}
+
+.theme-picker h3 {
+    font-size: 1.05rem;
+}
+
+.theme-picker p {
+    color: #94a3b8;
+    font-size: 0.9rem;
+}
+
+.theme-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.theme-options button {
+    padding: 10px 12px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(148, 163, 184, 0.1);
+    color: inherit;
+}
+
+.theme-options button[aria-pressed="true"] {
+    border-color: #60a5fa;
+    background: rgba(59, 130, 246, 0.25);
 }
 
 main {
@@ -628,6 +779,20 @@ button {
     header {
         padding: 20px 14px 16px;
         gap: 14px;
+    }
+
+    .settings-link {
+        top: 10px;
+        right: 10px;
+        width: 36px;
+        height: 36px;
+    }
+
+    .menu-toggle {
+        top: 10px;
+        left: 10px;
+        width: 36px;
+        height: 36px;
     }
 
     header p {
@@ -1602,3 +1767,149 @@ button {
 .atributo-trilho span.atributo-caiu { background:linear-gradient(90deg,#b91c1c,#fb7185); }
 .atributos-vazio { color:#94a3b8; font-size:.9rem; padding:8px 0; }
 @media (max-width:600px) { .atributos-painel { padding:15px; } .atributos-titulo { flex-direction:column; } .atributos-status { align-self:flex-start; } .atributos-lista { grid-template-columns:1fr; } .atributos-resumo { grid-template-columns:1fr 1fr; } }
+
+html[data-theme="light"] body {
+    background: linear-gradient(180deg, #bfdbfe 0%, #eff6ff 18%, #dbeafe 18%, #bfdbfe 100%);
+    color: #172554;
+}
+
+html[data-theme="light"] header {
+    background: linear-gradient(135deg, #1e3a8a, #2563eb 55%, #60a5fa);
+}
+
+html[data-theme="light"] #inicio,
+html[data-theme="light"] #historico,
+html[data-theme="light"] #ranking,
+html[data-theme="light"] #conquistas,
+html[data-theme="light"] #configuracoes {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    box-shadow: 0 14px 35px rgba(30, 58, 138, 0.12);
+}
+
+html[data-theme="light"] main :is(h1, h2, h3, h4, p, span, strong, small, label, summary, li, output) {
+    color: #1e3a5f !important;
+}
+
+html[data-theme="light"] #historico h2,
+html[data-theme="light"] #ranking h2,
+html[data-theme="light"] #conquistas h2,
+html[data-theme="light"] #configuracoes h2 {
+    color: #172554 !important;
+}
+
+html[data-theme="light"] #lista-ranking strong {
+    color: #1e40af !important;
+}
+
+html[data-theme="light"] #lista-temporadas li,
+html[data-theme="light"] #lista-ranking li,
+html[data-theme="light"] #lista-ranking .resumo-estatisticas-carreira div,
+html[data-theme="light"] #lista-ranking .temporada-carreira-detalhe,
+html[data-theme="light"] .conquistas-resumo > div,
+html[data-theme="light"] .atributos-resumo > div {
+    background: #e0ecff;
+    border-color: #bfdbfe;
+}
+
+html[data-theme="light"] #inputs,
+html[data-theme="light"] #posi,
+html[data-theme="light"] #posi > div,
+html[data-theme="light"] #resultados,
+html[data-theme="light"] .resumo-trofeus div,
+html[data-theme="light"] #lista-temporadas li,
+html[data-theme="light"] #lista-ranking li,
+html[data-theme="light"] .conquista-card,
+html[data-theme="light"] .recorde-card,
+html[data-theme="light"] .config-grupo,
+html[data-theme="light"] .config-avancado,
+html[data-theme="light"] .atributos-painel,
+html[data-theme="light"] .modal-caixa {
+    background: #eaf2ff;
+    border-color: #bfdbfe;
+}
+
+html[data-theme="light"] .conquista-card.bloqueada {
+    opacity: 1;
+    background: linear-gradient(135deg, #dbeafe, #eff6ff);
+    border-color: #93c5fd;
+}
+
+html[data-theme="light"] .conquista-card.bloqueada .conquista-icone {
+    background: #bfdbfe;
+}
+
+html[data-theme="light"] .conquista-progresso {
+    background: #bfdbfe;
+}
+
+html[data-theme="light"] .player-card,
+html[data-theme="light"] .resumo-final {
+    background: linear-gradient(135deg, #dbeafe, #eff6ff);
+    border-color: #93c5fd;
+}
+
+html[data-theme="light"] main :is(input, select, textarea),
+html[data-theme="light"] .filtro-ranking select {
+    background: #f8fbff !important;
+    border-color: #93c5fd !important;
+    color: #172554 !important;
+    color-scheme: light;
+}
+
+html[data-theme="light"] main input::placeholder,
+html[data-theme="light"] main textarea::placeholder {
+    color: #64748b !important;
+    opacity: 1;
+}
+
+html[data-theme="light"] main input[type="range"] {
+    background: #bfdbfe !important;
+    accent-color: #1d4ed8;
+}
+
+html[data-theme="light"] .preset-btn {
+    border-color: #93c5fd;
+    background: #dbeafe;
+    color: #1e3a8a !important;
+}
+
+html[data-theme="light"] .preset-btn:hover {
+    background: #bfdbfe;
+}
+
+html[data-theme="light"] .opcao-clube {
+    border-color: #93c5fd;
+    background: #e0ecff;
+    color: #1e3a5f;
+}
+
+html[data-theme="light"] .modal-btn--cancelar {
+    border-color: #93c5fd;
+    background: #dbeafe;
+    color: #1e3a5f;
+}
+
+html[data-theme="light"] .side-menu {
+    background: #eff6ff;
+    color: #172554;
+}
+
+html[data-theme="light"] .side-menu__close,
+html[data-theme="light"] .theme-options button {
+    border-color: #93c5fd;
+    background: #dbeafe;
+    color: #1e3a5f;
+}
+
+html[data-theme="light"] .theme-options button[aria-pressed="true"] {
+    border-color: #1d4ed8;
+    background: #bfdbfe;
+    color: #172554;
+}
+
+html[data-theme="light"] .theme-picker p,
+html[data-theme="light"] footer,
+html[data-theme="light"] footer a {
+    color: #1e3a5f;
+}
