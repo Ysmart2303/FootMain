@@ -97,7 +97,11 @@ const CLUBES = [
     { id: "sao-paulo", nome: "São Paulo FC", liga: "Brasileirão" },
     { id: "palmeiras", nome: "Palmeiras", liga: "Brasileirão" },
     { id: "santos", nome: "Santos FC", liga: "Brasileirão" },
-    { id: "vasco", nome: "Vasco da Gama", liga: "Brasileirão" }
+    { id: "vasco", nome: "Vasco da Gama", liga: "Brasileirão" },
+{ id: "nautico", nome: "Náutico", liga: "Brasileirão" },
+    { id: "criciuma", nome: "Criciuma", liga: "Brasileirão" },
+    { id: "mirassol", nome: "Mirassol", liga: "Brasileirão" },
+    { id: "botafogo", nome: "Botafogo", liga: "Brasileirão" }
 ];
 
 /* ---------- Configurações padrão ---------- */
