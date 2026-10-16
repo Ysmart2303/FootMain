@@ -1352,6 +1352,7 @@ async function gerar() {
         document.getElementById("gols").textContent = temporada.gols;
         document.getElementById("assi").textContent = temporada.assistencias;
         document.getElementById("prem").textContent = contarPremios(temporada);
+        atualizarTitulosResultados(temporada);
 
         const historicoDeOutrasCarreiras = lerHistorico().filter(
             (temporadaSalva) => temporadaSalva.carreiraId !== carreiraIdAnterior
@@ -1363,6 +1364,26 @@ async function gerar() {
     } finally {
         processamentoEmAndamento = false;
     }
+}
+
+function atualizarTitulosResultados(temporada) {
+    const anoElemento = document.getElementById("ano-titulos-resultados");
+    const coletivosElemento = document.getElementById("titulos-coletivos-resultados");
+    const individuaisElemento = document.getElementById("titulos-individuais-resultados");
+    if (!anoElemento || !coletivosElemento || !individuaisElemento) return;
+
+    if (!temporada) {
+        anoElemento.textContent = "Títulos da temporada";
+        coletivosElemento.textContent = "Nenhum";
+        individuaisElemento.textContent = "Nenhum";
+        return;
+    }
+
+    const coletivos = Array.isArray(temporada.trofeusColetivos) ? temporada.trofeusColetivos : [];
+    const individuais = Array.isArray(temporada.trofeusIndividuais) ? temporada.trofeusIndividuais : [];
+    anoElemento.textContent = `Títulos da temporada ${temporada.ano}`;
+    coletivosElemento.textContent = coletivos.length ? coletivos.join(", ") : "Nenhum";
+    individuaisElemento.textContent = individuais.length ? individuais.join(", ") : "Nenhum";
 }
 
 function simularTudo() {
@@ -1403,8 +1424,18 @@ function simularTudo() {
         carreiraAtual.idadeLimite = idadeLimite;
         carreiraAtual.nacionalidade = nacionalidade;
 
+        // Uma carreira que já está no ranking foi finalizada. Nunca reutilizamos
+        // seu ID ao iniciar outra, mesmo que o nome do jogador seja igual.
+        const carreiraFinalizada = lerRanking().some(
+            (carreira) => String(carreira.id) === String(carreiraAtual.id)
+        );
+        if (carreiraFinalizada) {
+            carreiraAtual.id = gerarIdRanking();
+            carreiraAtual.clube = "";
+        }
+
         // Se "gerar" já criou temporadas para esta carreira, continuamos dela.
-        // Se ainda não há temporadas, iniciamos uma carreira nova.
+        // Caso contrário, iniciamos uma carreira nova e isolada.
         const historicoCompleto = lerHistorico();
         let historico = historicoCompleto.filter(
             (temporada) => temporada.carreiraId === carreiraAtual.id
@@ -1412,7 +1443,6 @@ function simularTudo() {
         const continuandoCarreira = historico.length > 0;
 
         if (!continuandoCarreira) {
-            carreiraAtual.id = gerarIdRanking();
             historico = [];
         }
         salvarCarreiraAtual(carreiraAtual);
@@ -1460,7 +1490,9 @@ function simularTudo() {
         );
         salvarHistorico([...historicoDeOutrasCarreiras, ...historico]);
         renderHistorico();
-        renderAtributos(historico[historico.length - 1] || null);
+        const ultimaTemporadaSimulada = historico[historico.length - 1] || null;
+        renderAtributos(ultimaTemporadaSimulada);
+        atualizarTitulosResultados(ultimaTemporadaSimulada);
         mostrarResumoFinal(nome, idadeLimite, ano, historico, dadosPosicao.nome);
     } finally {
         processamentoEmAndamento = false;
@@ -1613,5 +1645,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderHistorico();
     renderRanking();
     const historicoInicialAtributos = lerHistoricoAtiva().sort((a, b) => a.ano - b.ano);
-    renderAtributos(historicoInicialAtributos[historicoInicialAtributos.length - 1] || null);
+    const ultimaTemporadaInicial = historicoInicialAtributos[historicoInicialAtributos.length - 1] || null;
+    renderAtributos(ultimaTemporadaInicial);
+    atualizarTitulosResultados(ultimaTemporadaInicial);
 });
