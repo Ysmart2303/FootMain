@@ -1102,15 +1102,33 @@ function evoluirAtributos(temporadasAnteriores, posicao, idade) {
         ? normalizarAtributos(temporadasAnteriores[temporadasAnteriores.length - 1].atributos, posicao, idade - 1)
         : normalizarAtributos(null, posicao, idade);
     const resultado = {};
+
     Object.keys(ATRIBUTOS_NOMES).forEach((chave) => {
         let variacao = 0;
-        if (idade <= 27) variacao = Math.random() < 0.72 ? 1 + Math.floor(Math.random() * 3) : 0;
-        else if (idade <= 30) variacao = Math.random() < 0.55 ? 1 : 0;
-        else if (idade <= 34) variacao = -(Math.random() < 0.75 ? 1 + Math.floor(Math.random() * 2) : 0);
-        else variacao = -(1 + Math.floor(Math.random() * 3));
-        if (chave === "reflexos" && posicao !== "go") resultado[chave] = limitarAtributo(Math.min(20, anterior[chave] + (idade <= 27 ? 0 : variacao)));
-        else resultado[chave] = limitarAtributo(anterior[chave] + variacao);
+
+        // Evolução mais perceptível na juventude, com desaceleração gradual no auge.
+        if (idade <= 22) {
+            variacao = Math.random() < 0.84 ? 1 + Math.floor(Math.random() * 3) : 0;
+        } else if (idade <= 26) {
+            variacao = Math.random() < 0.78 ? 1 + Math.floor(Math.random() * 2) : 0;
+        } else if (idade <= 29) {
+            variacao = Math.random() < 0.48 ? 1 : 0;
+        } else if (idade <= 32) {
+            variacao = Math.random() < 0.30 ? 1 : (Math.random() < 0.25 ? -1 : 0);
+        } else if (idade <= 35) {
+            variacao = Math.random() < 0.62 ? -1 : 0;
+        } else {
+            variacao = -(Math.random() < 0.65 ? 1 + Math.floor(Math.random() * 2) : 0);
+        }
+
+        // Reflexos são um atributo específico de goleiros; não afetam jogadores de linha.
+        if (chave === "reflexos" && posicao !== "go") {
+            resultado[chave] = limitarAtributo(Math.min(20, anterior[chave] + (idade <= 32 ? Math.max(0, variacao) : variacao)));
+        } else {
+            resultado[chave] = limitarAtributo(anterior[chave] + variacao);
+        }
     });
+
     return resultado;
 }
 
