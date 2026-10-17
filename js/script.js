@@ -37,156 +37,6 @@ function calcularOverall(posicao, atributos) {
     return Math.max(1, Math.min(99, overall));
 }
 
-/* ============================================================
-     Potencial:
-     30% → 78-85  (comum)
-     35% → 85-91  (bom)
-     25% → 91-95  (craque)
-     10% → 95-99  (gênio)
-   ============================================================ */
-function calcularPotencialDaCarreira(carreira) {
-    if (Number.isFinite(Number(carreira?.potencial))) {
-        return Math.max(60, Math.min(99, Math.round(Number(carreira.potencial))));
-    }
-
-    const seed = String(carreira?.id || carreira?.nome || "jogador-padrao");
-    let hash = 0;
-    for (let i = 0; i < seed.length; i++) {
-        hash = ((hash << 5) - hash) + seed.charCodeAt(i);
-        hash |= 0;
-    }
-    hash = Math.abs(hash);
-
-    const r = (hash % 1000) / 1000;
-    if (r < 0.30) return 78 + (hash % 8);   // 78-85
-    if (r < 0.65) return 85 + (hash % 7);   // 85-91
-    if (r < 0.90) return 91 + (hash % 5);   // 91-95
-    return 95 + (hash % 5);                  // 95-99
-}
-
-function obterModificadorPotencial(chave, posicao) {
-    // Cada posição distribui o potencial de forma diferente entre atributos.
-    // A média ponderada desses fatores (pelos pesos de calcularOverall)
-    // é ~1.0 → o overall final fica próximo do potencial.
-    const modificadores = {
-        ata: { finalizacao: 1.05, drible: 1.05, velocidade: 1.00, passe: 0.90, fisico: 0.85, defesa: 0.60, reflexos: 0.10 },
-        me:  { finalizacao: 0.90, drible: 1.00, velocidade: 1.00, passe: 1.10, fisico: 0.90, defesa: 0.85, reflexos: 0.10 },
-        zag: { finalizacao: 0.60, drible: 0.85, velocidade: 0.85, passe: 0.90, fisico: 1.05, defesa: 1.05, reflexos: 0.10 },
-        go:  { finalizacao: 0.30, drible: 0.50, velocidade: 0.85, passe: 0.90, fisico: 1.00, defesa: 0.90, reflexos: 1.10 }
-    };
-    return modificadores[posicao]?.[chave] ?? 1.0;
-}
-
-function amostrarPoisson(lambda) {
-    if (!(lambda > 0)) return 0;
-    const L = Math.exp(-lambda);
-    let k = 0;
-    let p = 1;
-    do {
-        k++;
-        p *= Math.random();
-    } while (p > L);
-    return k - 1;
-}
-
-/* ============================================================
-   Fator liga / clube
-   ============================================================ */
-
-function obterPerfilLiga(liga) {
-    return PERFIL_LIGAS[liga] || { dificuldade: 1.0, prestigio: 1.0 };
-}
-
-function obterForcaClube(clubeId) {
-    if (!clubeId) return 70;
-    return Number(FORCA_CLUBES[clubeId]) || 70;
-}
-
-function obterForcaMediaLiga(liga) {
-    const clubesDaLiga = CLUBES.filter((c) => c.liga === liga);
-    if (!clubesDaLiga.length) return 70;
-    const soma = clubesDaLiga.reduce((total, c) => total + obterForcaClube(c.id), 0);
-    return soma / clubesDaLiga.length;
-}
-
-function calcularDominancia(clubeId) {
-    const clube = obterClube(clubeId);
-    if (!clube) {
-        return { dominancia: 1.0, perfil: obterPerfilLiga(""), forca: 70 };
-    }
-    const perfil = obterPerfilLiga(clube.liga);
-    const forca = obterForcaClube(clube.id);
-    const mediaLiga = obterForcaMediaLiga(clube.liga);
-    return { dominancia: forca / mediaLiga, perfil, forca };
-}
-
-function simularTemporadaPorJogo(posicao, atributos, idade, clubeId = "") {
-    const cfg = getConfig();
-    const overall = calcularOverall(posicao, atributos);
-    const { dominancia, perfil } = calcularDominancia(clubeId);
-
-    let fatorIdade;
-    if (idade <= 19) fatorIdade = 0.82;
-    else if (idade <= 22) fatorIdade = 0.92;
-    else if (idade <= 25) fatorIdade = 1.00;
-    else if (idade <= 29) fatorIdade = 1.05;
-    else if (idade <= 32) fatorIdade = 1.00;
-    else if (idade <= 35) fatorIdade = 0.88;
-    else fatorIdade = 0.72;
-
-    // Clubes dominantes rodiziam menos → mais minutos.
-    const fatorClubeMinutos = 0.90 + Math.min(0.20, Math.max(0, dominancia - 0.8) * 0.35);
-
-    const probParticipar = Math.max(0.05, Math.min(0.99,
-        ((overall - 10) / 90) * fatorIdade * fatorClubeMinutos
-    ));
-    const maxJogos = Math.round((posicao === "go" ? 55 : 62) * (cfg.geral.multiplicadorJogos || 1));
-
-    const fin = Number(atributos?.finalizacao) || OVERALL_PADRAO;
-    const pas = Number(atributos?.passe)       || OVERALL_PADRAO;
-    const dri = Number(atributos?.drible)      || OVERALL_PADRAO;
-
-    let lambdaGol = 0;
-    let lambdaAssist = 0;
-
-    if (posicao === "ata") {
-        lambdaGol    = Math.pow(fin / 100, 3) * 1.00 + Math.pow(dri / 100, 3) * 0.15;
-        lambdaAssist = Math.pow(pas / 100, 2.5) * 0.45 + Math.pow(dri / 100, 3) * 0.15;
-    } else if (posicao === "me") {
-        lambdaGol    = Math.pow(fin / 100, 3) * 0.55 + Math.pow(dri / 100, 3) * 0.10;
-        lambdaAssist = Math.pow(pas / 100, 2.5) * 0.85 + Math.pow(dri / 100, 3) * 0.20;
-    } else if (posicao === "zag") {
-        lambdaGol    = Math.pow(fin / 100, 3) * 0.15;
-        lambdaAssist = Math.pow(pas / 100, 3) * 0.15;
-    } else if (posicao === "go") {
-        lambdaGol    = 0.003;
-        lambdaAssist = Math.pow(pas / 100, 4) * 0.06;
-    }
-
-    // Ligas fortes → defesas melhores → menos gols por jogo.
-    // Clubes dominantes → mais criação → mais gols.
-    const fatorDificuldade = 1 / Math.pow(perfil.dificuldade, 0.7);
-    const fatorDominancia   = Math.pow(dominancia, 0.5);
-
-    lambdaGol    *= fatorIdade * (cfg.geral.multiplicadorGols || 1)
-                  * fatorDificuldade * fatorDominancia;
-    lambdaAssist *= fatorIdade * (cfg.geral.multiplicadorAssistencias || 1)
-                  * fatorDificuldade * fatorDominancia;
-
-    let jogos = 0;
-    let gols = 0;
-    let assistencias = 0;
-
-    for (let i = 0; i < maxJogos; i++) {
-        if (Math.random() > probParticipar) continue;
-        jogos++;
-        gols         += amostrarPoisson(lambdaGol);
-        assistencias += amostrarPoisson(lambdaAssist);
-    }
-
-    return { jogos, gols, assistencias, overall };
-}
-
 function obterClube(clubeId) {
     return CLUBES.find((clube) => clube.id === clubeId) || null;
 }
@@ -267,17 +117,11 @@ function normalizarNome(valor) {
 }
 
 function normalizarPosicao(valor) {
-    if (typeof valor !== "string") {
-        return null;
-    }
+    return categoriaPosicao(valor);
+}
 
-    const valorNormalizado = valor.trim().toLowerCase();
-    const chave = Object.entries(posicoes).find(([, dados]) => dados.nome.toLowerCase() === valorNormalizado);
-    if (chave) {
-        return chave[0];
-    }
-
-    return posicoes[valorNormalizado] ? valorNormalizado : null;
+function normalizarPosicaoDetalhada(valor) {
+    return chavePosicaoCampo(valor);
 }
 
 function validarTemporada(temporada) {
@@ -286,8 +130,10 @@ function validarTemporada(temporada) {
     }
 
     const nome = normalizarNome(temporada.nome) || "Jogador";
-    const posicaoNormalizada = normalizarPosicao(temporada.posicao) || normalizarPosicao(temporada.posicaoKey) || "ata";
+    const posicaoDetalhe = normalizarPosicaoDetalhada(temporada.posicaoDetalhe || temporada.posicao);
+    const posicaoNormalizada = normalizarPosicao(temporada.posicaoKey || temporada.posicaoDetalhe || temporada.posicao) || "ata";
     const dadosPosicao = posicoes[posicaoNormalizada] || posicoes.ata;
+    const nomePosicao = POSICOES_CAMPO[posicaoDetalhe]?.nome || dadosPosicao.nome;
     const idade = Number.isFinite(Number(temporada.idade)) ? Math.max(0, Math.floor(Number(temporada.idade))) : 0;
     const ano = Number.isFinite(Number(temporada.ano)) ? Math.floor(Number(temporada.ano)) : ANO_INICIAL;
     const jogos = Number.isFinite(Number(temporada.jogos)) ? Math.max(0, Math.floor(Number(temporada.jogos))) : 0;
@@ -307,8 +153,9 @@ function validarTemporada(temporada) {
     return {
         nome,
         idade,
-        posicao: dadosPosicao.nome,
+        posicao: nomePosicao,
         posicaoKey: posicaoNormalizada,
+        posicaoDetalhe,
         nacionalidade: SELECOES.some((s) => s.id === temporada.nacionalidade) ? temporada.nacionalidade : "",
         clube: obterClube(temporada.clube)?.id || "",
         ano,
@@ -362,11 +209,12 @@ function obterCarreiraAtual() {
     const carreiraPadrao = {
         id: gerarIdRanking(),
         nome: "Jogador",
-        posicao: "Atacante",
+        posicao: "Centroavante",
+        posicaoDetalhe: "CA",
         idadeLimite: IDADE_LIMITE_PADRAO,
-        nacionalidade: "",
-        potencial: 85
+        nacionalidade: ""
     };
+    carreiraPadrao.potencial = calcularPotencialDaCarreira(carreiraPadrao);
 
     if (!carreiraRaw) {
         return carreiraPadrao;
@@ -381,7 +229,8 @@ function obterCarreiraAtual() {
         return {
             id: typeof carreira.id === "string" && carreira.id ? carreira.id : gerarIdRanking(),
             nome: normalizarNome(carreira.nome) || "Jogador",
-            posicao: typeof carreira.posicao === "string" ? carreira.posicao : "Atacante",
+            posicao: typeof carreira.posicao === "string" ? carreira.posicao : "Centroavante",
+            posicaoDetalhe: normalizarPosicaoDetalhada(carreira.posicaoDetalhe || carreira.posicao),
             idadeLimite: Number.isFinite(Number(carreira.idadeLimite)) ? Math.max(1, Math.floor(Number(carreira.idadeLimite))) : IDADE_LIMITE_PADRAO,
             nacionalidade: SELECOES.some((selecao) => selecao.id === carreira.nacionalidade) ? carreira.nacionalidade : "",
             clube: obterClube(carreira.clube)?.id || "",
@@ -398,7 +247,8 @@ function salvarCarreiraAtual(carreira) {
     return safeStorageSet(STORAGE_KEY_CARREIRA_ATUAL, JSON.stringify({
         id: typeof carreiraAtual.id === "string" && carreiraAtual.id ? carreiraAtual.id : gerarIdRanking(),
         nome: normalizarNome(carreiraAtual.nome) || "Jogador",
-        posicao: typeof carreiraAtual.posicao === "string" ? carreiraAtual.posicao : "Atacante",
+        posicao: typeof carreiraAtual.posicao === "string" ? carreiraAtual.posicao : "Centroavante",
+        posicaoDetalhe: normalizarPosicaoDetalhada(carreiraAtual.posicaoDetalhe || carreiraAtual.posicao),
         idadeLimite: Number.isFinite(Number(carreiraAtual.idadeLimite)) ? Math.max(1, Math.floor(Number(carreiraAtual.idadeLimite))) : IDADE_LIMITE_PADRAO,
         nacionalidade: SELECOES.some((selecao) => selecao.id === carreiraAtual.nacionalidade) ? carreiraAtual.nacionalidade : "",
         clube: obterClube(carreiraAtual.clube)?.id || "",
@@ -418,6 +268,7 @@ function normalizarRanking(ranking) {
             id: carreira.id || gerarIdRanking(),
             nome: normalizarNome(carreira.nome) || "Jogador",
             posicao: typeof carreira.posicao === "string" ? carreira.posicao : "-",
+            posicaoDetalhe: normalizarPosicaoDetalhada(carreira.posicaoDetalhe || carreira.posicao),
             nacionalidade: SELECOES.some((selecao) => selecao.id === carreira.nacionalidade) ? carreira.nacionalidade : "",
             clube: obterClube(carreira.clube)?.id || "",
             idadeLimite: Number.isFinite(Number(carreira.idadeLimite)) ? Math.max(1, Math.floor(Number(carreira.idadeLimite))) : IDADE_LIMITE_PADRAO,
@@ -585,33 +436,32 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
     const t = cfg.titulos;
     const multColetivos = cfg.geral.multiplicadorTitulos;
     const multIndividuais = cfg.geral.multiplicadorPremios;
-
-    const { dominancia, perfil } = calcularDominancia(clubeId);
-
-    // Clubes dominantes concentram títulos (expoente 2 concentra bastante).
-    const fatorTitulos = Math.pow(dominancia, 2);
-    // Prêmios individuais: prestígio da liga × dominância do clube.
-    const fatorVisibilidade = perfil.prestigio * Math.pow(dominancia, 1.5);
+    const forcaClube = Math.max(1, Math.min(100, Number(cfg.clubes?.potencias?.[clubeId]) || 70));
+    // Força 75 mantém aproximadamente a chance-base; clubes mais fortes aumentam e mais fracos reduzem.
+    const fatorClube = 0.4 + forcaClube / 125;
 
     const trofeusColetivos = [];
     const trofeusIndividuais = [];
     const temporadaAtual = Number(ano) || ANO_INICIAL;
     const ciclo = Math.max(1, Number(t.cicloCopaDoMundo) || 4);
 
+    // Ciclo da Copa do Mundo (a cada N anos, começando em ANO_INICIAL).
     const cicloCopaDoMundo = (temporadaAtual - ANO_INICIAL) % ciclo === 0;
+
+    // Ciclo do Mundial de Clubes (a cada N anos, começando em anoInicioMundialClubes).
     const anoInicioMundial = Number(t.anoInicioMundialClubes) || 2029;
     const anoCopaDoMundoDeClubes =
         temporadaAtual >= anoInicioMundial &&
         (temporadaAtual - anoInicioMundial) % ciclo === 0;
 
     // -------- Títulos coletivos --------
-    if (jogos >= 35 && sortearPremio(t.chanceCopaContinental * multColetivos * fatorTitulos)) {
+    if (jogos >= 35 && sortearPremio(t.chanceCopaContinental * multColetivos * fatorClube)) {
         trofeusColetivos.push("Copa Continental");
     }
-    if (jogos >= 30 && sortearPremio(t.chanceLigaNacional * multColetivos * fatorTitulos)) {
+    if (jogos >= 30 && sortearPremio(t.chanceLigaNacional * multColetivos * fatorClube)) {
         trofeusColetivos.push("Liga Nacional");
     }
-    if (jogos >= 25 && sortearPremio(t.chanceCopaNacional * multColetivos * fatorTitulos)) {
+    if (jogos >= 25 && sortearPremio(t.chanceCopaNacional * multColetivos * fatorClube)) {
         trofeusColetivos.push("Copa Nacional");
     }
     if (jogos >= 35 && cicloCopaDoMundo && sortearPremio(t.chanceCopaDoMundo * multColetivos)) {
@@ -622,22 +472,27 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
     }
 
     const ganhouContinentalNestaTemporada = trofeusColetivos.includes("Copa Continental");
-    const inicioCicloMundial = ANO_INICIAL + Math.floor((temporadaAtual - ANO_INICIAL) / ciclo) * ciclo;
+
+    // Início do ciclo mundial atual (para checar se ganhou continental no mesmo ciclo).
+    const inicioCicloMundial =
+        ANO_INICIAL + Math.floor((temporadaAtual - ANO_INICIAL) / ciclo) * ciclo;
 
     const ganhouContinentalNoCiclo =
         ganhouContinentalNestaTemporada ||
-        temporadasAnteriores.some((temporada) =>
-            Number(temporada.ano) >= inicioCicloMundial &&
-            Number(temporada.ano) <= temporadaAtual &&
-            Array.isArray(temporada.trofeusColetivos) &&
-            temporada.trofeusColetivos.includes("Copa Continental"));
+        temporadasAnteriores.some(
+            (temporada) =>
+                Number(temporada.ano) >= inicioCicloMundial &&
+                Number(temporada.ano) <= temporadaAtual &&
+                Array.isArray(temporada.trofeusColetivos) &&
+                temporada.trofeusColetivos.includes("Copa Continental")
+        );
 
     if (jogos >= 35 && ganhouContinentalNestaTemporada &&
-        sortearPremio(t.chanceIntercontinental * multColetivos * fatorTitulos)) {
+        sortearPremio(t.chanceIntercontinental * multColetivos * fatorClube)) {
         trofeusColetivos.push("Intercontinental");
     }
     if (jogos >= 35 && anoCopaDoMundoDeClubes && ganhouContinentalNoCiclo &&
-        sortearPremio(t.chanceMundialClubes * multColetivos * fatorTitulos)) {
+        sortearPremio(t.chanceMundialClubes * multColetivos * fatorClube)) {
         trofeusColetivos.push("Copa do Mundo de Clubes");
     }
 
@@ -646,7 +501,7 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
         posicao !== "Goleiro" &&
         trofeusColetivos.length >= 2 &&
         (gols >= 20 || assistencias >= 15 || gols + assistencias >= 25) &&
-        sortearPremio(t.chanceBolaDeOuro * multIndividuais * fatorVisibilidade)
+        sortearPremio(t.chanceBolaDeOuro * multIndividuais)
     ) {
         trofeusIndividuais.push("Bola de Ouro");
     }
@@ -659,19 +514,20 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
 
     if (
         !jaGanhouGoldenBoy &&
-        Number(idade) <= 20 && Number(idade) >= 0 &&
+        Number(idade) <= 20 &&
+        Number(idade) >= 0 &&
         (gols >= 10 || assistencias >= 8 || gols + assistencias >= 15) &&
-        sortearPremio(t.chanceGoldenBoy * multIndividuais * fatorVisibilidade)
+        sortearPremio(t.chanceGoldenBoy * multIndividuais)
     ) {
         trofeusIndividuais.push("Golden Boy");
     }
 
-    if (gols > jogos && sortearPremio(t.chanceChuteiraDeOuro * multIndividuais * fatorVisibilidade)) {
+    if (gols > jogos && sortearPremio(t.chanceChuteiraDeOuro * multIndividuais)) {
         trofeusIndividuais.push("Chuteira de Ouro");
     }
 
     if (posicao === "Goleiro" && jogos >= 30 &&
-        sortearPremio(t.chanceLuvaDeOuro * multIndividuais * fatorVisibilidade)) {
+        sortearPremio(t.chanceLuvaDeOuro * multIndividuais)) {
         trofeusIndividuais.push("Luva de Ouro");
     }
 
@@ -933,7 +789,14 @@ function renderRanking() {
     const filtroPosicao = document.getElementById("filtro-posicao-ranking");
     const posicaoSelecionada = filtroPosicao?.value || "todas";
     const ranking = lerRanking()
-        .filter((carreira) => posicaoSelecionada === "todas" || carreira.posicao === posicaoSelecionada)
+        .filter((carreira) => {
+            if (posicaoSelecionada === "todas") return true;
+            const detalhe = normalizarPosicaoDetalhada(carreira.posicaoDetalhe || carreira.posicao);
+            const categoria = categoriaPosicao(detalhe);
+            return POSICOES_CAMPO[posicaoSelecionada]
+                ? detalhe === posicaoSelecionada
+                : categoria === posicaoSelecionada;
+        })
         .sort((a, b) => (Number(b[criterio]) || 0) - (Number(a[criterio]) || 0))
         .slice(0, 5);
 
@@ -1058,7 +921,7 @@ function renderHistorico() {
                 <li>
                     <strong>Temporada ${temporada.ano}</strong>
                     <span> - ${temporada.posicao}</span>
-                    <span> - ${escaparHTML(obterClube(temporada.clube)?.nome || "Clube não definido")} (${escaparHTML(obterClube(temporada.clube)?.liga || "—")}, força ${obterForcaClube(temporada.clube)})</span>
+                    <span> - ${escaparHTML(obterClube(temporada.clube)?.nome || "Clube não definido")}</span>
                     <p>Jogador: ${temporada.nome} | Idade: ${temporada.idade} anos</p>
                     <p>Jogos: ${temporada.jogos} | Gols: ${temporada.gols} | Assistências: ${temporada.assistencias} | Prêmios: ${premios}</p>
                     <p class="titulo-categoria">Títulos coletivos:</p>
@@ -1136,6 +999,7 @@ function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao) {
         id: carreiraAtual.id || gerarIdRanking(),
         nome,
         posicao: posicao || "-",
+        posicaoDetalhe: carreiraAtual.posicaoDetalhe || normalizarPosicaoDetalhada(posicao),
         nacionalidade: carreiraAtual.nacionalidade,
         clube: carreiraAtual.clube,
         idadeLimite,
@@ -1245,7 +1109,7 @@ function validarDadosJogador({ nome, idade, idadeLimite, posicao, nacionalidade 
         return { valido: false, mensagem: "A idade limite deve ser maior que a idade inicial." };
     }
 
-    if (!posicao || !(posicao in posicoes)) {
+    if (!posicao || !categoriaPosicao(posicao)) {
         return { valido: false, mensagem: "Selecione uma posição válida para a carreira." };
     }
 
@@ -1307,9 +1171,8 @@ function evoluirAtributos(temporadasAnteriores, posicao, idade, potencial = 85) 
     Object.keys(ATRIBUTOS_NOMES).forEach((chave) => {
         let variacao = 0;
 
-        // Curva de evolução mais generosa:
-        // 18-20: +2 a +6/ano | 21-23: +2 a +5/ano | 24-27: +1 a +3/ano
-        // 28-30: +0 a +1/ano | 31-33: ~estável | 34+: queda
+        // Curva mais generosa: 18-20: +2 a +6 | 21-23: +2 a +5 | 24-27: +1 a +3
+        // 28-30: +0 a +1 | 31-33: ~estável | 34+: queda
         if (idade <= 20) {
             variacao = Math.random() < 0.90 ? 2 + Math.floor(Math.random() * 5) : 0;
         } else if (idade <= 23) {
@@ -1397,16 +1260,152 @@ function renderAtributos(temporada) {
         <div class="atributos-lista">${linhas}</div>`;
 }
 
+/* ========== Nova engine de simulação por overall ========== */
+
+// Calcula o overall com pesos por posição.
+function calcularOverall(posicao, atributos) {
+    const pesos = {
+        ata: { finalizacao: 0.35, drible: 0.22, velocidade: 0.18, passe: 0.15, fisico: 0.10 },
+        me:  { passe: 0.35, drible: 0.25, finalizacao: 0.15, velocidade: 0.15, fisico: 0.10 },
+        zag: { defesa: 0.45, fisico: 0.30, passe: 0.15, velocidade: 0.10 },
+        go:  { reflexos: 0.50, fisico: 0.20, defesa: 0.20, passe: 0.10 }
+    };
+    const peso = pesos[posicao] || pesos.ata;
+    let soma = 0;
+    let total = 0;
+    for (const chave in peso) {
+        soma += (Number(atributos?.[chave]) || 0) * peso[chave];
+        total += peso[chave];
+    }
+    return Math.max(1, Math.min(99, Math.round(soma / total)));
+}
+
+// Amostra uma Poisson (Knuth). Serve para "quantos gols nesse jogo".
+function amostrarPoisson(lambda) {
+    if (lambda <= 0) return 0;
+    const L = Math.exp(-lambda);
+    let k = 0;
+    let p = 1;
+    do {
+        k++;
+        p *= Math.random();
+    } while (p > L);
+    return k - 1;
+}
+
+/* ============================================================
+   Potencial — teto de evolução por jogador.
+   Derivado do id da carreira (estável, sem precisar salvar).
+   Distribuição:
+     30% → 78-85  (comum)
+     35% → 85-91  (bom)
+     25% → 91-95  (craque)
+     10% → 95-99  (gênio)
+   ============================================================ */
+function calcularPotencialDaCarreira(carreira) {
+    if (carreira && Number.isFinite(Number(carreira.potencial))) {
+        return Math.max(60, Math.min(99, Math.round(Number(carreira.potencial))));
+    }
+
+    const seed = String(carreira?.id || carreira?.nome || "jogador-padrao");
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+        hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+        hash |= 0;
+    }
+    hash = Math.abs(hash);
+
+    const r = (hash % 1000) / 1000;
+    if (r < 0.30) return 78 + (hash % 8);   // 78-85
+    if (r < 0.65) return 85 + (hash % 7);   // 85-91
+    if (r < 0.90) return 91 + (hash % 5);   // 91-95
+    return 95 + (hash % 5);                  // 95-99
+}
+
+function obterModificadorPotencial(chave, posicao) {
+    const modificadores = {
+        ata: { finalizacao: 1.05, drible: 1.05, velocidade: 1.00, passe: 0.90, fisico: 0.85, defesa: 0.60, reflexos: 0.10 },
+        me:  { finalizacao: 0.90, drible: 1.00, velocidade: 1.00, passe: 1.10, fisico: 0.90, defesa: 0.85, reflexos: 0.10 },
+        zag: { finalizacao: 0.60, drible: 0.85, velocidade: 0.85, passe: 0.90, fisico: 1.05, defesa: 1.05, reflexos: 0.10 },
+        go:  { finalizacao: 0.30, drible: 0.50, velocidade: 0.85, passe: 0.90, fisico: 1.00, defesa: 0.90, reflexos: 1.10 }
+    };
+    return modificadores[posicao]?.[chave] ?? 1.0;
+}
+
+// Simula a temporada jogo a jogo com base no overall e nos atributos.
+function simularTemporadaPorJogo(posicao, atributos, idade) {
+    const cfg = getConfig();
+    const overall = calcularOverall(posicao, atributos);
+
+    // Fator idade: jovem ainda não é titular absoluto, veterano perde ritmo.
+    let fatorIdade;
+    if (idade <= 19) fatorIdade = 0.82;
+    else if (idade <= 22) fatorIdade = 0.92;
+    else if (idade <= 25) fatorIdade = 1.00;
+    else if (idade <= 29) fatorIdade = 1.05;
+    else if (idade <= 32) fatorIdade = 1.00;
+    else if (idade <= 35) fatorIdade = 0.88;
+    else fatorIdade = 0.72;
+
+    // Probabilidade de entrar em campo em cada jogo.
+    // Overall 30 → ~0.22 | 50 → ~0.50 | 70 → ~0.78 | 85 → ~0.95 | 95 → ~0.99
+    const probParticipar = Math.max(0.05, Math.min(0.99, ((overall - 10) / 90) * fatorIdade));
+
+    // Nº máximo de jogos possíveis (clube + seleção).
+    const maxJogos = Math.round((posicao === "go" ? 55 : 62) * cfg.geral.multiplicadorJogos);
+
+    // Médias esperadas por jogo (lambda da Poisson).
+    const fin = Number(atributos?.finalizacao) || OVERALL_PADRAO;
+    const pas = Number(atributos?.passe)       || OVERALL_PADRAO;
+    const dri = Number(atributos?.drible)      || OVERALL_PADRAO;
+  
+    let lambdaGol = 0;
+    let lambdaAssist = 0;
+
+    if (posicao === "ata") {
+        lambdaGol    = Math.pow(fin / 100, 3) * 1.00 + Math.pow(dri / 100, 3) * 0.15;
+        lambdaAssist = Math.pow(pas / 100, 2.5) * 0.45 + Math.pow(dri / 100, 3) * 0.15;
+    } else if (posicao === "me") {
+        lambdaGol    = Math.pow(fin / 100, 3) * 0.55 + Math.pow(dri / 100, 3) * 0.10;
+        lambdaAssist = Math.pow(pas / 100, 2.5) * 0.85 + Math.pow(dri / 100, 3) * 0.20;
+    } else if (posicao === "zag") {
+        lambdaGol    = Math.pow(fin / 100, 3) * 0.15;
+        lambdaAssist = Math.pow(pas / 100, 3) * 0.15;
+    } else if (posicao === "go") {
+        lambdaGol    = 0.003;
+        lambdaAssist = Math.pow(pas / 100, 4) * 0.06;
+    }
+
+    // Idade + multiplicadores das configurações.
+    lambdaGol    *= fatorIdade * (cfg.geral.multiplicadorGols || 1);
+    lambdaAssist *= fatorIdade * (cfg.geral.multiplicadorAssistencias || 1);
+
+    let jogos = 0;
+    let gols = 0;
+    let assistencias = 0;
+
+    for (let i = 0; i < maxJogos; i++) {
+        if (Math.random() > probParticipar) continue;
+        jogos++;
+        gols        += amostrarPoisson(lambdaGol);
+        assistencias += amostrarPoisson(lambdaAssist);
+    }
+
+    return { jogos, gols, assistencias, overall };
+}
+
 function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], nacionalidade = "", clubeId = "") {
-    const dados = posicoes[posicao];
+    const posicaoDetalhe = normalizarPosicaoDetalhada(posicao);
+    const categoria = categoriaPosicao(posicao);
+    const dados = posicoes[categoria];
     if (!dados) {
         throw new Error(`Posição inválida: ${posicao}`);
     }
     const carreiraAtual = obterCarreiraAtual();
 
-    const atributos = evoluirAtributos(temporadasAnteriores, posicao, idade, carreiraAtual.potencial);
-    const overall = calcularOverall(posicao, atributos);
-    const sim = simularTemporadaPorJogo(posicao, atributos, idade, clubeId);
+    const atributos = evoluirAtributos(temporadasAnteriores, categoria, idade, carreiraAtual.potencial);
+    const overall = calcularOverall(categoria, atributos);
+    const sim = simularTemporadaPorJogo(categoria, atributos, idade);
 
     const trofeus = gerarTrofeusTemporada(
         dados.nome,
@@ -1425,8 +1424,9 @@ function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], na
     return {
         nome: nome,
         idade: idade,
-        posicao: dados.nome,
-        posicaoKey: posicao,
+        posicao: POSICOES_CAMPO[posicaoDetalhe]?.nome || dados.nome,
+        posicaoKey: categoria,
+        posicaoDetalhe,
         nacionalidade: nacionalidade,
         clube: clube ? clube.id : "",
         ano: ano,
@@ -1434,6 +1434,7 @@ function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], na
         gols: sim.gols,
         assistencias: sim.assistencias,
         overall: overall,
+        potencial: carreiraAtual.potencial,
         atributos: atributos,
         trofeusColetivos: trofeus.trofeusColetivos,
         trofeusIndividuais: trofeus.trofeusIndividuais,
@@ -1552,7 +1553,8 @@ async function gerar() {
         const nacionalidadeInput = document.getElementById("nacionalidade");
         const nacionalidade = nacionalidadeInput ? nacionalidadeInput.value : "";
         const nome = normalizarNome(nomeInput ? nomeInput.value : "") || obterNomeAtual();
-        const dadosPosicao = posicoes[posicaoSelecionada.id];
+        const posicaoDetalhe = posicaoSelecionada.id.toUpperCase();
+        const dadosPosicao = posicoes[categoriaPosicao(posicaoDetalhe)];
         const idadeLimite = obterIdadeLimite();
         const carreiraAtual = obterCarreiraAtual();
         const carreiraIdAnterior = carreiraAtual.id;
@@ -1577,9 +1579,11 @@ async function gerar() {
         if (carreiraFinalizada) {
             carreiraAtual.id = gerarIdRanking();
             carreiraAtual.clube = "";
+            delete carreiraAtual.potencial;
         }
         carreiraAtual.nome = nome;
-        carreiraAtual.posicao = dadosPosicao.nome;
+        carreiraAtual.posicao = POSICOES_CAMPO[posicaoDetalhe]?.nome || dadosPosicao.nome;
+        carreiraAtual.posicaoDetalhe = posicaoDetalhe;
         carreiraAtual.idadeLimite = idadeLimite;
         carreiraAtual.nacionalidade = nacionalidade;
         if (!carreiraFinalizada) {
@@ -1592,7 +1596,7 @@ async function gerar() {
         const temporadaInicial = historico.length === 0 || !obterClube(clubeAtual);
 
         if (idade > idadeLimite) {
-            mostrarResumoFinal(nome, idadeLimite, ano, historico, dadosPosicao.nome);
+            mostrarResumoFinal(nome, idadeLimite, ano, historico, POSICOES_CAMPO[posicaoDetalhe]?.nome || dadosPosicao.nome);
             return;
         }
 
@@ -1630,7 +1634,6 @@ async function gerar() {
         processamentoEmAndamento = false;
     }
 }
-
 
 function atualizarTitulosResultados(temporada) {
     const anoElemento = document.getElementById("ano-titulos-resultados");
@@ -1673,7 +1676,8 @@ function simularTudo() {
         const nacionalidadeInput = document.getElementById("nacionalidade");
         const nacionalidade = nacionalidadeInput ? nacionalidadeInput.value : "";
         const nome = normalizarNome(nomeInput ? nomeInput.value : "") || obterNomeAtual();
-        const dadosPosicao = posicoes[posicaoSelecionada.id];
+        const posicaoDetalhe = posicaoSelecionada.id.toUpperCase();
+        const dadosPosicao = posicoes[categoriaPosicao(posicaoDetalhe)];
         const idadeLimite = obterIdadeLimite();
         const idadeInicial = Number(document.getElementById("idade").value) || 0;
         const dadosValidos = validarDadosJogador({ nome, idade: idadeInicial, idadeLimite, posicao: posicaoSelecionada.id, nacionalidade });
@@ -1685,7 +1689,8 @@ function simularTudo() {
 
         const carreiraAtual = obterCarreiraAtual();
         carreiraAtual.nome = nome;
-        carreiraAtual.posicao = dadosPosicao.nome;
+        carreiraAtual.posicao = POSICOES_CAMPO[posicaoDetalhe]?.nome || dadosPosicao.nome;
+        carreiraAtual.posicaoDetalhe = posicaoDetalhe;
         carreiraAtual.idadeLimite = idadeLimite;
         carreiraAtual.nacionalidade = nacionalidade;
 
@@ -1697,6 +1702,7 @@ function simularTudo() {
         if (carreiraFinalizada) {
             carreiraAtual.id = gerarIdRanking();
             carreiraAtual.clube = "";
+            delete carreiraAtual.potencial;
         }
 
         // Se "gerar" já criou temporadas para esta carreira, continuamos dela.
@@ -1758,7 +1764,7 @@ function simularTudo() {
         const ultimaTemporadaSimulada = historico[historico.length - 1] || null;
         renderAtributos(ultimaTemporadaSimulada);
         atualizarTitulosResultados(ultimaTemporadaSimulada);
-        mostrarResumoFinal(nome, idadeLimite, ano, historico, dadosPosicao.nome);
+        mostrarResumoFinal(nome, idadeLimite, ano, historico, POSICOES_CAMPO[posicaoDetalhe]?.nome || dadosPosicao.nome);
     } catch (erro) {
         console.error("[FootMain] Erro em simularTudo():", erro);
         alert("Ocorreu um erro ao simular a carreira. Veja o console (F12) para detalhes.");
@@ -1830,12 +1836,24 @@ document.addEventListener("DOMContentLoaded", () => {
     const filtroCategoriaConquistas = document.getElementById("filtro-categoria-conquistas");
   
     const campoIdade = document.getElementById("idade");
+    const posicaoSelecionadaTexto = document.getElementById("posicao-selecionada");
+    const atualizarPosicaoSelecionada = () => {
+        const selecionada = document.querySelector('input[name="posicao"]:checked');
+        if (posicaoSelecionadaTexto) {
+            posicaoSelecionadaTexto.textContent = selecionada && POSICOES_CAMPO[selecionada.id]
+                ? `${selecionada.id} · ${POSICOES_CAMPO[selecionada.id].nome}`
+                : "Nenhuma posição selecionada";
+        }
+    };
+    document.querySelectorAll('input[name="posicao"]').forEach((radio) => radio.addEventListener("change", atualizarPosicaoSelecionada));
     const carreiraParaIdade = obterCarreiraAtual();
     if (campoIdade && (!campoIdade.value || campoIdade.value === "0") && carreiraParaIdade.nome === "Jogador") {
         campoIdade.value = getConfig().geral.idadeInicialPadrao;
         atualizarResumoJogador("Jogador", getConfig().geral.idadeInicialPadrao, ANO_INICIAL);
     }
     
+    atualizarPosicaoSelecionada();
+
     if (filtroCategoriaConquistas) {
         filtroCategoriaConquistas.addEventListener("change", renderConquistas);
     }
