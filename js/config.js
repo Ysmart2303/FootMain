@@ -4,7 +4,7 @@
  */
 
 const STORAGE_KEY_CONFIG = "footmain_config_v1";
-const VERSAO_APP = "1.3.1";
+const VERSAO_APP = "1.4.0";
 
 /* ---------- Definições base (as "de fábrica") ---------- */
 const POSICOES_PADRAO = {
@@ -34,6 +34,45 @@ const POSICOES_PADRAO = {
     }
 };
 
+/* Posições específicas do 4-3-3 ligadas às quatro categorias da simulação. */
+const POSICOES_CAMPO = {
+    GOL: { nome: "Goleiro", categoria: "go" },
+    ZCE: { nome: "Zagueiro esquerdo", categoria: "zag" },
+    ZCD: { nome: "Zagueiro direito", categoria: "zag" },
+    LE: { nome: "Lateral esquerdo", categoria: "zag" },
+    LD: { nome: "Lateral direito", categoria: "zag" },
+    ME: { nome: "Meio-campista esquerdo", categoria: "me" },
+    MC: { nome: "Meio-campista central", categoria: "me" },
+    MD: { nome: "Meio-campista direito", categoria: "me" },
+    PE: { nome: "Ponta esquerda", categoria: "ata" },
+    CA: { nome: "Centroavante", categoria: "ata" },
+    PD: { nome: "Ponta direita", categoria: "ata" }
+};
+
+function categoriaPosicao(valor) {
+    if (typeof valor !== "string") return null;
+    const texto = valor.trim();
+    const chave = texto.toUpperCase();
+    if (POSICOES_CAMPO[chave]) return POSICOES_CAMPO[chave].categoria;
+    const porNomeCampo = Object.entries(POSICOES_CAMPO).find(([, dados]) => dados.nome.toLowerCase() === texto.toLowerCase());
+    if (porNomeCampo) return porNomeCampo[1].categoria;
+    const legado = texto.toLowerCase();
+    if (posicoes?.[legado]) return legado;
+    const encontrada = Object.entries(posicoes || {}).find(([, dados]) => dados.nome.toLowerCase() === legado);
+    return encontrada ? encontrada[0] : null;
+}
+
+function chavePosicaoCampo(valor) {
+    if (typeof valor !== "string") return "CA";
+    const texto = valor.trim();
+    const chave = texto.toUpperCase();
+    if (POSICOES_CAMPO[chave]) return chave;
+    const porNomeCampo = Object.entries(POSICOES_CAMPO).find(([, dados]) => dados.nome.toLowerCase() === texto.toLowerCase());
+    if (porNomeCampo) return porNomeCampo[0];
+    const categoria = categoriaPosicao(valor);
+    return ({ ata: "CA", me: "MC", zag: "ZCE", go: "GOL" })[categoria] || "CA";
+}
+
 /* Variáveis globais mutáveis consumidas por script.js */
 var posicoes = JSON.parse(JSON.stringify(POSICOES_PADRAO));
 var ANO_INICIAL = 2026;
@@ -62,106 +101,155 @@ const SELECOES = [
     { id: "estadosUnidos", nome: "Estados Unidos", regiao: "americaNorte" }
 ];
 
+
 const CLUBES = [
+    // PREMIER LEAGUE
     { id: "manchester-city", nome: "Manchester City", liga: "Premier League" },
     { id: "arsenal", nome: "Arsenal", liga: "Premier League" },
     { id: "liverpool", nome: "Liverpool", liga: "Premier League" },
     { id: "chelsea", nome: "Chelsea", liga: "Premier League" },
     { id: "manchester-united", nome: "Manchester United", liga: "Premier League" },
+    { id: "tottenham", nome: "Tottenham", liga: "Premier League" },
+    { id: "newcastle", nome: "Newcastle United", liga: "Premier League" },
+    { id: "aston-villa", nome: "Aston Villa", liga: "Premier League" },
+    { id: "west-ham", nome: "West Ham", liga: "Premier League" },
+    { id: "brighton", nome: "Brighton", liga: "Premier League" },
+    { id: "everton", nome: "Everton", liga: "Premier League" },
+    { id: "crystal-palace", nome: "Crystal Palace", liga: "Premier League" },
+    { id: "fulham", nome: "Fulham", liga: "Premier League" },
+    { id: "brentford", nome: "Brentford", liga: "Premier League" },
+    { id: "wolves", nome: "Wolverhampton", liga: "Premier League" },
+    { id: "nottingham-forest", nome: "Nottingham Forest", liga: "Premier League" },
+    { id: "bournemouth", nome: "Bournemouth", liga: "Premier League" },
+    { id: "leicester-city", nome: "Leicester City", liga: "Premier League" },
+    { id: "ipswich-town", nome: "Ipswich Town", liga: "Premier League" },
+    { id: "southampton", nome: "Southampton", liga: "Premier League" },
 
+    // LA LIGA
     { id: "real-madrid", nome: "Real Madrid", liga: "La Liga" },
     { id: "barcelona", nome: "Barcelona", liga: "La Liga" },
     { id: "atletico-madrid", nome: "Atlético de Madrid", liga: "La Liga" },
     { id: "athletic-bilbao", nome: "Athletic Club", liga: "La Liga" },
     { id: "real-sociedad", nome: "Real Sociedad", liga: "La Liga" },
+    { id: "girona", nome: "Girona", liga: "La Liga" },
+    { id: "real-betis", nome: "Real Betis", liga: "La Liga" },
+    { id: "villarreal", nome: "Villarreal", liga: "La Liga" },
+    { id: "sevilla", nome: "Sevilla", liga: "La Liga" },
+    { id: "valencia", nome: "Valencia", liga: "La Liga" },
+    { id: "osasuna", nome: "Osasuna", liga: "La Liga" },
+    { id: "celta-vigo", nome: "Celta de Vigo", liga: "La Liga" },
+    { id: "getafe", nome: "Getafe", liga: "La Liga" },
+    { id: "mallorca", nome: "Mallorca", liga: "La Liga" },
+    { id: "alaves", nome: "Alavés", liga: "La Liga" },
+    { id: "las-palmas", nome: "Las Palmas", liga: "La Liga" },
+    { id: "rayo-vallecano", nome: "Rayo Vallecano", liga: "La Liga" },
+    { id: "leganes", nome: "Leganés", liga: "La Liga" },
+    { id: "espanyol", nome: "Espanyol", liga: "La Liga" },
+    { id: "real-valladolid", nome: "Real Valladolid", liga: "La Liga" },
 
+    // SERIE A
     { id: "inter", nome: "Inter de Milão", liga: "Serie A" },
     { id: "milan", nome: "Milan", liga: "Serie A" },
     { id: "juventus", nome: "Juventus", liga: "Serie A" },
     { id: "napoli", nome: "Napoli", liga: "Serie A" },
     { id: "roma", nome: "Roma", liga: "Serie A" },
+    { id: "lazio", nome: "Lazio", liga: "Serie A" },
+    { id: "atalanta", nome: "Atalanta", liga: "Serie A" },
+    { id: "fiorentina", nome: "Fiorentina", liga: "Serie A" },
+    { id: "bologna", nome: "Bologna", liga: "Serie A" },
+    { id: "torino", nome: "Torino", liga: "Serie A" },
+    { id: "udinese", nome: "Udinese", liga: "Serie A" },
+    { id: "genoa", nome: "Genoa", liga: "Serie A" },
+    { id: "monza", nome: "Monza", liga: "Serie A" },
+    { id: "cagliari", nome: "Cagliari", liga: "Serie A" },
+    { id: "lecce", nome: "Lecce", liga: "Serie A" },
+    { id: "verona", nome: "Hellas Verona", liga: "Serie A" },
+    { id: "parma", nome: "Parma", liga: "Serie A" },
+    { id: "como", nome: "Como", liga: "Serie A" },
+    { id: "venezia", nome: "Venezia", liga: "Serie A" },
+    { id: "empoli", nome: "Empoli", liga: "Serie A" },
 
+    // BUNDESLIGA
     { id: "bayern-munich", nome: "Bayern de Munique", liga: "Bundesliga" },
     { id: "borussia-dortmund", nome: "Borussia Dortmund", liga: "Bundesliga" },
     { id: "bayer-leverkusen", nome: "Bayer Leverkusen", liga: "Bundesliga" },
     { id: "rb-leipzig", nome: "RB Leipzig", liga: "Bundesliga" },
     { id: "stuttgart", nome: "Stuttgart", liga: "Bundesliga" },
+    { id: "eintracht-frankfurt", nome: "Eintracht Frankfurt", liga: "Bundesliga" },
+    { id: "wolfsburg", nome: "Wolfsburg", liga: "Bundesliga" },
+    { id: "freiburg", nome: "Freiburg", liga: "Bundesliga" },
+    { id: "hoffenheim", nome: "Hoffenheim", liga: "Bundesliga" },
+    { id: "werder-bremen", nome: "Werder Bremen", liga: "Bundesliga" },
+    { id: "augsburg", nome: "Augsburg", liga: "Bundesliga" },
+    { id: "mainz", nome: "Mainz 05", liga: "Bundesliga" },
+    { id: "borussia-monchengladbach", nome: "Borussia Mönchengladbach", liga: "Bundesliga" },
+    { id: "union-berlin", nome: "Union Berlin", liga: "Bundesliga" },
+    { id: "heidenheim", nome: "Heidenheim", liga: "Bundesliga" },
+    { id: "bochum", nome: "Bochum", liga: "Bundesliga" },
+    { id: "holstein-kiel", nome: "Holstein Kiel", liga: "Bundesliga" },
+    { id: "st-pauli", nome: "St. Pauli", liga: "Bundesliga" },
+    { id: "hamburger-sv", nome: "Hamburgo", liga: "Bundesliga" },
+    { id: "schalke-04", nome: "Schalke 04", liga: "Bundesliga" },
 
+    // LIGUE 1
     { id: "paris-saint-germain", nome: "Paris Saint-Germain", liga: "Ligue 1" },
     { id: "marseille", nome: "Marseille", liga: "Ligue 1" },
     { id: "monaco", nome: "Monaco", liga: "Ligue 1" },
     { id: "lille", nome: "Lille", liga: "Ligue 1" },
     { id: "lyon", nome: "Lyon", liga: "Ligue 1" },
+    { id: "nice", nome: "Nice", liga: "Ligue 1" },
+    { id: "lens", nome: "Lens", liga: "Ligue 1" },
+    { id: "rennes", nome: "Rennes", liga: "Ligue 1" },
+    { id: "strasbourg", nome: "Strasbourg", liga: "Ligue 1" },
+    { id: "toulouse", nome: "Toulouse", liga: "Ligue 1" },
+    { id: "nantes", nome: "Nantes", liga: "Ligue 1" },
+    { id: "montpellier", nome: "Montpellier", liga: "Ligue 1" },
+    { id: "reims", nome: "Reims", liga: "Ligue 1" },
+    { id: "auxerre", nome: "Auxerre", liga: "Ligue 1" },
+    { id: "angers", nome: "Angers", liga: "Ligue 1" },
+    { id: "le-havre", nome: "Le Havre", liga: "Ligue 1" },
+    { id: "saint-etienne", nome: "Saint-Étienne", liga: "Ligue 1" },
+    { id: "bordeaux", nome: "Bordeaux", liga: "Ligue 1" },
+    { id: "lorient", nome: "Lorient", liga: "Ligue 1" },
+    { id: "metz", nome: "Metz", liga: "Ligue 1" },
 
+    // BRASILEIRÃO SÉRIE A
     { id: "flamengo", nome: "Flamengo", liga: "Brasileirão" },
-    { id: "corinthians", nome: "Corinthias", liga: "Brasileirão" },
-    { id: "sao-paulo", nome: "São Paulo FC", liga: "Brasileirão" },
     { id: "palmeiras", nome: "Palmeiras", liga: "Brasileirão" },
-    { id: "santos", nome: "Santos FC", liga: "Brasileirão" },
+    { id: "corinthians", nome: "Corinthians", liga: "Brasileirão" },
+    { id: "sao-paulo", nome: "São Paulo", liga: "Brasileirão" },
+    { id: "santos", nome: "Santos", liga: "Brasileirão" },
+    { id: "gremio", nome: "Grêmio", liga: "Brasileirão" },
+    { id: "internacional", nome: "Internacional", liga: "Brasileirão" },
+    { id: "atletico-mg", nome: "Atlético Mineiro", liga: "Brasileirão" },
+    { id: "cruzeiro", nome: "Cruzeiro", liga: "Brasileirão" },
+    { id: "botafogo", nome: "Botafogo", liga: "Brasileirão" },
     { id: "vasco", nome: "Vasco da Gama", liga: "Brasileirão" },
-{ id: "nautico", nome: "Náutico", liga: "Brasileirão" },
-    { id: "criciuma", nome: "Criciuma", liga: "Brasileirão" },
-    { id: "mirassol", nome: "Mirassol", liga: "Brasileirão" },
-    { id: "botafogo", nome: "Botafogo", liga: "Brasileirão" }
+    { id: "fluminense", nome: "Fluminense", liga: "Brasileirão" },
+    { id: "bahia", nome: "Bahia", liga: "Brasileirão" },
+    { id: "fortaleza", nome: "Fortaleza", liga: "Brasileirão" },
+    { id: "ceara", nome: "Ceará", liga: "Brasileirão" },
+    { id: "sport", nome: "Sport Recife", liga: "Brasileirão" },
+    { id: "vitoria", nome: "Vitória", liga: "Brasileirão" },
+    { id: "bragantino", nome: "Red Bull Bragantino", liga: "Brasileirão" },
+    { id: "juventude", nome: "Juventude", liga: "Brasileirão" },
+    { id: "mirassol", nome: "Mirassol", liga: "Brasileirão" }
 ];
 
-/* ============================================================
-   Fator liga / clube — versão 1.2.1
-   dificuldade: quanto maior, menos gols por temporada na liga.
-   prestigio:   quanto maior, mais visibilidade para prêmios.
-   ============================================================ */
-const PERFIL_LIGAS = {
-    "Premier League": { dificuldade: 1.15, prestigio: 1.20 },
-    "La Liga":        { dificuldade: 1.10, prestigio: 1.18 },
-    "Serie A":        { dificuldade: 1.12, prestigio: 1.10 },
-    "Bundesliga":     { dificuldade: 1.08, prestigio: 1.10 },
-    "Ligue 1":        { dificuldade: 1.02, prestigio: 1.05 },
-    "Brasileirão":    { dificuldade: 0.92, prestigio: 0.80 }
-};
-
-const FORCA_CLUBES = {
-    // Premier League
-    "manchester-city": 96, "arsenal": 91, "liverpool": 90, "chelsea": 85,
-    "manchester-united": 84, "tottenham": 82, "newcastle": 81, "aston-villa": 79,
-    "west-ham": 75, "brighton": 75, "everton": 71, "crystal-palace": 70,
-    "fulham": 69, "brentford": 68, "wolves": 67, "nottingham-forest": 67,
-    "bournemouth": 65, "leicester-city": 64, "ipswich-town": 59, "southampton": 58,
-
-    // La Liga
-    "real-madrid": 97, "barcelona": 91, "atletico-madrid": 88, "athletic-bilbao": 80,
-    "real-sociedad": 78, "girona": 76, "real-betis": 75, "villarreal": 74,
-    "sevilla": 73, "valencia": 71, "osasuna": 68, "celta-vigo": 68,
-    "getafe": 67, "mallorca": 66, "alaves": 65, "rayo-vallecano": 64,
-    "las-palmas": 63, "espanyol": 61, "leganes": 60, "real-valladolid": 58,
-
-    // Serie A
-    "inter": 90, "milan": 86, "juventus": 86, "napoli": 85, "atalanta": 82,
-    "roma": 82, "lazio": 80, "fiorentina": 78, "bologna": 76, "torino": 72,
-    "udinese": 71, "genoa": 70, "monza": 68, "cagliari": 67, "verona": 66,
-    "lecce": 65, "parma": 64, "como": 63, "empoli": 63, "venezia": 62,
-
-    // Bundesliga
-    "bayern-munich": 94, "bayer-leverkusen": 88, "borussia-dortmund": 85,
-    "rb-leipzig": 83, "stuttgart": 79, "eintracht-frankfurt": 76, "freiburg": 74,
-    "wolfsburg": 73, "borussia-monchengladbach": 72, "hoffenheim": 71,
-    "werder-bremen": 70, "union-berlin": 69, "augsburg": 68, "mainz": 67,
-    "hamburger-sv": 66, "heidenheim": 65, "schalke-04": 64, "bochum": 63,
-    "holstein-kiel": 60, "st-pauli": 59,
-
-    // Ligue 1
-    "paris-saint-germain": 94, "marseille": 80, "monaco": 79, "lille": 77,
-    "lyon": 76, "nice": 74, "lens": 73, "rennes": 72, "strasbourg": 71,
-    "toulouse": 69, "montpellier": 68, "reims": 68, "nantes": 67,
-    "auxerre": 65, "saint-etienne": 64, "angers": 63, "le-havre": 62,
-    "bordeaux": 62, "lorient": 61, "metz": 60,
-
-    // Brasileirão
-    "flamengo": 90, "palmeiras": 89, "botafogo": 84, "corinthians": 80,
-    "sao-paulo": 80, "atletico-mg": 79, "internacional": 78, "gremio": 77,
-    "cruzeiro": 76, "santos": 76, "fortaleza": 76, "bahia": 76,
-    "fluminense": 75, "vasco": 73, "bragantino": 72, "ceara": 71,
-    "sport": 68, "vitoria": 67, "juventude": 65, "mirassol": 63
-};
+/*
+ * Forças padrão em faixas equivalentes entre ligas: os clubes na mesma posição
+ * relativa da lista de cada liga começam com a mesma força aproximada.
+ */
+const FORCAS_CLUBES_PADRAO = (() => {
+    const faixas = [96, 94, 92, 89, 87, 85, 83, 81, 79, 77, 75, 73, 71, 69, 67, 65, 63, 61, 59, 57];
+    const contagemPorLiga = {};
+    return CLUBES.reduce((resultado, clube) => {
+        const indice = contagemPorLiga[clube.liga] || 0;
+        contagemPorLiga[clube.liga] = indice + 1;
+        resultado[clube.id] = faixas[Math.min(indice, faixas.length - 1)];
+        return resultado;
+    }, {});
+})();
 
 /* ---------- Configurações padrão ---------- */
 const CONFIG_PADRAO = {
@@ -212,6 +300,9 @@ const CONFIG_PADRAO = {
             mexico: 78,
             estadosUnidos: 77
         }
+    },
+    clubes: {
+        potencias: { ...FORCAS_CLUBES_PADRAO }
     }
 };
 
