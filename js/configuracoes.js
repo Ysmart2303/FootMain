@@ -48,7 +48,7 @@ const SCHEMA_CONFIG = [
         id: "selecao",
         titulo: "Força das seleções",
         icone: "🌎",
-        descricao: "A força (1 a 100) define a chance proporcional de cada seleção ganhar os torneios em que participa. As cinco competições continentais e as Olimpíadas ocorrem a cada quatro anos, a partir de 2028.",
+        descricao: "A força (1 a 100) define a chance proporcional de cada seleção ganhar os torneios em que participa. As competições internacionais continuam seguindo seus ciclos configurados.",
         campos: SELECOES.map((selecao) => ({
             caminho: `selecao.potencias.${selecao.id}`,
             label: selecao.nome,
@@ -59,6 +59,8 @@ const SCHEMA_CONFIG = [
         }))
     }
 ];
+
+const LIGAS_CLUBES = [...new Set(CLUBES.map((clube) => clube.liga))];
 
 const PRESETS_UI = [
     { id: "padrao",   nome: "Padrão",   icone: "⚙️" },
@@ -116,33 +118,66 @@ function renderCampos() {
     const config = carregarConfig();
     const container = document.getElementById("grupos-config");
 
-    // Preserva o que estava aberto (importante no "aplicar preset").
-    const abertos = new Set(
-        Array.from(container.querySelectorAll("details[open]")).map((d) => d.dataset.grupo)
-    );
-    const primeiraRenderizacao = container.childElementCount === 0;
-
-    container.innerHTML = SCHEMA_CONFIG.map((grupo, index) => {
-        const deveAbrir = primeiraRenderizacao ? index === 0 : abertos.has(grupo.id);
-        return `<details class="config-grupo" data-grupo="${grupo.id}"${deveAbrir ? " open" : ""}>
-            <summary>
+    container.innerHTML = SCHEMA_CONFIG.map((grupo, indice) => `
+        <details class="config-grupo" data-grupo="${grupo.id}">
+            <summary class="config-grupo-resumo">
                 <span class="config-grupo-icone">${grupo.icone}</span>
-                <h3>${grupo.titulo}</h3>
+                <span class="config-grupo-titulo">${grupo.titulo}</span>
+                <span class="config-grupo-seta" aria-hidden="true">⌄</span>
             </summary>
-            <div class="config-grupo-conteudo">
-                ${grupo.descricao ? `<p class="config-grupo-desc">${grupo.descricao}</p>` : ""}
-                <div class="config-campos">
-                    ${grupo.campos.map((campo) => renderCampo(campo, obterPorCaminho(config, campo.caminho))).join("")}
-                </div>
+            ${grupo.descricao ? `<p class="config-grupo-desc">${grupo.descricao}</p>` : ""}
+            <div class="config-campos">
+                ${grupo.campos.map(campo => renderCampo(campo, obterPorCaminho(config, campo.caminho))).join("")}
             </div>
-        </details>`;
-    }).join("");
+        </details>
+    `).join("") + renderGrupoClubes(config);
 
-    if (!container.dataset.ligado) {
-        container.addEventListener("input", aoAlterarCampo);
-        container.addEventListener("change", aoAlterarCampo);
-        container.dataset.ligado = "1";
-    }
+    // Atribuição direta evita acumular listeners quando preset/JSON redesenha os campos.
+    renderCamposClubes(config);
+    container.oninput = aoAlterarCampo;
+    container.onchange = (evento) => {
+        if (evento.target?.id === "filtro-liga-clubes") {
+            renderCamposClubes(carregarConfig());
+            return;
+        }
+        aoAlterarCampo(evento);
+    };
+}
+
+function renderGrupoClubes(config) {
+    const opcoes = LIGAS_CLUBES.map((liga) => `<option value="${liga}">${liga}</option>`).join("");
+    return `
+        <details class="config-grupo config-grupo-clubes" data-grupo="clubes">
+            <summary class="config-grupo-resumo">
+                <span class="config-grupo-icone">🏟️</span>
+                <span class="config-grupo-titulo">Força dos clubes</span>
+                <span class="config-grupo-seta" aria-hidden="true">⌄</span>
+            </summary>
+            <p class="config-grupo-desc">A força (1 a 100) influencia apenas as chances de títulos coletivos do clube. Os níveis padrão usam faixas equivalentes entre as ligas.</p>
+            <div class="filtro-liga-clubes">
+                <label for="filtro-liga-clubes">Filtrar por liga</label>
+                <select id="filtro-liga-clubes">${opcoes}</select>
+            </div>
+            <div id="campos-forca-clubes" class="config-campos"></div>
+        </details>`;
+}
+
+function renderCamposClubes(config = carregarConfig()) {
+    const filtro = document.getElementById("filtro-liga-clubes");
+    const container = document.getElementById("campos-forca-clubes");
+    if (!filtro || !container) return;
+    const liga = filtro.value || LIGAS_CLUBES[0];
+    container.innerHTML = CLUBES.filter((clube) => clube.liga === liga).map((clube) => {
+        const campo = {
+            caminho: `clubes.potencias.${clube.id}`,
+            label: clube.nome,
+            tipo: "range",
+            min: 1,
+            max: 100,
+            passo: 1
+        };
+        return renderCampo(campo, obterPorCaminho(config, campo.caminho) ?? 70);
+    }).join("");
 }
 
 function renderCampo(campo, valor) {
