@@ -44,6 +44,72 @@ function calcularOverall(posicao, atributos) {
     return Math.max(1, Math.min(99, overall));
 }
 
+function amostrarPoisson(lambda) {
+    if (!(lambda > 0)) return 0;
+    const L = Math.exp(-lambda);
+    let k = 0;
+    let p = 1;
+    do {
+        k++;
+        p *= Math.random();
+    } while (p > L);
+    return k - 1;
+}
+
+function simularTemporadaPorJogo(posicao, atributos, idade) {
+    const cfg = getConfig();
+    const overall = calcularOverall(posicao, atributos); // já é à prova de falhas
+
+    let fatorIdade;
+    if (idade <= 19) fatorIdade = 0.82;
+    else if (idade <= 22) fatorIdade = 0.92;
+    else if (idade <= 25) fatorIdade = 1.00;
+    else if (idade <= 29) fatorIdade = 1.05;
+    else if (idade <= 32) fatorIdade = 1.00;
+    else if (idade <= 35) fatorIdade = 0.88;
+    else fatorIdade = 0.72;
+
+    const probParticipar = Math.max(0.05, Math.min(0.99, ((overall - 10) / 90) * fatorIdade));
+    const maxJogos = Math.round((posicao === "go" ? 55 : 62) * (cfg.geral.multiplicadorJogos || 1));
+
+    const fin = Number(atributos?.finalizacao) || OVERALL_PADRAO;
+    const pas = Number(atributos?.passe)       || OVERALL_PADRAO;
+    const dri = Number(atributos?.drible)      || OVERALL_PADRAO;
+
+    let lambdaGol = 0;
+    let lambdaAssist = 0;
+
+    if (posicao === "ata") {
+        lambdaGol    = Math.pow(fin / 100, 3) * 1.00 + Math.pow(dri / 100, 3) * 0.15;
+        lambdaAssist = Math.pow(pas / 100, 2.5) * 0.45 + Math.pow(dri / 100, 3) * 0.15;
+    } else if (posicao === "me") {
+        lambdaGol    = Math.pow(fin / 100, 3) * 0.55 + Math.pow(dri / 100, 3) * 0.10;
+        lambdaAssist = Math.pow(pas / 100, 2.5) * 0.85 + Math.pow(dri / 100, 3) * 0.20;
+    } else if (posicao === "zag") {
+        lambdaGol    = Math.pow(fin / 100, 3) * 0.15;
+        lambdaAssist = Math.pow(pas / 100, 3) * 0.15;
+    } else if (posicao === "go") {
+        lambdaGol    = 0.003;
+        lambdaAssist = Math.pow(pas / 100, 4) * 0.06;
+    }
+
+    lambdaGol    *= fatorIdade * (cfg.geral.multiplicadorGols || 1);
+    lambdaAssist *= fatorIdade * (cfg.geral.multiplicadorAssistencias || 1);
+
+    let jogos = 0;
+    let gols = 0;
+    let assistencias = 0;
+
+    for (let i = 0; i < maxJogos; i++) {
+        if (Math.random() > probParticipar) continue;
+        jogos++;
+        gols         += amostrarPoisson(lambdaGol);
+        assistencias += amostrarPoisson(lambdaAssist);
+    }
+
+    return { jogos, gols, assistencias, overall };
+}
+
 function obterClube(clubeId) {
     return CLUBES.find((clube) => clube.id === clubeId) || null;
 }
@@ -123,51 +189,19 @@ function normalizarNome(valor) {
     return typeof valor === "string" ? valor.trim() : "";
 }
 
-
 function normalizarPosicao(valor) {
     if (typeof valor !== "string") {
         return null;
     }
 
     const valorNormalizado = valor.trim().toLowerCase();
-
-    // Converte as 11 posições do campo em 4 categorias.
-    const mapaPosicoesCampo = {
-        pe: "ata",
-        ca: "ata",
-        pd: "ata",
-
-        me: "me",
-        mc: "me",
-        md: "me",
-
-        le: "zag",
-        zce: "zag",
-        zcd: "zag",
-        ld: "zag",
-
-        gol: "go"
-    };
-
-    if (mapaPosicoesCampo[valorNormalizado]) {
-        return mapaPosicoesCampo[valorNormalizado];
-    }
-
-    // Mantém a compatibilidade com os nomes já utilizados.
-    const chave = Object.entries(posicoes).find(
-        ([, dados]) =>
-            dados.nome.toLowerCase() === valorNormalizado
-    );
-
+    const chave = Object.entries(posicoes).find(([, dados]) => dados.nome.toLowerCase() === valorNormalizado);
     if (chave) {
         return chave[0];
     }
 
-    return posicoes[valorNormalizado]
-        ? valorNormalizado
-        : null;
+    return posicoes[valorNormalizado] ? valorNormalizado : null;
 }
-
 
 function validarTemporada(temporada) {
     if (!temporada || typeof temporada !== "object") {
@@ -176,12 +210,7 @@ function validarTemporada(temporada) {
 
     const nome = normalizarNome(temporada.nome) || "Jogador";
     const posicaoNormalizada = normalizarPosicao(temporada.posicao) || normalizarPosicao(temporada.posicaoKey) || "ata";
-    
-const dadosPosicao =
-    posicoes?.[posicaoNormalizada] ||
-    posicoes?.ata ||
-    POSICOES_PADRAO.ata;
-
+    const dadosPosicao = posicoes[posicaoNormalizada] || posicoes.ata;
     const idade = Number.isFinite(Number(temporada.idade)) ? Math.max(0, Math.floor(Number(temporada.idade))) : 0;
     const ano = Number.isFinite(Number(temporada.ano)) ? Math.floor(Number(temporada.ano)) : ANO_INICIAL;
     const jogos = Number.isFinite(Number(temporada.jogos)) ? Math.max(0, Math.floor(Number(temporada.jogos))) : 0;
@@ -1156,10 +1185,7 @@ function obterHistoricoDaCarreira(nome, dadosPosicao) {
             return temporada.carreiraId === carreiraAtual.id;
         }
 
-        
-return temporada.nome === nome
-    && dadosPosicao
-    && temporada.posicao === dadosPosicao.nome;
+        return temporada.nome === nome && temporada.posicao === dadosPosicao.nome;
     });
 }
 
@@ -1193,33 +1219,15 @@ function evoluirAtributos(temporadasAnteriores, posicao, idade) {
         ? normalizarAtributos(temporadasAnteriores[temporadasAnteriores.length - 1].atributos, posicao, idade - 1)
         : normalizarAtributos(null, posicao, idade);
     const resultado = {};
-
     Object.keys(ATRIBUTOS_NOMES).forEach((chave) => {
         let variacao = 0;
-
-        // Evolução mais perceptível na juventude, com desaceleração gradual no auge.
-        if (idade <= 22) {
-            variacao = Math.random() < 0.84 ? 1 + Math.floor(Math.random() * 3) : 0;
-        } else if (idade <= 26) {
-            variacao = Math.random() < 0.78 ? 1 + Math.floor(Math.random() * 2) : 0;
-        } else if (idade <= 29) {
-            variacao = Math.random() < 0.48 ? 1 : 0;
-        } else if (idade <= 32) {
-            variacao = Math.random() < 0.30 ? 1 : (Math.random() < 0.25 ? -1 : 0);
-        } else if (idade <= 35) {
-            variacao = Math.random() < 0.62 ? -1 : 0;
-        } else {
-            variacao = -(Math.random() < 0.65 ? 1 + Math.floor(Math.random() * 2) : 0);
-        }
-
-        // Reflexos são um atributo específico de goleiros; não afetam jogadores de linha.
-        if (chave === "reflexos" && posicao !== "go") {
-            resultado[chave] = limitarAtributo(Math.min(20, anterior[chave] + (idade <= 32 ? Math.max(0, variacao) : variacao)));
-        } else {
-            resultado[chave] = limitarAtributo(anterior[chave] + variacao);
-        }
+        if (idade <= 27) variacao = Math.random() < 0.72 ? 1 + Math.floor(Math.random() * 3) : 0;
+        else if (idade <= 30) variacao = Math.random() < 0.55 ? 1 : 0;
+        else if (idade <= 34) variacao = -(Math.random() < 0.75 ? 1 + Math.floor(Math.random() * 2) : 0);
+        else variacao = -(1 + Math.floor(Math.random() * 3));
+        if (chave === "reflexos" && posicao !== "go") resultado[chave] = limitarAtributo(Math.min(20, anterior[chave] + (idade <= 27 ? 0 : variacao)));
+        else resultado[chave] = limitarAtributo(anterior[chave] + variacao);
     });
-
     return resultado;
 }
 
@@ -1270,101 +1278,6 @@ function renderAtributos(temporada) {
             <div><span>Fase da carreira</span><strong>${fase}</strong></div>
         </div>
         <div class="atributos-lista">${linhas}</div>`;
-}
-
-/* ========== Nova engine de simulação por overall ========== */
-
-// Calcula o overall com pesos por posição.
-function calcularOverall(posicao, atributos) {
-    const pesos = {
-        ata: { finalizacao: 0.35, drible: 0.22, velocidade: 0.18, passe: 0.15, fisico: 0.10 },
-        me:  { passe: 0.35, drible: 0.25, finalizacao: 0.15, velocidade: 0.15, fisico: 0.10 },
-        zag: { defesa: 0.45, fisico: 0.30, passe: 0.15, velocidade: 0.10 },
-        go:  { reflexos: 0.50, fisico: 0.20, defesa: 0.20, passe: 0.10 }
-    };
-    const peso = pesos[posicao] || pesos.ata;
-    let soma = 0;
-    let total = 0;
-    for (const chave in peso) {
-        soma += (Number(atributos?.[chave]) || 0) * peso[chave];
-        total += peso[chave];
-    }
-    return Math.max(1, Math.min(99, Math.round(soma / total)));
-}
-
-// Amostra uma Poisson (Knuth). Serve para "quantos gols nesse jogo".
-function amostrarPoisson(lambda) {
-    if (lambda <= 0) return 0;
-    const L = Math.exp(-lambda);
-    let k = 0;
-    let p = 1;
-    do {
-        k++;
-        p *= Math.random();
-    } while (p > L);
-    return k - 1;
-}
-
-// Simula a temporada jogo a jogo com base no overall e nos atributos.
-function simularTemporadaPorJogo(posicao, atributos, idade) {
-    const cfg = getConfig();
-    const overall = calcularOverall(posicao, atributos);
-
-    // Fator idade: jovem ainda não é titular absoluto, veterano perde ritmo.
-    let fatorIdade;
-    if (idade <= 19) fatorIdade = 0.82;
-    else if (idade <= 22) fatorIdade = 0.92;
-    else if (idade <= 25) fatorIdade = 1.00;
-    else if (idade <= 29) fatorIdade = 1.05;
-    else if (idade <= 32) fatorIdade = 1.00;
-    else if (idade <= 35) fatorIdade = 0.88;
-    else fatorIdade = 0.72;
-
-    // Probabilidade de entrar em campo em cada jogo.
-    // Overall 30 → ~0.22 | 50 → ~0.50 | 70 → ~0.78 | 85 → ~0.95 | 95 → ~0.99
-    const probParticipar = Math.max(0.05, Math.min(0.99, ((overall - 10) / 90) * fatorIdade));
-
-    // Nº máximo de jogos possíveis (clube + seleção).
-    const maxJogos = Math.round((posicao === "go" ? 55 : 62) * cfg.geral.multiplicadorJogos);
-
-    // Médias esperadas por jogo (lambda da Poisson).
-    const fin = Number(atributos?.finalizacao) || OVERALL_PADRAO;
-    const pas = Number(atributos?.passe)       || OVERALL_PADRAO;
-    const dri = Number(atributos?.drible)      || OVERALL_PADRAO;
-  
-    let lambdaGol = 0;
-    let lambdaAssist = 0;
-
-    if (posicao === "ata") {
-        lambdaGol    = Math.pow(fin / 100, 3) * 1.00 + Math.pow(dri / 100, 3) * 0.15;
-        lambdaAssist = Math.pow(pas / 100, 2.5) * 0.45 + Math.pow(dri / 100, 3) * 0.15;
-    } else if (posicao === "me") {
-        lambdaGol    = Math.pow(fin / 100, 3) * 0.55 + Math.pow(dri / 100, 3) * 0.10;
-        lambdaAssist = Math.pow(pas / 100, 2.5) * 0.85 + Math.pow(dri / 100, 3) * 0.20;
-    } else if (posicao === "zag") {
-        lambdaGol    = Math.pow(fin / 100, 3) * 0.15;
-        lambdaAssist = Math.pow(pas / 100, 3) * 0.15;
-    } else if (posicao === "go") {
-        lambdaGol    = 0.003;
-        lambdaAssist = Math.pow(pas / 100, 4) * 0.06;
-    }
-
-    // Idade + multiplicadores das configurações.
-    lambdaGol    *= fatorIdade * (cfg.geral.multiplicadorGols || 1);
-    lambdaAssist *= fatorIdade * (cfg.geral.multiplicadorAssistencias || 1);
-
-    let jogos = 0;
-    let gols = 0;
-    let assistencias = 0;
-
-    for (let i = 0; i < maxJogos; i++) {
-        if (Math.random() > probParticipar) continue;
-        jogos++;
-        gols        += amostrarPoisson(lambdaGol);
-        assistencias += amostrarPoisson(lambdaAssist);
-    }
-
-    return { jogos, gols, assistencias, overall };
 }
 
 function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], nacionalidade = "", clubeId = "") {
@@ -1521,8 +1434,7 @@ async function gerar() {
         const nacionalidadeInput = document.getElementById("nacionalidade");
         const nacionalidade = nacionalidadeInput ? nacionalidadeInput.value : "";
         const nome = normalizarNome(nomeInput ? nomeInput.value : "") || obterNomeAtual();
-        const posicaoNormalizada = normalizarPosicao(posicaoSelecionada.value);
-        const dadosPosicao = posicoes[posicaoNormalizada] || posicoes.ata;
+        const dadosPosicao = posicoes[posicaoSelecionada.id];
         const idadeLimite = obterIdadeLimite();
         const carreiraAtual = obterCarreiraAtual();
         const carreiraIdAnterior = carreiraAtual.id;
@@ -1533,14 +1445,7 @@ async function gerar() {
         const idadeInicial = carreiraFinalizada && idadeInformada === carreiraAtual.idadeLimite
             ? getConfig().geral.idadeInicialPadrao
             : idadeInformada;
-
-        const dadosValidos = validarDadosJogador({
-            nome,
-            idade: idadeInicial,
-            idadeLimite,
-            posicao: posicaoNormalizada,
-            nacionalidade
-        });
+        const dadosValidos = validarDadosJogador({ nome, idade: idadeInicial, idadeLimite, posicao: posicaoSelecionada.id, nacionalidade });
 
         if (!dadosValidos.valido) {
             alert(dadosValidos.mensagem);
@@ -1600,14 +1505,14 @@ async function gerar() {
         salvarHistorico([...historicoDeOutrasCarreiras, ...historicoAtualizado]);
         renderHistorico();
         renderAtributos(temporada);
-    
-} catch (erro) {
-    console.error("[FootMain] Erro em gerar():", erro);
-    alert(erro.stack || erro.message);
-} finally {
-    processamentoEmAndamento = false;
+    } catch (erro) {
+        console.error("[FootMain] Erro em gerar():", erro);
+        alert("Ocorreu um erro ao gerar a temporada. Veja o console (F12) para detalhes.");
+    } finally {
+        processamentoEmAndamento = false;
+    }
 }
-}
+
 
 function atualizarTitulosResultados(temporada) {
     const anoElemento = document.getElementById("ano-titulos-resultados");
@@ -1650,11 +1555,10 @@ function simularTudo() {
         const nacionalidadeInput = document.getElementById("nacionalidade");
         const nacionalidade = nacionalidadeInput ? nacionalidadeInput.value : "";
         const nome = normalizarNome(nomeInput ? nomeInput.value : "") || obterNomeAtual();
-        const posicaoNormalizada = normalizarPosicao(posicaoSelecionada.value);
-        const dadosPosicao = posicoes[posicaoNormalizada] || posicoes.ata;
+        const dadosPosicao = posicoes[posicaoSelecionada.id];
         const idadeLimite = obterIdadeLimite();
         const idadeInicial = Number(document.getElementById("idade").value) || 0;
-        const dadosValidos = validarDadosJogador({ nome, idade: idadeInicial, idadeLimite, posicao: posicaoNormalizada, nacionalidade });
+        const dadosValidos = validarDadosJogador({ nome, idade: idadeInicial, idadeLimite, posicao: posicaoSelecionada.id, nacionalidade });
 
         if (!dadosValidos.valido) {
             alert(dadosValidos.mensagem);
