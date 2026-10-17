@@ -80,26 +80,65 @@
             </div>
 
             <div id="posi">
-
-                <div>
-                    <input type="radio" name="posicao" id="ata">
-                    <label for="ata">Atacante</label>
+                <h3>Escolha sua posição</h3>
+                <p class="campo-instrucao">Toque em uma das 11 posições do esquema 4-3-3.</p>
+                <div class="campo-futebol" role="group" aria-label="Campo de futebol, formação 4-3-3">
+                    <div class="linha-campo linha-atacantes">
+                        <label class="jogador-campo jogador-pe" title="Ponta esquerda">
+                            <input type="radio" name="posicao" id="PE" value="PE">
+                            <span>PE</span>
+                        </label>
+                        <label class="jogador-campo jogador-ca" title="Centroavante">
+                            <input type="radio" name="posicao" id="CA" value="CA">
+                            <span>CA</span>
+                        </label>
+                        <label class="jogador-campo jogador-pd" title="Ponta direita">
+                            <input type="radio" name="posicao" id="PD" value="PD">
+                            <span>PD</span>
+                        </label>
+                    </div>
+                    <div class="linha-campo linha-meio">
+                        <label class="jogador-campo" title="Meio-campista esquerdo">
+                            <input type="radio" name="posicao" id="ME" value="ME">
+                            <span>ME</span>
+                        </label>
+                        <label class="jogador-campo" title="Meio-campista central">
+                            <input type="radio" name="posicao" id="MC" value="MC">
+                            <span>MC</span>
+                        </label>
+                        <label class="jogador-campo" title="Meio-campista direito">
+                            <input type="radio" name="posicao" id="MD" value="MD">
+                            <span>MD</span>
+                        </label>
+                    </div>
+                    <div class="linha-campo linha-defesa">
+                        <label class="jogador-campo" title="Lateral esquerdo">
+                            <input type="radio" name="posicao" id="LE" value="LE">
+                            <span>LE</span>
+                        </label>
+                        <label class="jogador-campo" title="Zagueiro esquerdo">
+                            <input type="radio" name="posicao" id="ZCE" value="ZCE">
+                            <span>ZCE</span>
+                        </label>
+                        <label class="jogador-campo" title="Zagueiro direito">
+                            <input type="radio" name="posicao" id="ZCD" value="ZCD">
+                            <span>ZCD</span>
+                        </label>
+                        <label class="jogador-campo" title="Lateral direito">
+                            <input type="radio" name="posicao" id="LD" value="LD">
+                            <span>LD</span>
+                        </label>
+                    </div>
+                    <div class="linha-campo linha-goleiro">
+                        <label class="jogador-campo" title="Goleiro">
+                            <input type="radio" name="posicao" id="GOL" value="GOL">
+                            <span>GOL</span>
+                        </label>
+                    </div>
                 </div>
-                <div>
-                    <input type="radio" name="posicao" id="me">
-                    <label for="me">Meio Campo</label>
-                </div>
-                <div>
-                    <input type="radio" name="posicao" id="zag">
-                    <label for="zag">Zagueiro</label>
-                </div>
-                <div>
-                    <input type="radio" name="posicao" id="go">
-                    <label for="go">Goleiro</label>
-                </div>
-
+                <p id="posicao-selecionada" class="posicao-selecionada">Nenhuma posição selecionada</p>
             </div>
-          
+
             <div id="resultados">
                 <div id="nomes">
                     <p>Jogos:</p>
@@ -162,6 +201,7 @@
                 <div id="painel-atributos"><p class="atributos-vazio">Gere uma temporada para acompanhar a evolução do jogador.</p></div>
             </section>
 
+            
         </section>
 
         <section id="historico">
@@ -191,11 +231,21 @@
                 </select>
                 <label for="filtro-posicao-ranking">Posição:</label>
                 <select id="filtro-posicao-ranking">
-                    <option value="todas" selected> todas as posições</option>
-                    <option value="Atacante">Atacante</option>
-                    <option value="Meio Campo">Meio Campo</option>
-                    <option value="Zagueiro">Zagueiro</option>
-                    <option value="Goleiro">Goleiro</option>
+                    <option value="todas" selected>Todas as posições</option>
+                    <option value="GOL">Goleiro (GOL)</option>
+                    <option value="ZCE">Zagueiro esquerdo (ZCE)</option>
+                    <option value="ZCD">Zagueiro direito (ZCD)</option>
+                    <option value="LE">Lateral esquerdo (LE)</option>
+                    <option value="LD">Lateral direito (LD)</option>
+                    <option value="ME">Meio-campista esquerdo (ME)</option>
+                    <option value="MC">Meio-campista central (MC)</option>
+                    <option value="MD">Meio-campista direito (MD)</option>
+                    <option value="PE">Ponta esquerda (PE)</option>
+                    <option value="CA">Centroavante (CA)</option>
+                    <option value="PD">Ponta direita (PD)</option>
+                    <option value="ata">Todos os atacantes</option>
+                    <option value="me">Todos os meio-campistas</option>
+                    <option value="zag">Todos os defensores</option>
                 </select>
             </div>
             <button id="limparRanking" type="button">Limpar ranking</button>
@@ -235,24 +285,24 @@
             <div id="notificacao-conquista" class="notificacao-conquista" role="status" aria-live="polite" hidden></div>
         </section>
     </main>
-
+    
     <footer>
-    <a href="https://github.com/Ysmart2303">Ysmart2303</a> / 2026
-    <span class="versao-app" data-versao-app>v—</span>
+        <a href="https://github.com/Ysmart2303">Ysmart2303</a> / 2026
+        <span class="versao-app" data-versao-app>v—</span>
     </footer>
-
-<div id="modal-confirmacao" class="modal-overlay" hidden>
-    <div class="modal-caixa" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
-        <div class="modal-icone">⚠️</div>
-        <h3 id="modal-titulo">Confirmar ação</h3>
-        <p id="modal-mensagem">Tem certeza?</p>
-        <div id="modal-opcoes-clube" class="modal-opcoes-clube" role="radiogroup" aria-labelledby="modal-titulo" hidden></div>
-        <div class="modal-acoes">
-            <button type="button" id="modal-cancelar" class="modal-btn modal-btn--cancelar">Cancelar</button>
-            <button type="button" id="modal-confirmar" class="modal-btn modal-btn--confirmar">Confirmar</button>
+      
+    <div id="modal-confirmacao" class="modal-overlay" hidden>
+        <div class="modal-caixa" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+            <div class="modal-icone">⚠️</div>
+            <h3 id="modal-titulo">Confirmar ação</h3>
+            <p id="modal-mensagem">Tem certeza?</p>
+            <div id="modal-opcoes-clube" class="modal-opcoes-clube" role="radiogroup" aria-labelledby="modal-titulo" hidden></div>
+            <div class="modal-acoes">
+                <button type="button" id="modal-cancelar" class="modal-btn modal-btn--cancelar">Cancelar</button>
+                <button type="button" id="modal-confirmar" class="modal-btn modal-btn--confirmar">Confirmar</button>
+            </div>
         </div>
     </div>
-</div>
 
 <script src="js/config.js"></script>
 <script src="js/script.js" defer></script>
