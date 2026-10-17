@@ -1156,7 +1156,10 @@ function obterHistoricoDaCarreira(nome, dadosPosicao) {
             return temporada.carreiraId === carreiraAtual.id;
         }
 
-        return temporada.nome === nome && temporada.posicao === dadosPosicao.nome;
+        
+return temporada.nome === nome
+    && dadosPosicao
+    && temporada.posicao === dadosPosicao.nome;
     });
 }
 
