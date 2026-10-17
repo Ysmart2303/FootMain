@@ -1610,7 +1610,7 @@ const dadosValidos = validarDadosJogador({
     
 } catch (erro) {
     console.error("[FootMain] Erro em gerar():", erro);
-    alert("Erro ao gerar temporada: " + (erro?.message || String(erro)));
+    alert(erro.stack || erro.message);
 } finally {
     processamentoEmAndamento = false;
 }
