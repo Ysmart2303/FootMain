@@ -37,6 +37,46 @@ function calcularOverall(posicao, atributos) {
     return Math.max(1, Math.min(99, overall));
 }
 
+/* ============================================================
+     Potencial:
+     30% → 78-85  (comum)
+     35% → 85-91  (bom)
+     25% → 91-95  (craque)
+     10% → 95-99  (gênio)
+   ============================================================ */
+function calcularPotencialDaCarreira(carreira) {
+    if (Number.isFinite(Number(carreira?.potencial))) {
+        return Math.max(60, Math.min(99, Math.round(Number(carreira.potencial))));
+    }
+
+    const seed = String(carreira?.id || carreira?.nome || "jogador-padrao");
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+        hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+        hash |= 0;
+    }
+    hash = Math.abs(hash);
+
+    const r = (hash % 1000) / 1000;
+    if (r < 0.30) return 78 + (hash % 8);   // 78-85
+    if (r < 0.65) return 85 + (hash % 7);   // 85-91
+    if (r < 0.90) return 91 + (hash % 5);   // 91-95
+    return 95 + (hash % 5);                  // 95-99
+}
+
+function obterModificadorPotencial(chave, posicao) {
+    // Cada posição distribui o potencial de forma diferente entre atributos.
+    // A média ponderada desses fatores (pelos pesos de calcularOverall)
+    // é ~1.0 → o overall final fica próximo do potencial.
+    const modificadores = {
+        ata: { finalizacao: 1.05, drible: 1.05, velocidade: 1.00, passe: 0.90, fisico: 0.85, defesa: 0.60, reflexos: 0.10 },
+        me:  { finalizacao: 0.90, drible: 1.00, velocidade: 1.00, passe: 1.10, fisico: 0.90, defesa: 0.85, reflexos: 0.10 },
+        zag: { finalizacao: 0.60, drible: 0.85, velocidade: 0.85, passe: 0.90, fisico: 1.05, defesa: 1.05, reflexos: 0.10 },
+        go:  { finalizacao: 0.30, drible: 0.50, velocidade: 0.85, passe: 0.90, fisico: 1.00, defesa: 0.90, reflexos: 1.10 }
+    };
+    return modificadores[posicao]?.[chave] ?? 1.0;
+}
+
 function amostrarPoisson(lambda) {
     if (!(lambda > 0)) return 0;
     const L = Math.exp(-lambda);
@@ -319,7 +359,14 @@ function salvarHistorico(historico) {
 
 function obterCarreiraAtual() {
     const carreiraRaw = safeStorageGet(STORAGE_KEY_CARREIRA_ATUAL);
-    const carreiraPadrao = { id: gerarIdRanking(), nome: "Saraiva", posicao: "Atacante", idadeLimite: IDADE_LIMITE_PADRAO, nacionalidade: "" };
+    const carreiraPadrao = {
+        id: gerarIdRanking(),
+        nome: "Jogador",
+        posicao: "Atacante",
+        idadeLimite: IDADE_LIMITE_PADRAO,
+        nacionalidade: "",
+        potencial: 85
+    };
 
     if (!carreiraRaw) {
         return carreiraPadrao;
@@ -337,7 +384,8 @@ function obterCarreiraAtual() {
             posicao: typeof carreira.posicao === "string" ? carreira.posicao : "Atacante",
             idadeLimite: Number.isFinite(Number(carreira.idadeLimite)) ? Math.max(1, Math.floor(Number(carreira.idadeLimite))) : IDADE_LIMITE_PADRAO,
             nacionalidade: SELECOES.some((selecao) => selecao.id === carreira.nacionalidade) ? carreira.nacionalidade : "",
-            clube: obterClube(carreira.clube)?.id || ""
+            clube: obterClube(carreira.clube)?.id || "",
+            potencial: calcularPotencialDaCarreira(carreira)
         };
     } catch (erro) {
         console.error("Erro ao ler a carreira atual:", erro);
@@ -353,7 +401,8 @@ function salvarCarreiraAtual(carreira) {
         posicao: typeof carreiraAtual.posicao === "string" ? carreiraAtual.posicao : "Atacante",
         idadeLimite: Number.isFinite(Number(carreiraAtual.idadeLimite)) ? Math.max(1, Math.floor(Number(carreiraAtual.idadeLimite))) : IDADE_LIMITE_PADRAO,
         nacionalidade: SELECOES.some((selecao) => selecao.id === carreiraAtual.nacionalidade) ? carreiraAtual.nacionalidade : "",
-        clube: obterClube(carreiraAtual.clube)?.id || ""
+        clube: obterClube(carreiraAtual.clube)?.id || "",
+        potencial: calcularPotencialDaCarreira(carreiraAtual)
     }));
 }
 
@@ -1249,20 +1298,53 @@ function normalizarAtributos(atributos, posicao, idade = 18) {
     return dados;
 }
 
-function evoluirAtributos(temporadasAnteriores, posicao, idade) {
+function evoluirAtributos(temporadasAnteriores, posicao, idade, potencial = 85) {
     const anterior = temporadasAnteriores.length
         ? normalizarAtributos(temporadasAnteriores[temporadasAnteriores.length - 1].atributos, posicao, idade - 1)
         : normalizarAtributos(null, posicao, idade);
     const resultado = {};
+
     Object.keys(ATRIBUTOS_NOMES).forEach((chave) => {
         let variacao = 0;
-        if (idade <= 24) variacao = Math.random() < 0.72 ? 1 + Math.floor(Math.random() * 3) : 0;
-        else if (idade <= 30) variacao = Math.random() < 0.55 ? 1 : 0;
-        else if (idade <= 38) variacao = -(Math.random() < 0.75 ? 1 + Math.floor(Math.random() * 2) : 0);
-        else variacao = -(1 + Math.floor(Math.random() * 3));
-        if (chave === "reflexos" && posicao !== "go") resultado[chave] = limitarAtributo(Math.min(20, anterior[chave] + (idade <= 24 ? 0 : variacao)));
-        else resultado[chave] = limitarAtributo(anterior[chave] + variacao);
+
+        // Curva de evolução mais generosa:
+        // 18-20: +2 a +6/ano | 21-23: +2 a +5/ano | 24-27: +1 a +3/ano
+        // 28-30: +0 a +1/ano | 31-33: ~estável | 34+: queda
+        if (idade <= 20) {
+            variacao = Math.random() < 0.90 ? 2 + Math.floor(Math.random() * 5) : 0;
+        } else if (idade <= 23) {
+            variacao = Math.random() < 0.85 ? 2 + Math.floor(Math.random() * 4) : 0;
+        } else if (idade <= 27) {
+            variacao = Math.random() < 0.75 ? 1 + Math.floor(Math.random() * 3) : 0;
+        } else if (idade <= 30) {
+            variacao = Math.random() < 0.60 ? 1 : 0;
+        } else if (idade <= 33) {
+            variacao = Math.random() < 0.30 ? 1 : (Math.random() < 0.40 ? -1 : 0);
+        } else if (idade <= 36) {
+            variacao = Math.random() < 0.70 ? -1 : 0;
+        } else {
+            variacao = -(1 + Math.floor(Math.random() * 2));
+        }
+
+        // Teto deste atributo, dado o potencial do jogador e sua posição.
+        const modificador = obterModificadorPotencial(chave, posicao);
+        const teto = Math.min(99, Math.round(potencial * modificador));
+
+        let novoValor = anterior[chave] + variacao;
+
+        // Não deixa crescer acima do teto — o jogador bate o próprio limite.
+        if (variacao > 0 && novoValor > teto) {
+            novoValor = teto;
+        }
+
+        // Reflexos: goleiros treinam, jogadores de linha não.
+        if (chave === "reflexos" && posicao !== "go") {
+            resultado[chave] = limitarAtributo(Math.min(20, novoValor));
+        } else {
+            resultado[chave] = limitarAtributo(novoValor);
+        }
     });
+
     return resultado;
 }
 
@@ -1322,7 +1404,7 @@ function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], na
     }
     const carreiraAtual = obterCarreiraAtual();
 
-    const atributos = evoluirAtributos(temporadasAnteriores, posicao, idade);
+    const atributos = evoluirAtributos(temporadasAnteriores, posicao, idade, carreiraAtual.potencial);
     const overall = calcularOverall(posicao, atributos);
     const sim = simularTemporadaPorJogo(posicao, atributos, idade, clubeId);
 
