@@ -2,13 +2,6 @@ const STORAGE_KEY = "footmain_temporadas";
 const STORAGE_KEY_RANKING = "footmain_ranking";
 const STORAGE_KEY_CARREIRA_ATUAL = "footmain_carreira_atual";
 
-/* ============================================================
-   OVERALL — núcleo da engine de simulação.
-   Definido cedo e blindado contra qualquer entrada inválida,
-   para nunca lançar exceção (nem durante o carregamento do
-   histórico antigo, nem durante a geração de uma temporada).
-   ============================================================ */
-
 const OVERALL_PADRAO = 50;
 
 const PESOS_OVERALL = {
@@ -56,9 +49,41 @@ function amostrarPoisson(lambda) {
     return k - 1;
 }
 
-function simularTemporadaPorJogo(posicao, atributos, idade) {
+/* ============================================================
+   Fator liga / clube
+   ============================================================ */
+
+function obterPerfilLiga(liga) {
+    return PERFIL_LIGAS[liga] || { dificuldade: 1.0, prestigio: 1.0 };
+}
+
+function obterForcaClube(clubeId) {
+    if (!clubeId) return 70;
+    return Number(FORCA_CLUBES[clubeId]) || 70;
+}
+
+function obterForcaMediaLiga(liga) {
+    const clubesDaLiga = CLUBES.filter((c) => c.liga === liga);
+    if (!clubesDaLiga.length) return 70;
+    const soma = clubesDaLiga.reduce((total, c) => total + obterForcaClube(c.id), 0);
+    return soma / clubesDaLiga.length;
+}
+
+function calcularDominancia(clubeId) {
+    const clube = obterClube(clubeId);
+    if (!clube) {
+        return { dominancia: 1.0, perfil: obterPerfilLiga(""), forca: 70 };
+    }
+    const perfil = obterPerfilLiga(clube.liga);
+    const forca = obterForcaClube(clube.id);
+    const mediaLiga = obterForcaMediaLiga(clube.liga);
+    return { dominancia: forca / mediaLiga, perfil, forca };
+}
+
+function simularTemporadaPorJogo(posicao, atributos, idade, clubeId = "") {
     const cfg = getConfig();
-    const overall = calcularOverall(posicao, atributos); // já é à prova de falhas
+    const overall = calcularOverall(posicao, atributos);
+    const { dominancia, perfil } = calcularDominancia(clubeId);
 
     let fatorIdade;
     if (idade <= 19) fatorIdade = 0.82;
@@ -69,7 +94,12 @@ function simularTemporadaPorJogo(posicao, atributos, idade) {
     else if (idade <= 35) fatorIdade = 0.88;
     else fatorIdade = 0.72;
 
-    const probParticipar = Math.max(0.05, Math.min(0.99, ((overall - 10) / 90) * fatorIdade));
+    // Clubes dominantes rodiziam menos → mais minutos.
+    const fatorClubeMinutos = 0.90 + Math.min(0.20, Math.max(0, dominancia - 0.8) * 0.35);
+
+    const probParticipar = Math.max(0.05, Math.min(0.99,
+        ((overall - 10) / 90) * fatorIdade * fatorClubeMinutos
+    ));
     const maxJogos = Math.round((posicao === "go" ? 55 : 62) * (cfg.geral.multiplicadorJogos || 1));
 
     const fin = Number(atributos?.finalizacao) || OVERALL_PADRAO;
@@ -93,8 +123,15 @@ function simularTemporadaPorJogo(posicao, atributos, idade) {
         lambdaAssist = Math.pow(pas / 100, 4) * 0.06;
     }
 
-    lambdaGol    *= fatorIdade * (cfg.geral.multiplicadorGols || 1);
-    lambdaAssist *= fatorIdade * (cfg.geral.multiplicadorAssistencias || 1);
+    // Ligas fortes → defesas melhores → menos gols por jogo.
+    // Clubes dominantes → mais criação → mais gols.
+    const fatorDificuldade = 1 / Math.pow(perfil.dificuldade, 0.7);
+    const fatorDominancia   = Math.pow(dominancia, 0.5);
+
+    lambdaGol    *= fatorIdade * (cfg.geral.multiplicadorGols || 1)
+                  * fatorDificuldade * fatorDominancia;
+    lambdaAssist *= fatorIdade * (cfg.geral.multiplicadorAssistencias || 1)
+                  * fatorDificuldade * fatorDominancia;
 
     let jogos = 0;
     let gols = 0;
@@ -282,7 +319,7 @@ function salvarHistorico(historico) {
 
 function obterCarreiraAtual() {
     const carreiraRaw = safeStorageGet(STORAGE_KEY_CARREIRA_ATUAL);
-    const carreiraPadrao = { id: gerarIdRanking(), nome: "Jogador", posicao: "Atacante", idadeLimite: IDADE_LIMITE_PADRAO, nacionalidade: "" };
+    const carreiraPadrao = { id: gerarIdRanking(), nome: "Saraiva", posicao: "Atacante", idadeLimite: IDADE_LIMITE_PADRAO, nacionalidade: "" };
 
     if (!carreiraRaw) {
         return carreiraPadrao;
@@ -494,34 +531,38 @@ function gerarTrofeusSelecao(nacionalidade, ano, multiplicadorTitulos) {
     return trofeus;
 }
 
-function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, temporadasAnteriores = [], nacionalidade = "") {
+function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, temporadasAnteriores = [], nacionalidade = "", clubeId = "") {
     const cfg = getConfig();
     const t = cfg.titulos;
     const multColetivos = cfg.geral.multiplicadorTitulos;
     const multIndividuais = cfg.geral.multiplicadorPremios;
+
+    const { dominancia, perfil } = calcularDominancia(clubeId);
+
+    // Clubes dominantes concentram títulos (expoente 2 concentra bastante).
+    const fatorTitulos = Math.pow(dominancia, 2);
+    // Prêmios individuais: prestígio da liga × dominância do clube.
+    const fatorVisibilidade = perfil.prestigio * Math.pow(dominancia, 1.5);
 
     const trofeusColetivos = [];
     const trofeusIndividuais = [];
     const temporadaAtual = Number(ano) || ANO_INICIAL;
     const ciclo = Math.max(1, Number(t.cicloCopaDoMundo) || 4);
 
-    // Ciclo da Copa do Mundo (a cada N anos, começando em ANO_INICIAL).
     const cicloCopaDoMundo = (temporadaAtual - ANO_INICIAL) % ciclo === 0;
-
-    // Ciclo do Mundial de Clubes (a cada N anos, começando em anoInicioMundialClubes).
     const anoInicioMundial = Number(t.anoInicioMundialClubes) || 2029;
     const anoCopaDoMundoDeClubes =
         temporadaAtual >= anoInicioMundial &&
         (temporadaAtual - anoInicioMundial) % ciclo === 0;
 
     // -------- Títulos coletivos --------
-    if (jogos >= 35 && sortearPremio(t.chanceCopaContinental * multColetivos)) {
+    if (jogos >= 35 && sortearPremio(t.chanceCopaContinental * multColetivos * fatorTitulos)) {
         trofeusColetivos.push("Copa Continental");
     }
-    if (jogos >= 30 && sortearPremio(t.chanceLigaNacional * multColetivos)) {
+    if (jogos >= 30 && sortearPremio(t.chanceLigaNacional * multColetivos * fatorTitulos)) {
         trofeusColetivos.push("Liga Nacional");
     }
-    if (jogos >= 25 && sortearPremio(t.chanceCopaNacional * multColetivos)) {
+    if (jogos >= 25 && sortearPremio(t.chanceCopaNacional * multColetivos * fatorTitulos)) {
         trofeusColetivos.push("Copa Nacional");
     }
     if (jogos >= 35 && cicloCopaDoMundo && sortearPremio(t.chanceCopaDoMundo * multColetivos)) {
@@ -532,27 +573,22 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
     }
 
     const ganhouContinentalNestaTemporada = trofeusColetivos.includes("Copa Continental");
-
-    // Início do ciclo mundial atual (para checar se ganhou continental no mesmo ciclo).
-    const inicioCicloMundial =
-        ANO_INICIAL + Math.floor((temporadaAtual - ANO_INICIAL) / ciclo) * ciclo;
+    const inicioCicloMundial = ANO_INICIAL + Math.floor((temporadaAtual - ANO_INICIAL) / ciclo) * ciclo;
 
     const ganhouContinentalNoCiclo =
         ganhouContinentalNestaTemporada ||
-        temporadasAnteriores.some(
-            (temporada) =>
-                Number(temporada.ano) >= inicioCicloMundial &&
-                Number(temporada.ano) <= temporadaAtual &&
-                Array.isArray(temporada.trofeusColetivos) &&
-                temporada.trofeusColetivos.includes("Copa Continental")
-        );
+        temporadasAnteriores.some((temporada) =>
+            Number(temporada.ano) >= inicioCicloMundial &&
+            Number(temporada.ano) <= temporadaAtual &&
+            Array.isArray(temporada.trofeusColetivos) &&
+            temporada.trofeusColetivos.includes("Copa Continental"));
 
     if (jogos >= 35 && ganhouContinentalNestaTemporada &&
-        sortearPremio(t.chanceIntercontinental * multColetivos)) {
+        sortearPremio(t.chanceIntercontinental * multColetivos * fatorTitulos)) {
         trofeusColetivos.push("Intercontinental");
     }
     if (jogos >= 35 && anoCopaDoMundoDeClubes && ganhouContinentalNoCiclo &&
-        sortearPremio(t.chanceMundialClubes * multColetivos)) {
+        sortearPremio(t.chanceMundialClubes * multColetivos * fatorTitulos)) {
         trofeusColetivos.push("Copa do Mundo de Clubes");
     }
 
@@ -561,7 +597,7 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
         posicao !== "Goleiro" &&
         trofeusColetivos.length >= 2 &&
         (gols >= 20 || assistencias >= 15 || gols + assistencias >= 25) &&
-        sortearPremio(t.chanceBolaDeOuro * multIndividuais)
+        sortearPremio(t.chanceBolaDeOuro * multIndividuais * fatorVisibilidade)
     ) {
         trofeusIndividuais.push("Bola de Ouro");
     }
@@ -574,20 +610,19 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
 
     if (
         !jaGanhouGoldenBoy &&
-        Number(idade) <= 20 &&
-        Number(idade) >= 0 &&
+        Number(idade) <= 20 && Number(idade) >= 0 &&
         (gols >= 10 || assistencias >= 8 || gols + assistencias >= 15) &&
-        sortearPremio(t.chanceGoldenBoy * multIndividuais)
+        sortearPremio(t.chanceGoldenBoy * multIndividuais * fatorVisibilidade)
     ) {
         trofeusIndividuais.push("Golden Boy");
     }
 
-    if (gols > jogos && sortearPremio(t.chanceChuteiraDeOuro * multIndividuais)) {
+    if (gols > jogos && sortearPremio(t.chanceChuteiraDeOuro * multIndividuais * fatorVisibilidade)) {
         trofeusIndividuais.push("Chuteira de Ouro");
     }
 
     if (posicao === "Goleiro" && jogos >= 30 &&
-        sortearPremio(t.chanceLuvaDeOuro * multIndividuais)) {
+        sortearPremio(t.chanceLuvaDeOuro * multIndividuais * fatorVisibilidade)) {
         trofeusIndividuais.push("Luva de Ouro");
     }
 
@@ -974,7 +1009,7 @@ function renderHistorico() {
                 <li>
                     <strong>Temporada ${temporada.ano}</strong>
                     <span> - ${temporada.posicao}</span>
-                    <span> - ${escaparHTML(obterClube(temporada.clube)?.nome || "Clube não definido")}</span>
+                    <span> - ${escaparHTML(obterClube(temporada.clube)?.nome || "Clube não definido")} (${escaparHTML(obterClube(temporada.clube)?.liga || "—")}, força ${obterForcaClube(temporada.clube)})</span>
                     <p>Jogador: ${temporada.nome} | Idade: ${temporada.idade} anos</p>
                     <p>Jogos: ${temporada.jogos} | Gols: ${temporada.gols} | Assistências: ${temporada.assistencias} | Prêmios: ${premios}</p>
                     <p class="titulo-categoria">Títulos coletivos:</p>
@@ -1221,11 +1256,11 @@ function evoluirAtributos(temporadasAnteriores, posicao, idade) {
     const resultado = {};
     Object.keys(ATRIBUTOS_NOMES).forEach((chave) => {
         let variacao = 0;
-        if (idade <= 27) variacao = Math.random() < 0.72 ? 1 + Math.floor(Math.random() * 3) : 0;
+        if (idade <= 24) variacao = Math.random() < 0.72 ? 1 + Math.floor(Math.random() * 3) : 0;
         else if (idade <= 30) variacao = Math.random() < 0.55 ? 1 : 0;
-        else if (idade <= 34) variacao = -(Math.random() < 0.75 ? 1 + Math.floor(Math.random() * 2) : 0);
+        else if (idade <= 38) variacao = -(Math.random() < 0.75 ? 1 + Math.floor(Math.random() * 2) : 0);
         else variacao = -(1 + Math.floor(Math.random() * 3));
-        if (chave === "reflexos" && posicao !== "go") resultado[chave] = limitarAtributo(Math.min(20, anterior[chave] + (idade <= 27 ? 0 : variacao)));
+        if (chave === "reflexos" && posicao !== "go") resultado[chave] = limitarAtributo(Math.min(20, anterior[chave] + (idade <= 24 ? 0 : variacao)));
         else resultado[chave] = limitarAtributo(anterior[chave] + variacao);
     });
     return resultado;
@@ -1289,7 +1324,7 @@ function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], na
 
     const atributos = evoluirAtributos(temporadasAnteriores, posicao, idade);
     const overall = calcularOverall(posicao, atributos);
-    const sim = simularTemporadaPorJogo(posicao, atributos, idade);
+    const sim = simularTemporadaPorJogo(posicao, atributos, idade, clubeId);
 
     const trofeus = gerarTrofeusTemporada(
         dados.nome,
@@ -1299,7 +1334,8 @@ function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], na
         ano,
         idade,
         temporadasAnteriores,
-        nacionalidade
+        nacionalidade,
+        clubeId
     );
 
     const clube = obterClube(clubeId);
