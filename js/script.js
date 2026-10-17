@@ -1599,12 +1599,13 @@ const dadosValidos = validarDadosJogador({
         salvarHistorico([...historicoDeOutrasCarreiras, ...historicoAtualizado]);
         renderHistorico();
         renderAtributos(temporada);
-    } catch (erro) {
-        console.error("[FootMain] Erro em gerar():", erro);
-        alert("Ocorreu um erro ao gerar a temporada. Veja o console (F12) para detalhes.");
-    } finally {
-        processamentoEmAndamento = false;
-    }
+    
+} catch (erro) {
+    console.error("[FootMain] Erro em gerar():", erro);
+    alert("Erro ao gerar temporada: " + (erro?.message || String(erro)));
+} finally {
+    processamentoEmAndamento = false;
+}
 }
 
 function atualizarTitulosResultados(temporada) {
