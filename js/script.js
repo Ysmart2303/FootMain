@@ -1527,6 +1527,9 @@ async function gerar() {
         
 const posicaoNormalizada = normalizarPosicao(posicaoSelecionada.value);
 
+console.log("Posição selecionada:", posicaoSelecionada.value);
+console.log("Posição normalizada:", posicaoNormalizada);
+
 const dadosValidos = validarDadosJogador({
     nome,
     idade: idadeInicial,
