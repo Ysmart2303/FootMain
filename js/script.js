@@ -1524,7 +1524,16 @@ async function gerar() {
         const idadeInicial = carreiraFinalizada && idadeInformada === carreiraAtual.idadeLimite
             ? getConfig().geral.idadeInicialPadrao
             : idadeInformada;
-        const dadosValidos = validarDadosJogador({ nome, idade: idadeInicial, idadeLimite, posicao: posicaoSelecionada.id, nacionalidade });
+        
+const posicaoNormalizada = normalizarPosicao(posicaoSelecionada.value);
+
+const dadosValidos = validarDadosJogador({
+    nome,
+    idade: idadeInicial,
+    idadeLimite,
+    posicao: posicaoNormalizada,
+    nacionalidade
+});
 
         if (!dadosValidos.valido) {
             alert(dadosValidos.mensagem);
