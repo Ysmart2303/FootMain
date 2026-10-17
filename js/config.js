@@ -4,7 +4,7 @@
  */
 
 const STORAGE_KEY_CONFIG = "footmain_config_v1";
-const VERSAO_APP = "1.1.1";
+const VERSAO_APP = "1.2.1";
 
 /* ---------- Definições base (as "de fábrica") ---------- */
 const POSICOES_PADRAO = {
@@ -104,6 +104,64 @@ const CLUBES = [
     { id: "mirassol", nome: "Mirassol", liga: "Brasileirão" },
     { id: "botafogo", nome: "Botafogo", liga: "Brasileirão" }
 ];
+
+/* ============================================================
+   Fator liga / clube — versão 1.2.1
+   dificuldade: quanto maior, menos gols por temporada na liga.
+   prestigio:   quanto maior, mais visibilidade para prêmios.
+   ============================================================ */
+const PERFIL_LIGAS = {
+    "Premier League": { dificuldade: 1.15, prestigio: 1.20 },
+    "La Liga":        { dificuldade: 1.10, prestigio: 1.18 },
+    "Serie A":        { dificuldade: 1.12, prestigio: 1.10 },
+    "Bundesliga":     { dificuldade: 1.08, prestigio: 1.10 },
+    "Ligue 1":        { dificuldade: 1.02, prestigio: 1.05 },
+    "Brasileirão":    { dificuldade: 0.92, prestigio: 0.80 }
+};
+
+const FORCA_CLUBES = {
+    // Premier League
+    "manchester-city": 96, "arsenal": 91, "liverpool": 90, "chelsea": 85,
+    "manchester-united": 84, "tottenham": 82, "newcastle": 81, "aston-villa": 79,
+    "west-ham": 75, "brighton": 75, "everton": 71, "crystal-palace": 70,
+    "fulham": 69, "brentford": 68, "wolves": 67, "nottingham-forest": 67,
+    "bournemouth": 65, "leicester-city": 64, "ipswich-town": 59, "southampton": 58,
+
+    // La Liga
+    "real-madrid": 97, "barcelona": 91, "atletico-madrid": 88, "athletic-bilbao": 80,
+    "real-sociedad": 78, "girona": 76, "real-betis": 75, "villarreal": 74,
+    "sevilla": 73, "valencia": 71, "osasuna": 68, "celta-vigo": 68,
+    "getafe": 67, "mallorca": 66, "alaves": 65, "rayo-vallecano": 64,
+    "las-palmas": 63, "espanyol": 61, "leganes": 60, "real-valladolid": 58,
+
+    // Serie A
+    "inter": 90, "milan": 86, "juventus": 86, "napoli": 85, "atalanta": 82,
+    "roma": 82, "lazio": 80, "fiorentina": 78, "bologna": 76, "torino": 72,
+    "udinese": 71, "genoa": 70, "monza": 68, "cagliari": 67, "verona": 66,
+    "lecce": 65, "parma": 64, "como": 63, "empoli": 63, "venezia": 62,
+
+    // Bundesliga
+    "bayern-munich": 94, "bayer-leverkusen": 88, "borussia-dortmund": 85,
+    "rb-leipzig": 83, "stuttgart": 79, "eintracht-frankfurt": 76, "freiburg": 74,
+    "wolfsburg": 73, "borussia-monchengladbach": 72, "hoffenheim": 71,
+    "werder-bremen": 70, "union-berlin": 69, "augsburg": 68, "mainz": 67,
+    "hamburger-sv": 66, "heidenheim": 65, "schalke-04": 64, "bochum": 63,
+    "holstein-kiel": 60, "st-pauli": 59,
+
+    // Ligue 1
+    "paris-saint-germain": 94, "marseille": 80, "monaco": 79, "lille": 77,
+    "lyon": 76, "nice": 74, "lens": 73, "rennes": 72, "strasbourg": 71,
+    "toulouse": 69, "montpellier": 68, "reims": 68, "nantes": 67,
+    "auxerre": 65, "saint-etienne": 64, "angers": 63, "le-havre": 62,
+    "bordeaux": 62, "lorient": 61, "metz": 60,
+
+    // Brasileirão
+    "flamengo": 90, "palmeiras": 89, "botafogo": 84, "corinthians": 80,
+    "sao-paulo": 80, "atletico-mg": 79, "internacional": 78, "gremio": 77,
+    "cruzeiro": 76, "santos": 76, "fortaleza": 76, "bahia": 76,
+    "fluminense": 75, "vasco": 73, "bragantino": 72, "ceara": 71,
+    "sport": 68, "vitoria": 67, "juventude": 65, "mirassol": 63
+};
 
 /* ---------- Configurações padrão ---------- */
 const CONFIG_PADRAO = {
