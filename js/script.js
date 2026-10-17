@@ -176,7 +176,12 @@ function validarTemporada(temporada) {
 
     const nome = normalizarNome(temporada.nome) || "Jogador";
     const posicaoNormalizada = normalizarPosicao(temporada.posicao) || normalizarPosicao(temporada.posicaoKey) || "ata";
-    const dadosPosicao = posicoes[posicaoNormalizada] || posicoes.ata;
+    
+const dadosPosicao =
+    posicoes?.[posicaoNormalizada] ||
+    posicoes?.ata ||
+    POSICOES_PADRAO.ata;
+
     const idade = Number.isFinite(Number(temporada.idade)) ? Math.max(0, Math.floor(Number(temporada.idade))) : 0;
     const ano = Number.isFinite(Number(temporada.ano)) ? Math.floor(Number(temporada.ano)) : ANO_INICIAL;
     const jogos = Number.isFinite(Number(temporada.jogos)) ? Math.max(0, Math.floor(Number(temporada.jogos))) : 0;
