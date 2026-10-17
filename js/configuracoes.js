@@ -116,18 +116,33 @@ function renderCampos() {
     const config = carregarConfig();
     const container = document.getElementById("grupos-config");
 
-    container.innerHTML = SCHEMA_CONFIG.map(grupo => `
-        <div class="config-grupo" data-grupo="${grupo.id}">
-            <h3><span class="config-grupo-icone">${grupo.icone}</span>${grupo.titulo}</h3>
-            ${grupo.descricao ? `<p class="config-grupo-desc">${grupo.descricao}</p>` : ""}
-            <div class="config-campos">
-                ${grupo.campos.map(campo => renderCampo(campo, obterPorCaminho(config, campo.caminho))).join("")}
-            </div>
-        </div>
-    `).join("");
+    // Preserva o que estava aberto (importante no "aplicar preset").
+    const abertos = new Set(
+        Array.from(container.querySelectorAll("details[open]")).map((d) => d.dataset.grupo)
+    );
+    const primeiraRenderizacao = container.childElementCount === 0;
 
-    container.addEventListener("input", aoAlterarCampo);
-    container.addEventListener("change", aoAlterarCampo);
+    container.innerHTML = SCHEMA_CONFIG.map((grupo, index) => {
+        const deveAbrir = primeiraRenderizacao ? index === 0 : abertos.has(grupo.id);
+        return `<details class="config-grupo" data-grupo="${grupo.id}"${deveAbrir ? " open" : ""}>
+            <summary>
+                <span class="config-grupo-icone">${grupo.icone}</span>
+                <h3>${grupo.titulo}</h3>
+            </summary>
+            <div class="config-grupo-conteudo">
+                ${grupo.descricao ? `<p class="config-grupo-desc">${grupo.descricao}</p>` : ""}
+                <div class="config-campos">
+                    ${grupo.campos.map((campo) => renderCampo(campo, obterPorCaminho(config, campo.caminho))).join("")}
+                </div>
+            </div>
+        </details>`;
+    }).join("");
+
+    if (!container.dataset.ligado) {
+        container.addEventListener("input", aoAlterarCampo);
+        container.addEventListener("change", aoAlterarCampo);
+        container.dataset.ligado = "1";
+    }
 }
 
 function renderCampo(campo, valor) {
