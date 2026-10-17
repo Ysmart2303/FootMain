@@ -810,6 +810,188 @@ function renderConquistas() {
     }).join("");
 }
 
+function renderRanking() {
+    const listaRanking = document.getElementById("lista-ranking");
+    const filtroRanking = document.getElementById("filtro-ranking");
+
+    if (!listaRanking) return;
+
+    const criterio = filtroRanking?.value || "pontuacao";
+    const filtroPosicao = document.getElementById("filtro-posicao-ranking");
+    const posicaoSelecionada = filtroPosicao?.value || "todas";
+    const ranking = lerRanking()
+        .filter((carreira) => posicaoSelecionada === "todas" || carreira.posicao === posicaoSelecionada)
+        .sort((a, b) => (Number(b[criterio]) || 0) - (Number(a[criterio]) || 0))
+        .slice(0, 5);
+
+    if (ranking.length === 0) {
+        listaRanking.innerHTML = "<li>Nenhuma carreira finalizada ainda.</li>";
+        renderConquistas();
+        return;
+    }
+
+    listaRanking.innerHTML = ranking
+        .map((carreira, index) => {
+            const trofeusColetivos = Array.isArray(carreira.trofeusColetivos) ? carreira.trofeusColetivos : [];
+            const trofeusIndividuais = Array.isArray(carreira.trofeusIndividuais) ? carreira.trofeusIndividuais : [];
+            const premios = contarPremios(carreira);
+            const trofeusHtml = [
+                ...(trofeusColetivos.length ? [`<span class="ranking-trofeu coletivo">${escaparHTML(formatarTrofeus(trofeusColetivos))}</span>`] : []),
+                ...(trofeusIndividuais.length ? [`<span class="ranking-trofeu individual">${escaparHTML(formatarTrofeus(trofeusIndividuais))}</span>`] : [])
+            ];
+            const conteudoTrofeus = trofeusHtml.length ? trofeusHtml.join("") : '<span class="ranking-trofeu coletivo">Nenhum</span>';
+            const medalha = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "#";
+            const classeTop = index === 0 ? "top-1" : index === 1 ? "top-2" : index === 2 ? "top-3" : "";
+
+            return `
+                <li class="${classeTop}">
+                    <span class="rank-medal">${medalha}</span>
+                    <strong>#${index + 1} - ${escaparHTML(carreira.nome)}</strong>
+                    <p>Posição: ${escaparHTML(carreira.posicao)} | Seleção: ${escaparHTML(SELECOES.find((selecao) => selecao.id === carreira.nacionalidade)?.nome || "Não definida")} | Último clube: ${escaparHTML(obterClube(carreira.clube)?.nome || "Não definido")} | Pontuação: ${carreira.pontuacao}</p>
+                    <p>Jogos: ${carreira.jogos} | Gols: ${carreira.gols} | Assistências: ${carreira.assistencias} | Prêmios: ${premios}</p>
+                    <p>Títulos coletivos: ${trofeusColetivos.length} | Títulos individuais: ${trofeusIndividuais.length}</p>
+                    <div class="ranking-trofeus">${conteudoTrofeus}</div>
+                    <small>Idade limite: ${carreira.idadeLimite} anos</small>
+                    ${renderDetalhesCarreira(carreira)}
+                    <button type="button" class="remover-ranking" data-id="${escaparHTML(carreira.id || "")}" aria-label="Apagar ${escaparHTML(carreira.nome)} do ranking">Apagar</button>
+                </li>
+            `;
+        })
+        .join("");
+
+    renderConquistas();
+}
+
+function proximoAno(historico = lerHistorico()) {
+    if (historico.length === 0) {
+        return ANO_INICIAL;
+    }
+
+    const maioresAnos = historico.map((temporada) => Number(temporada.ano) || ANO_INICIAL);
+    return Math.max(...maioresAnos) + 1;
+}
+
+function atualizarResumoJogador(nome, idade, ano, nacionalidade = obterCarreiraAtual().nacionalidade, clubeId = obterCarreiraAtual().clube) {
+    const perfilNome = document.getElementById("perfil-nome");
+    const perfilIdade = document.getElementById("perfil-idade");
+    const perfilAno = document.getElementById("perfil-ano");
+    const perfilSelecao = document.getElementById("perfil-selecao");
+    const selecao = SELECOES.find((item) => item.id === nacionalidade);
+    const perfilClube = document.getElementById("perfil-clube");
+    const clube = obterClube(clubeId);
+
+    if (perfilNome) perfilNome.textContent = nome || "Jogador";
+    if (perfilIdade) perfilIdade.textContent = idade ?? 0;
+    if (perfilAno) perfilAno.textContent = ano ?? ANO_INICIAL;
+    if (perfilSelecao) perfilSelecao.textContent = selecao ? selecao.nome : "Não definida";
+    if (perfilClube) perfilClube.textContent = clube ? clube.nome : "Ainda não escolhido";
+}
+
+function lerHistoricoAtiva() {
+    const carreiraAtual = obterCarreiraAtual();
+    const historico = lerHistorico();
+
+    if (!carreiraAtual.id || historico.length === 0) {
+        return historico;
+    }
+
+    return historico.filter((temporada) => {
+        if (temporada.carreiraId) {
+            return temporada.carreiraId === carreiraAtual.id;
+        }
+
+        return temporada.nome === carreiraAtual.nome || temporada.nome === "Jogador";
+    });
+}
+
+function renderHistorico() {
+    const lista = document.getElementById("lista-temporadas");
+    const filtroHistorico = document.getElementById("filtro-historico");
+    const criterio = filtroHistorico?.value || "ordem";
+    const historico = lerHistoricoAtiva();
+
+    if (!lista) return;
+
+    if (historico.length === 0) {
+        lista.innerHTML = "<li>Nenhuma temporada salva ainda.</li>";
+        return;
+    }
+
+    const temporadas = criterio === "ordem"
+        ? historico
+        : historico.slice().sort((a, b) => {
+              const valorA = criterio === "premios" ? contarPremios(a) : Number(a[criterio]) || 0;
+              const valorB = criterio === "premios" ? contarPremios(b) : Number(b[criterio]) || 0;
+              return valorB - valorA;
+          });
+
+    lista.innerHTML = temporadas
+        .map((temporada) => {
+            const trofeusColetivos = Array.isArray(temporada.trofeusColetivos) ? temporada.trofeusColetivos : [];
+            const trofeusIndividuais = Array.isArray(temporada.trofeusIndividuais) ? temporada.trofeusIndividuais : [];
+            const premios = contarPremios(temporada);
+
+            const renderTrofeus = (trofeus) => {
+                if (!trofeus.length) {
+                    return '<span class="titulo-tag">Nenhum</span>';
+                }
+
+                return trofeus
+                    .map((trofeu) => `<span class="titulo-tag">${trofeu}</span>`)
+                    .join("");
+            };
+
+            return `
+                <li>
+                    <strong>Temporada ${temporada.ano}</strong>
+                    <span> - ${temporada.posicao}</span>
+                    <span> - ${escaparHTML(obterClube(temporada.clube)?.nome || "Clube não definido")}</span>
+                    <p>Jogador: ${temporada.nome} | Idade: ${temporada.idade} anos</p>
+                    <p>Jogos: ${temporada.jogos} | Gols: ${temporada.gols} | Assistências: ${temporada.assistencias} | Prêmios: ${premios}</p>
+                    <p class="titulo-categoria">Títulos coletivos:</p>
+                    <div class="titulo-tags">${renderTrofeus(trofeusColetivos)}</div>
+                    <p class="titulo-categoria">Títulos individuais:</p>
+                    <div class="titulo-tags">${renderTrofeus(trofeusIndividuais)}</div>
+                    <small>${temporada.data}</small>
+                </li>
+            `;
+        })
+        .join("");
+}
+
+function proximaIdade(historico = lerHistoricoAtiva()) {
+    if (historico.length === 0) {
+        const idadeInicial = Number(document.getElementById("idade").value) || 0;
+        return idadeInicial;
+    }
+
+    const ultimaIdade = Number(historico[historico.length - 1].idade) || 0;
+    return ultimaIdade + 1;
+}
+
+function validarNumeroInteiro(valor, fallback, minimo = 0) {
+    const numero = Number(valor);
+
+    if (!Number.isFinite(numero)) {
+        return fallback;
+    }
+
+    const arredondado = Math.floor(numero);
+    return Math.max(minimo, arredondado);
+}
+
+function obterIdadeLimite() {
+    const idadeLimiteInput = document.getElementById("idade-limite");
+    const valor = idadeLimiteInput ? idadeLimiteInput.value : "";
+    const numero = Number(valor);
+
+    if (!Number.isFinite(numero) || numero <= 0) {
+        return IDADE_LIMITE_PADRAO;
+    }
+
+    return Math.max(1, Math.floor(numero));
+}
+
 function somarTotaisHistorico(historico) {
     return historico.reduce(
         (acumulador, temporada) => {
@@ -1418,7 +1600,7 @@ async function gerar() {
         salvarHistorico([...historicoDeOutrasCarreiras, ...historicoAtualizado]);
         renderHistorico();
         renderAtributos(temporada);
-
+    
 } catch (erro) {
     console.error("[FootMain] Erro em gerar():", erro);
     alert(erro.stack || erro.message);
@@ -1713,4 +1895,3 @@ document.addEventListener("DOMContentLoaded", () => {
     renderAtributos(ultimaTemporadaInicial);
     atualizarTitulosResultados(ultimaTemporadaInicial);
 });
-                                                   
