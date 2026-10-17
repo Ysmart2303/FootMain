@@ -123,19 +123,51 @@ function normalizarNome(valor) {
     return typeof valor === "string" ? valor.trim() : "";
 }
 
+
 function normalizarPosicao(valor) {
     if (typeof valor !== "string") {
         return null;
     }
 
     const valorNormalizado = valor.trim().toLowerCase();
-    const chave = Object.entries(posicoes).find(([, dados]) => dados.nome.toLowerCase() === valorNormalizado);
+
+    // Converte as 11 posições do campo em 4 categorias.
+    const mapaPosicoesCampo = {
+        pe: "ata",
+        ca: "ata",
+        pd: "ata",
+
+        me: "me",
+        mc: "me",
+        md: "me",
+
+        le: "zag",
+        zce: "zag",
+        zcd: "zag",
+        ld: "zag",
+
+        gol: "go"
+    };
+
+    if (mapaPosicoesCampo[valorNormalizado]) {
+        return mapaPosicoesCampo[valorNormalizado];
+    }
+
+    // Mantém a compatibilidade com os nomes já utilizados.
+    const chave = Object.entries(posicoes).find(
+        ([, dados]) =>
+            dados.nome.toLowerCase() === valorNormalizado
+    );
+
     if (chave) {
         return chave[0];
     }
 
-    return posicoes[valorNormalizado] ? valorNormalizado : null;
+    return posicoes[valorNormalizado]
+        ? valorNormalizado
+        : null;
 }
+
 
 function validarTemporada(temporada) {
     if (!temporada || typeof temporada !== "object") {
