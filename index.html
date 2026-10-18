@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/theme-menu.js" defer></script>
+    <title>FootMain</title>
+</head>
+<body>
+    
+    <header>
+        <p>
+            FootMain
+        </p>
+
+        <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="side-menu">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+        </button>
+
+        <div id="links">
+            <a href="#inicio">Inicio</a>
+            <a href="#ranking">Ranking</a>
+            <a href="#historico">Histórico</a>
+            <a href="#conquistas">Conquistas</a>
+        </div>
+
+        <a class="settings-link" href="configuracoes.html" aria-label="Configurações" title="Configurações">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M19.14 12.94c.04-.31.06-.62.06-.94s-.02-.63-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.3 7.3 0 0 0-1.63-.94l-.36-2.52a.5.5 0 0 0-.49-.4h-3.84a.5.5 0 0 0-.49.4l-.36 2.52a7.3 7.3 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.61.22L2.64 8.84a.5.5 0 0 0 .12.64l2.03 1.58a6.8 6.8 0 0 0 0 1.88l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.12.21.37.29.61.22l2.39-.96c.5.39 1.04.71 1.63.94l.36 2.52a.5.5 0 0 0 .49.4h3.84a.5.5 0 0 0 .49-.4l.36-2.52c.59-.23 1.13-.55 1.63-.94l2.39.96c.24.07.49-.01.61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58Z"></path>
+                <circle cx="12" cy="12" r="3.5"></circle>
+            </svg>
+        </a>
+    </header>
+
+    <button class="menu-backdrop" id="menu-backdrop" type="button" aria-label="Fechar menu" hidden></button>
+    <aside class="side-menu" id="side-menu" aria-labelledby="side-menu-title" aria-hidden="true" inert>
+        <div class="side-menu__header">
+            <h2 id="side-menu-title">Menu</h2>
+            <button class="side-menu__close" id="menu-close" type="button" aria-label="Fechar menu">&times;</button>
+        </div>
+        <section class="theme-picker" aria-labelledby="theme-picker-title">
+            <h3 id="theme-picker-title">Aparência</h3>
+            <p>Escolha o tema do site.</p>
+            <div class="theme-options" role="group" aria-label="Tema do site">
+                <button type="button" data-theme-choice="dark" aria-pressed="true">Escuro</button>
+                <button type="button" data-theme-choice="light" aria-pressed="false">Claro</button>
+            </div>
+        </section>
+    </aside>
+
+    <main>
+        <section id="inicio">
+            <div class="player-card">
+                <div class="player-card__header">
+                    <span>Perfil do jogador</span>
+                    <strong id="perfil-nome">Jogador</strong>
+                </div>
+                <div class="player-card__meta">
+                    <span>Idade: <strong id="perfil-idade">0</strong></span>
+                    <span>Temporada: <strong id="perfil-ano">2024</strong></span>
+                    <span>Seleção: <strong id="perfil-selecao">Não definida</strong></span>
+                    <span>Clube: <strong id="perfil-clube">Ainda não escolhido</strong></span>
+                </div>
+            </div>
+
+            <div id="inputs">
+                <label for="nome">Nome:</label>
+                <input placeholder="Ex: Marcos" id="nome">
+                <label for="idade">Idade atual</label>
+                <input type="number" placeholder="Ex: 18" id="idade" min="0" value="18">
+                <label for="idade-limite">Idade limite</label>
+                <input type="number" id="idade-limite" min="1" value="40">
+                <label for="nacionalidade">Nacionalidade</label>
+                <select id="nacionalidade">
+                    <option value="">Selecione uma seleção</option>
+                </select>
+            </div>
+
+            <div id="posi">
+                <h3>Escolha sua posição</h3>
+                <p class="campo-instrucao">Toque em uma das 11 posições do esquema 4-3-3.</p>
+                <div class="campo-futebol" role="group" aria-label="Campo de futebol, formação 4-3-3">
+                    <div class="linha-campo linha-atacantes">
+                        <label class="jogador-campo jogador-pe" title="Ponta esquerda">
+                            <input type="radio" name="posicao" id="PE" value="PE">
+                            <span>PE</span>
+                        </label>
+                        <label class="jogador-campo jogador-ca" title="Centroavante">
+                            <input type="radio" name="posicao" id="CA" value="CA">
+                            <span>CA</span>
+                        </label>
+                        <label class="jogador-campo jogador-pd" title="Ponta direita">
+                            <input type="radio" name="posicao" id="PD" value="PD">
+                            <span>PD</span>
+                        </label>
+                    </div>
+                    <div class="linha-campo linha-meio">
+                        <label class="jogador-campo" title="Meio-campista esquerdo">
+                            <input type="radio" name="posicao" id="ME" value="ME">
+                            <span>ME</span>
+                        </label>
+                        <label class="jogador-campo" title="Meio-campista central">
+                            <input type="radio" name="posicao" id="MC" value="MC">
+                            <span>MC</span>
+                        </label>
+                        <label class="jogador-campo" title="Meio-campista direito">
+                            <input type="radio" name="posicao" id="MD" value="MD">
+                            <span>MD</span>
+                        </label>
+                    </div>
+                    <div class="linha-campo linha-defesa">
+                        <label class="jogador-campo" title="Lateral esquerdo">
+                            <input type="radio" name="posicao" id="LE" value="LE">
+                            <span>LE</span>
+                        </label>
+                        <label class="jogador-campo" title="Zagueiro esquerdo">
+                            <input type="radio" name="posicao" id="ZCE" value="ZCE">
+                            <span>ZCE</span>
+                        </label>
+                        <label class="jogador-campo" title="Zagueiro direito">
+                            <input type="radio" name="posicao" id="ZCD" value="ZCD">
+                            <span>ZCD</span>
+                        </label>
+                        <label class="jogador-campo" title="Lateral direito">
+                            <input type="radio" name="posicao" id="LD" value="LD">
+                            <span>LD</span>
+                        </label>
+                    </div>
+                    <div class="linha-campo linha-goleiro">
+                        <label class="jogador-campo" title="Goleiro">
+                            <input type="radio" name="posicao" id="GOL" value="GOL">
+                            <span>GOL</span>
+                        </label>
+                    </div>
+                </div>
+                <p id="posicao-selecionada" class="posicao-selecionada">Nenhuma posição selecionada</p>
+            </div>
+
+            <div id="resultados">
+                <div id="nomes">
+                    <p>Jogos:</p>
+                    <p>Gols:</p>
+                    <p>Assistências:</p>
+                    <p>Prêmios:</p>
+                </div>
+
+                <div id="dados">
+                    <p id="jogos">0</p>
+                    <p id="gols">0</p>
+                    <p id="assi">0</p>
+                    <p id="prem">0</p>
+                </div>
+                <div id="titulos-resultados" class="titulos-resultados">
+                    <div>
+                        <strong id="ano-titulos-resultados">Títulos da temporada</strong>
+                        <p><b>Coletivos:</b> <span id="titulos-coletivos-resultados">Nenhum</span></p>
+                        <p><b>Individuais:</b> <span id="titulos-individuais-resultados">Nenhum</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="resumo-final" class="resumo-final" hidden>
+                <h3>Carreira encerrada</h3>
+                <p><strong id="resumo-nome">Jogador</strong></p>
+                <p>Posição: <strong id="resumo-posicao">-</strong></p>
+                <p>Seleção: <strong id="resumo-selecao">-</strong></p>
+                <p>Último clube: <strong id="resumo-clube">-</strong></p>
+                <p>Idade limite: <strong id="resumo-idade-limite">0</strong> anos</p>
+                <div class="resumo-grid">
+                    <span>Jogos</span>
+                    <strong id="resumo-jogos">0</strong>
+                    <span>Gols</span>
+                    <strong id="resumo-gols">0</strong>
+                    <span>Assistências</span>
+                    <strong id="resumo-assistencias">0</strong>
+                    <span>Prêmios</span>
+                    <strong id="resumo-premios">0</strong>
+                </div>
+                <div class="resumo-trofeus">
+                    <div>
+                        <span>Coletivos</span>
+                        <strong id="resumo-coletivos">Nenhum</strong>
+                    </div>
+                    <div>
+                        <span>Individuais</span>
+                        <strong id="resumo-individuais">Nenhum</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="acoes-simulacao">
+                <button onclick="gerar()" id="gerar">Gerar</button>
+                <button onclick="simularTudo()" id="simularTudo" type="button">Simular tudo</button>
+            </div>
+          
+            <section id="atributos-jogador" class="atributos-painel">
+                <div class="atributos-titulo"><div><h3>Atributos do jogador</h3><p>Os atributos evoluem durante a juventude e caem com o avanço da idade.</p></div><span class="atributos-status">Evolução da carreira</span></div>
+                <div id="painel-atributos"><p class="atributos-vazio">Gere uma temporada para acompanhar a evolução do jogador.</p></div>
+            </section>
+
+            
+        </section>
+
+        <section id="historico">
+            <details class="secao-colapsavel">
+                <summary>
+                    <h2>Histórico de temporadas</h2>
+                    <span class="seta" aria-hidden="true">▾</span>
+                </summary>
+                <div class="conteudo-colapsavel">
+                    <div class="filtro-ranking">
+                        <label for="filtro-historico">Comparar temporadas por:</label>
+                        <select id="filtro-historico">
+                            <option value="ordem" selected>Ordem original</option>
+                            <option value="gols">Gols</option>
+                            <option value="assistencias">Assistências</option>
+                            <option value="premios">Prêmios</option>
+                        </select>
+                    </div>
+                    <button id="limparHistorico" type="button">Limpar histórico</button>
+                    <ul id="lista-temporadas"></ul>
+                </div>
+            </details>
+        </section>
+        
+        <section id="ranking">
+            <details class="secao-colapsavel">
+                <summary>
+                    <h2>Ranking das melhores carreiras</h2>
+                    <span class="seta" aria-hidden="true">▾</span>
+                </summary>
+                <div class="conteudo-colapsavel">
+                    <div class="filtro-ranking">
+                        <label for="filtro-ranking">Comparar por:</label>
+                        <select id="filtro-ranking">
+                            <option value="pontuacao" selected>Pontuação</option>
+                            <option value="gols">Gols</option>
+                            <option value="assistencias">Assistências</option>
+                            <option value="premios">Prêmios</option>
+                        </select>
+                        <label for="filtro-posicao-ranking">Posição:</label>
+                        <select id="filtro-posicao-ranking">
+                            <option value="todas" selected>Todas as posições</option>
+                            <option value="GOL">Goleiro (GOL)</option>
+                            <option value="ZCE">Zagueiro esquerdo (ZCE)</option>
+                            <option value="ZCD">Zagueiro direito (ZCD)</option>
+                            <option value="LE">Lateral esquerdo (LE)</option>
+                            <option value="LD">Lateral direito (LD)</option>
+                            <option value="ME">Meio-campista esquerdo (ME)</option>
+                            <option value="MC">Meio-campista central (MC)</option>
+                            <option value="MD">Meio-campista direito (MD)</option>
+                            <option value="PE">Ponta esquerda (PE)</option>
+                            <option value="CA">Centroavante (CA)</option>
+                            <option value="PD">Ponta direita (PD)</option>
+                            <option value="ata">Todos os atacantes</option>
+                            <option value="me">Todos os meio-campistas</option>
+                            <option value="zag">Todos os defensores</option>
+                        </select>
+                    </div>
+                    <button id="limparRanking" type="button">Limpar ranking</button>
+                    <ol id="lista-ranking"></ol>
+                </div>
+            </details>
+        </section>
+        
+        <section id="conquistas">
+            <details class="secao-colapsavel">
+                <summary>
+                    <h2>Conquistas e recordes</h2>
+                    <span class="seta" aria-hidden="true">▾</span>
+                </summary>
+                <div class="conteudo-colapsavel">
+                    <p class="conquistas-intro">Acompanhe os objetivos desbloqueados por cada carreira e os maiores feitos registrados no FootMain.</p>
+                    <div class="conquistas-resumo">
+                        <div><span>Desbloqueadas</span><strong id="conquistas-desbloqueadas">0</strong></div>
+                        <div><span>Total disponível</span><strong id="conquistas-total">30</strong></div>
+                        <div><span>Conclusão</span><strong id="conquistas-percentual">0%</strong></div>
+                    </div>
+                    <div class="filtro-ranking filtro-conquistas">
+                        <label for="filtro-carreira-conquistas">Carreira:</label>
+                        <select id="filtro-carreira-conquistas">
+                            <option value="">Selecione uma carreira</option>
+                        </select>
+                        <label for="filtro-categoria-conquistas">Categoria:</label>
+                        <select id="filtro-categoria-conquistas">
+                            <option value="todas" selected>Todas</option>
+                            <option value="Gols">Gols</option>
+                            <option value="Assistências">Assistências</option>
+                            <option value="Jogos">Jogos</option>
+                            <option value="Títulos coletivos">Títulos coletivos</option>
+                            <option value="Títulos individuais">Títulos individuais</option>
+                            <option value="Longevidade">Longevidade</option>
+                        </select>
+                    </div>
+                    <h3>Conquistas da carreira</h3>
+                    <div id="lista-conquistas" class="grade-conquistas"></div>
+                    <h3>Recordes históricos</h3>
+                    <p class="conquistas-intro">Os recordes são calculados com base nas carreiras salvas no ranking e nas temporadas disponíveis.</p>
+                    <div id="lista-recordes" class="grade-recordes"></div>
+                </div>
+            </details>
+            <div id="notificacao-conquista" class="notificacao-conquista" role="status" aria-live="polite" hidden></div>
+        </section>
+    
+    <footer>
+        <a href="https://github.com/Ysmart2303">Ysmart2303</a> / 2026
+        <span class="versao-app" data-versao-app>v—</span>
+    </footer>
+      
+    <div id="modal-confirmacao" class="modal-overlay" hidden>
+        <div class="modal-caixa" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+            <div class="modal-icone">⚠️</div>
+            <h3 id="modal-titulo">Confirmar ação</h3>
+            <p id="modal-mensagem">Tem certeza?</p>
+            <div id="modal-opcoes-clube" class="modal-opcoes-clube" role="radiogroup" aria-labelledby="modal-titulo" hidden></div>
+            <div class="modal-acoes">
+                <button type="button" id="modal-cancelar" class="modal-btn modal-btn--cancelar">Cancelar</button>
+                <button type="button" id="modal-confirmar" class="modal-btn modal-btn--confirmar">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+<script src="js/config.js"></script>
+<script src="js/script.js" defer></script>
+</body>
+</html>
