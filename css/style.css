@@ -2029,6 +2029,9 @@ html[data-theme="light"] footer a {
 .filtro-liga-clubes select { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(148,163,184,.35); background: #0f172a; color: #f8fafc; font: inherit; }
 html[data-theme="light"] #posi .campo-instrucao { color: #475569; }
 html[data-theme="light"] #posi .posicao-selecionada { color: #854d0e; }
+html[data-theme="light"] #posi .jogador-campo { background: #dbeafe; border-color: #60a5fa; }
+html[data-theme="light"] #posi .jogador-campo:hover { background: #bfdbfe; }
+html[data-theme="light"] #posi .jogador-campo:has(input:checked) { background: #facc15; border-color: #fef08a; }
 html[data-theme="light"] .config-grupo-titulo { color: #0f172a; }
 html[data-theme="light"] .config-grupo-seta { color: #1d4ed8; }
 html[data-theme="light"] .filtro-liga-clubes label { color: #1e293b; }
