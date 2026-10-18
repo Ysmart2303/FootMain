@@ -79,3 +79,11 @@
         }
     });
 })();
+
+document.querySelectorAll('#links a[href^="#"]').forEach((link) => {
+    link.addEventListener('click', () => {
+        const alvo = document.querySelector(link.getAttribute('href'));
+        const detalhe = alvo?.querySelector('details.secao-colapsavel');
+        if (detalhe) detalhe.open = true;
+    });
+});
