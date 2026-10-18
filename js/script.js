@@ -385,6 +385,81 @@ function confirmarAcao(mensagem, titulo = "Confirmar ação") {
     });
 }
 
+function escolherAcaoContrato(clube, temporadasRestantes) {
+    return new Promise((resolve) => {
+        const overlay = document.getElementById("modal-confirmacao");
+        const caixa = overlay?.querySelector(".modal-caixa");
+        const tituloEl = document.getElementById("modal-titulo");
+        const mensagemEl = document.getElementById("modal-mensagem");
+        const btnManter = document.getElementById("modal-cancelar");
+        const btnTransferencias = document.getElementById("modal-confirmar");
+        const filtroLigaContainer = document.getElementById("filtro-liga-clube-alvo");
+        const opcoesEl = document.getElementById("modal-opcoes-clube");
+        const icone = overlay?.querySelector(".modal-icone");
+
+        if (!overlay || !caixa || !tituloEl || !mensagemEl || !btnManter || !btnTransferencias) {
+            throw new Error("O diálogo de contrato ativo não está disponível.");
+        }
+
+        const estadoAnterior = {
+            titulo: tituloEl.textContent,
+            mensagem: mensagemEl.textContent,
+            manter: btnManter.textContent,
+            transferencias: btnTransferencias.textContent,
+            classeManter: btnManter.className,
+            classeTransferencias: btnTransferencias.className,
+            icone: icone?.textContent,
+            classeCaixa: caixa.className,
+            filtroOculto: filtroLigaContainer?.hidden,
+            opcoesOcultas: opcoesEl?.hidden
+        };
+        const fechar = (escolha) => {
+            overlay.hidden = true;
+            document.removeEventListener("keydown", aoTeclar);
+            btnManter.removeEventListener("click", aoManter);
+            btnTransferencias.removeEventListener("click", aoTransferencias);
+            overlay.removeEventListener("click", aoClicarFora);
+            tituloEl.textContent = estadoAnterior.titulo;
+            mensagemEl.textContent = estadoAnterior.mensagem;
+            btnManter.textContent = estadoAnterior.manter;
+            btnTransferencias.textContent = estadoAnterior.transferencias;
+            btnManter.className = estadoAnterior.classeManter;
+            btnTransferencias.className = estadoAnterior.classeTransferencias;
+            caixa.className = estadoAnterior.classeCaixa;
+            if (icone) icone.textContent = estadoAnterior.icone;
+            if (filtroLigaContainer) filtroLigaContainer.hidden = estadoAnterior.filtroOculto;
+            if (opcoesEl) opcoesEl.hidden = estadoAnterior.opcoesOcultas;
+            resolve(escolha);
+        };
+        const aoManter = () => fechar("manter");
+        const aoTransferencias = () => fechar("transferencias");
+        const aoClicarFora = (evento) => {
+            if (evento.target === overlay) fechar(null);
+        };
+        const aoTeclar = (evento) => {
+            if (evento.key === "Escape") fechar(null);
+            else if (evento.key === "Enter") fechar("transferencias");
+        };
+
+        tituloEl.textContent = "Contrato ativo";
+        mensagemEl.textContent = `Você ainda tem contrato com ${obterClube(clube)?.nome || "seu clube atual"} por ${temporadasRestantes} ${temporadasRestantes === 1 ? "temporada" : "temporadas"}.`;
+        btnManter.textContent = "Gerar nova temporada";
+        btnTransferencias.textContent = "Janela de transferências";
+        btnManter.className = "modal-btn modal-btn--decisao modal-btn--continuar";
+        btnTransferencias.className = "modal-btn modal-btn--decisao modal-btn--transferencias";
+        caixa.classList.add("modal-caixa--decisao-contrato");
+        if (icone) icone.textContent = "⚽";
+        if (filtroLigaContainer) filtroLigaContainer.hidden = true;
+        if (opcoesEl) opcoesEl.hidden = true;
+        btnManter.addEventListener("click", aoManter);
+        btnTransferencias.addEventListener("click", aoTransferencias);
+        overlay.addEventListener("click", aoClicarFora);
+        document.addEventListener("keydown", aoTeclar);
+        overlay.hidden = false;
+        btnManter.focus();
+    });
+}
+
 async function removerItemRanking(id) {
     const rankingAtual = lerRanking();
     const carreira = rankingAtual.find((item) => String(item.id) === String(id));
@@ -1791,13 +1866,29 @@ async function gerar() {
             return;
         }
 
-        const contratoEscolhido = await escolherContratoParaTemporada(
-            clubeAtual,
-            temporadaInicial,
-            idade,
-            idadeLimite,
-            carreiraAtual
-        );
+        let contratoEscolhido;
+        if (!temporadaInicial && carreiraAtual.anosContratoRestantes > 0) {
+            const acaoContrato = await escolherAcaoContrato(clubeAtual, carreiraAtual.anosContratoRestantes);
+            if (!acaoContrato) return;
+
+            contratoEscolhido = acaoContrato === "manter"
+                ? { clube: clubeAtual, anosContrato: carreiraAtual.anosContratoRestantes, rompeContrato: false }
+                : await escolherContratoParaTemporada(
+                    clubeAtual,
+                    temporadaInicial,
+                    idade,
+                    idadeLimite,
+                    carreiraAtual
+                );
+        } else {
+            contratoEscolhido = await escolherContratoParaTemporada(
+                clubeAtual,
+                temporadaInicial,
+                idade,
+                idadeLimite,
+                carreiraAtual
+            );
+        }
         if (!contratoEscolhido) return;
 
         carreiraAtual.clube = contratoEscolhido.clube;
