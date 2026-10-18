@@ -5,12 +5,12 @@ const SCHEMA_CONFIG = [
         id: "geral",
         titulo: "Carreira",
         icone: "👤",
-        descricao: "Defina quantas vezes o jogador pode romper um contrato antes do vencimento (limite máximo: 3).",
+        descricao: "Defina quantas vezes o jogador pode romper um contrato antes do vencimento (limite máximo: 10).",
         campos: [
             { caminho: "geral.anoInicial",          label: "Ano inicial",             tipo: "number", min: 1950, max: 2200, passo: 1 },
             { caminho: "geral.idadeInicialPadrao",  label: "Idade inicial padrão",    tipo: "number", min: 10,   max: 40,   passo: 1 },
             { caminho: "geral.idadeLimitePadrao",   label: "Idade limite padrão",     tipo: "number", min: 20,   max: 80,   passo: 1 },
-            { caminho: "geral.limiteRompimentosContrato", label: "Limite de rompimentos de contrato", tipo: "number", min: 0, max: 3, passo: 1 }
+            { caminho: "geral.limiteRompimentosContrato", label: "Limite de rompimentos de contrato", tipo: "number", min: 0, max: 10, passo: 1 }
         ]
     },
     {
@@ -212,7 +212,7 @@ function aoAlterarCampo(evento) {
     let valor = input.type === "range" ? parseFloat(input.value) : Number(input.value);
     if (!Number.isFinite(valor)) return;
     if (caminho === "geral.limiteRompimentosContrato") {
-        valor = Math.max(0, Math.min(3, Math.floor(valor)));
+        valor = Math.max(0, Math.min(10, Math.floor(valor)));
         input.value = String(valor);
     }
 

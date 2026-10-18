@@ -255,7 +255,7 @@ function obterCarreiraAtual() {
                 ? Math.max(0, Math.min(5, Math.floor(Number(carreira.anosContratoRestantes))))
                 : 0,
             rompimentosContratoUsados: Number.isFinite(Number(carreira.rompimentosContratoUsados))
-                ? Math.max(0, Math.min(3, Math.floor(Number(carreira.rompimentosContratoUsados))))
+                ? Math.max(0, Math.min(10, Math.floor(Number(carreira.rompimentosContratoUsados))))
                 : 0,
             potencial: calcularPotencialDaCarreira(carreira)
         };
@@ -280,7 +280,7 @@ function salvarCarreiraAtual(carreira) {
             ? Math.max(0, Math.min(5, Math.floor(Number(carreiraAtual.anosContratoRestantes))))
             : 0,
         rompimentosContratoUsados: Number.isFinite(Number(carreiraAtual.rompimentosContratoUsados))
-            ? Math.max(0, Math.min(3, Math.floor(Number(carreiraAtual.rompimentosContratoUsados))))
+            ? Math.max(0, Math.min(10, Math.floor(Number(carreiraAtual.rompimentosContratoUsados))))
             : 0,
         potencial: calcularPotencialDaCarreira(carreiraAtual)
     }));
@@ -705,6 +705,23 @@ function obterMetricasCarreira(carreira) {
     };
 }
 
+function atualizarNotificacaoConquista(carreira, forcarExibicao = false) {
+    const notificacao = document.getElementById("notificacao-conquista");
+    if (!notificacao || (!forcarExibicao && notificacao.hidden)) return;
+
+    if (!carreira) {
+        notificacao.hidden = true;
+        return;
+    }
+
+    const metricas = obterMetricasCarreira(carreira);
+    const desbloqueadas = CONQUISTAS.filter((conquista) => metricas[conquista.metrica] >= conquista.meta);
+    notificacao.textContent = desbloqueadas.length
+        ? `Carreira registrada! ${desbloqueadas.length} de ${CONQUISTAS.length} conquistas desbloqueadas nesta carreira.`
+        : "Carreira registrada! Continue jogando para desbloquear conquistas.";
+    notificacao.hidden = false;
+}
+
 function renderConquistas() {
     const seletor = document.getElementById("filtro-carreira-conquistas");
     const lista = document.getElementById("lista-conquistas");
@@ -727,6 +744,7 @@ function renderConquistas() {
 
     const carreira = ordenadas.find((item) => String(item.id) === String(seletor.value)) || ordenadas[0];
     if (carreira && !seletor.value) seletor.value = String(carreira.id);
+    atualizarNotificacaoConquista(carreira);
 
     if (!carreira) {
         lista.innerHTML = '<p class="conquistas-vazio">Finalize uma carreira para começar a desbloquear conquistas.</p>';
@@ -1109,15 +1127,7 @@ function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao) {
 
     renderRanking();
 
-    const notificacaoConquista = document.getElementById("notificacao-conquista");
-    if (notificacaoConquista) {
-        const metricasConquista = obterMetricasCarreira(carreira);
-        const conquistasObtidas = CONQUISTAS.filter((conquista) => metricasConquista[conquista.metrica] >= conquista.meta);
-        notificacaoConquista.textContent = conquistasObtidas.length
-            ? `Carreira registrada! ${conquistasObtidas.length} de ${CONQUISTAS.length} conquistas desbloqueadas nesta carreira.`
-            : "Carreira registrada! Continue jogando para desbloquear conquistas.";
-        notificacaoConquista.hidden = false;
-    }
+    atualizarNotificacaoConquista(carreira, true);
 
     if (resumoFinal) {
         resumoFinal.hidden = false;

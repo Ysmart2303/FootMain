@@ -355,7 +355,7 @@ function carregarConfig() {
         const config = raw ? mesclarConfig(CONFIG_PADRAO, JSON.parse(raw)) : clonarConfig(CONFIG_PADRAO);
         const limiteRompimentos = Number(config.geral.limiteRompimentosContrato);
         config.geral.limiteRompimentosContrato = Number.isFinite(limiteRompimentos)
-            ? Math.max(0, Math.min(3, Math.floor(limiteRompimentos)))
+            ? Math.max(0, Math.min(10, Math.floor(limiteRompimentos)))
             : CONFIG_PADRAO.geral.limiteRompimentosContrato;
         return config;
     } catch (erro) {
