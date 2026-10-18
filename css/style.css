@@ -573,7 +573,7 @@ button:hover {
 #ranking h2 {
     margin-bottom: 15px;
     text-align: center;
-    color: #f8fafc;
+    color: #cbd5e1;
 }
 
 #lista-temporadas,
@@ -1121,7 +1121,7 @@ button {
 }
 
 #conquistas h2 {
-    margin-bottom: 0;
+    text-align: center;
 }
 
 #conquistas h3 {
@@ -2058,4 +2058,65 @@ html[data-theme="light"] .versao-app {
     background: #dbeafe;
     border-color: #93c5fd;
     color: #1e40af;
+}
+
+/* ==============================
+   Seções colapsáveis
+   ============================== */
+.secao-colapsavel > summary {
+    position: relative;
+    list-style: none;
+    cursor: pointer;
+    padding: 4px 0;
+    user-select: none;
+    transition: opacity .15s ease;
+}
+
+.secao-colapsavel > summary::-webkit-details-marker { display: none; }
+.secao-colapsavel > summary::marker { display: none; content: ""; }
+
+.secao-colapsavel > summary:hover { opacity: .85; }
+.secao-colapsavel > summary:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 4px;
+    border-radius: 6px;
+}
+
+.secao-colapsavel > summary h2 {
+    margin-bottom: 0;
+}
+
+.secao-colapsavel .seta {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    color: #93c5fd;
+    line-height: 1;
+    transition: transform .2s ease;
+    pointer-events: none;
+}
+
+.secao-colapsavel[open] .seta {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+/* Espaço entre o summary e o conteúdo */
+.conteudo-colapsavel {
+    padding-top: 16px;
+}
+
+/* A seção de conquistas originalmente usava gap: 16px
+   entre os filhos via flex; replicamos aqui. */
+#conquistas .conteudo-colapsavel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Tema claro */
+html[data-theme="light"] .secao-colapsavel .seta { color: #1d4ed8; }
+html[data-theme="light"] .secao-colapsavel > summary:focus-visible {
+    outline-color: #1d4ed8;
 }
