@@ -347,6 +347,7 @@ main {
     border-radius: 16px;
 }
 
+
 #posi > div {
     display: flex;
     align-items: center;
@@ -459,8 +460,9 @@ main {
 }
 
 #posi {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centraliza o campo e os textos */
     align-content: center;
 }
 
@@ -1945,6 +1947,8 @@ html[data-theme="light"] footer a {
     gap: 22px;
     min-height: 390px;
     width: 100%;
+    max-width: 380px; /* Adicione isso para o campo não estourar a largura no PC */
+    margin: 0 auto;
     padding: 24px 10px;
     overflow: hidden;
     border: 2px solid rgba(226, 232, 240, .72);
