@@ -63,6 +63,7 @@
                     <span>Temporada: <strong id="perfil-ano">2024</strong></span>
                     <span>Seleção: <strong id="perfil-selecao">Não definida</strong></span>
                     <span>Clube: <strong id="perfil-clube">Ainda não escolhido</strong></span>
+                    <span>Contrato: <strong id="perfil-contrato">Sem contrato · Rompimentos: 0/3</strong></span>
                 </div>
             </div>
 
@@ -77,6 +78,8 @@
                 <select id="nacionalidade">
                     <option value="">Selecione uma seleção</option>
                 </select>
+                <label for="clube-alvo">Clube-alvo</label>
+                <button id="clube-alvo" class="clube-alvo-btn" type="button">Escolher clube-alvo</button>
             </div>
 
             <div id="posi">
@@ -259,6 +262,10 @@
                             <option value="me">Todos os meio-campistas</option>
                             <option value="zag">Todos os defensores</option>
                         </select>
+                        <label for="filtro-selecao-ranking">Seleção:</label>
+                        <select id="filtro-selecao-ranking">
+                            <option value="" selected>Todas as seleções</option>
+                        </select>
                     </div>
                     <button id="limparRanking" type="button">Limpar ranking</button>
                     <ol id="lista-ranking"></ol>
@@ -315,6 +322,12 @@
             <div class="modal-icone">⚠️</div>
             <h3 id="modal-titulo">Confirmar ação</h3>
             <p id="modal-mensagem">Tem certeza?</p>
+            <div id="filtro-liga-clube-alvo" class="filtro-liga-clube-alvo" hidden>
+                <label for="selecionar-liga-clube-alvo">Filtrar por liga</label>
+                <select id="selecionar-liga-clube-alvo">
+                    <option value="">Todas as ligas</option>
+                </select>
+            </div>
             <div id="modal-opcoes-clube" class="modal-opcoes-clube" role="radiogroup" aria-labelledby="modal-titulo" hidden></div>
             <div class="modal-acoes">
                 <button type="button" id="modal-cancelar" class="modal-btn modal-btn--cancelar">Cancelar</button>

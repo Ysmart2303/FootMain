@@ -257,6 +257,7 @@ const CONFIG_PADRAO = {
         anoInicial: 2026,
         idadeInicialPadrao: 18,
         idadeLimitePadrao: 40,
+        limiteRompimentosContrato: 3,
         multiplicadorJogos: 1,
         multiplicadorGols: 1,
         multiplicadorAssistencias: 1,
@@ -351,8 +352,12 @@ function mesclarConfig(base, override) {
 function carregarConfig() {
     try {
         const raw = localStorage.getItem(STORAGE_KEY_CONFIG);
-        if (!raw) return clonarConfig(CONFIG_PADRAO);
-        return mesclarConfig(CONFIG_PADRAO, JSON.parse(raw));
+        const config = raw ? mesclarConfig(CONFIG_PADRAO, JSON.parse(raw)) : clonarConfig(CONFIG_PADRAO);
+        const limiteRompimentos = Number(config.geral.limiteRompimentosContrato);
+        config.geral.limiteRompimentosContrato = Number.isFinite(limiteRompimentos)
+            ? Math.max(0, Math.min(3, Math.floor(limiteRompimentos)))
+            : CONFIG_PADRAO.geral.limiteRompimentosContrato;
+        return config;
     } catch (erro) {
         console.error("Erro ao carregar configurações:", erro);
         return clonarConfig(CONFIG_PADRAO);

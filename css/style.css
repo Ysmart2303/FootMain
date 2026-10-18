@@ -336,6 +336,10 @@ main {
     box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
 }
 
+#inputs .clube-alvo-btn {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
 #posi {
     width: min(100%, 420px);
     display: flex;
@@ -1392,9 +1396,11 @@ button {
 
 .modal-caixa {
     width: min(100%, 420px);
+    max-height: calc(100vh - 40px);
     display: flex;
     flex-direction: column;
     align-items: center;
+    overflow-y: auto;
     gap: 12px;
     padding: 26px 22px 22px;
     border-radius: 18px;
@@ -1428,6 +1434,30 @@ button {
     line-height: 1.5;
     font-size: 0.95rem;
     white-space: pre-line;
+}
+
+.filtro-liga-clube-alvo {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    width: 100%;
+    color: #e2e8f0;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.filtro-liga-clube-alvo[hidden] {
+    display: none;
+}
+
+.filtro-liga-clube-alvo select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 10px;
+    background: #0f172a;
+    color: #f8fafc;
+    font: inherit;
 }
 
 .modal-acoes {
@@ -1474,6 +1504,8 @@ button {
     width: 100%;
     display: grid;
     gap: 9px;
+    max-height: min(50vh, 360px);
+    overflow-y: auto;
 }
 
 .modal-opcoes-clube[hidden] {
@@ -1491,6 +1523,11 @@ button {
     color: #e2e8f0;
     cursor: pointer;
     text-align: left;
+}
+
+.opcao-clube--desabilitada {
+    opacity: 0.55;
+    cursor: not-allowed;
 }
 
 .opcao-clube input {
@@ -1876,6 +1913,17 @@ html[data-theme="light"] .filtro-ranking select {
     background: #f8fbff !important;
     border-color: #93c5fd !important;
     color: #172554 !important;
+    color-scheme: light;
+}
+
+html[data-theme="light"] .filtro-liga-clube-alvo {
+    color: #1e293b;
+}
+
+html[data-theme="light"] .filtro-liga-clube-alvo select {
+    background: #f8fbff;
+    border-color: #93c5fd;
+    color: #172554;
     color-scheme: light;
 }
 

@@ -41,13 +41,26 @@ function obterClube(clubeId) {
     return CLUBES.find((clube) => clube.id === clubeId) || null;
 }
 
-function sortearClubes(quantidade, clubeExcluir = "") {
+function sortearClubes(quantidade, clubeExcluir = "", clubeAlvo = "") {
     const disponiveis = CLUBES.filter((clube) => clube.id !== clubeExcluir);
     for (let indice = 0; indice < quantidade; indice++) {
         const indiceAleatorio = indice + Math.floor(Math.random() * (disponiveis.length - indice));
         [disponiveis[indice], disponiveis[indiceAleatorio]] = [disponiveis[indiceAleatorio], disponiveis[indice]];
     }
-    return disponiveis.slice(0, quantidade);
+    const sorteados = disponiveis.slice(0, quantidade);
+    const alvo = obterClube(clubeAlvo);
+
+    if (
+        alvo
+        && alvo.id !== clubeExcluir
+        && !sorteados.some((clube) => clube.id === alvo.id)
+        && sorteados.length > 0
+        && Math.random() < 0.5
+    ) {
+        sorteados[Math.floor(Math.random() * sorteados.length)] = alvo;
+    }
+
+    return sorteados;
 }
 
 function sortearIndicePonderado(pesos) {
@@ -212,7 +225,10 @@ function obterCarreiraAtual() {
         posicao: "Centroavante",
         posicaoDetalhe: "CA",
         idadeLimite: IDADE_LIMITE_PADRAO,
-        nacionalidade: ""
+        nacionalidade: "",
+        clubeAlvo: "",
+        anosContratoRestantes: 0,
+        rompimentosContratoUsados: 0
     };
     carreiraPadrao.potencial = calcularPotencialDaCarreira(carreiraPadrao);
 
@@ -234,6 +250,13 @@ function obterCarreiraAtual() {
             idadeLimite: Number.isFinite(Number(carreira.idadeLimite)) ? Math.max(1, Math.floor(Number(carreira.idadeLimite))) : IDADE_LIMITE_PADRAO,
             nacionalidade: SELECOES.some((selecao) => selecao.id === carreira.nacionalidade) ? carreira.nacionalidade : "",
             clube: obterClube(carreira.clube)?.id || "",
+            clubeAlvo: obterClube(carreira.clubeAlvo)?.id || "",
+            anosContratoRestantes: Number.isFinite(Number(carreira.anosContratoRestantes))
+                ? Math.max(0, Math.min(5, Math.floor(Number(carreira.anosContratoRestantes))))
+                : 0,
+            rompimentosContratoUsados: Number.isFinite(Number(carreira.rompimentosContratoUsados))
+                ? Math.max(0, Math.min(3, Math.floor(Number(carreira.rompimentosContratoUsados))))
+                : 0,
             potencial: calcularPotencialDaCarreira(carreira)
         };
     } catch (erro) {
@@ -252,6 +275,13 @@ function salvarCarreiraAtual(carreira) {
         idadeLimite: Number.isFinite(Number(carreiraAtual.idadeLimite)) ? Math.max(1, Math.floor(Number(carreiraAtual.idadeLimite))) : IDADE_LIMITE_PADRAO,
         nacionalidade: SELECOES.some((selecao) => selecao.id === carreiraAtual.nacionalidade) ? carreiraAtual.nacionalidade : "",
         clube: obterClube(carreiraAtual.clube)?.id || "",
+        clubeAlvo: obterClube(carreiraAtual.clubeAlvo)?.id || "",
+        anosContratoRestantes: Number.isFinite(Number(carreiraAtual.anosContratoRestantes))
+            ? Math.max(0, Math.min(5, Math.floor(Number(carreiraAtual.anosContratoRestantes))))
+            : 0,
+        rompimentosContratoUsados: Number.isFinite(Number(carreiraAtual.rompimentosContratoUsados))
+            ? Math.max(0, Math.min(3, Math.floor(Number(carreiraAtual.rompimentosContratoUsados))))
+            : 0,
         potencial: calcularPotencialDaCarreira(carreiraAtual)
     }));
 }
@@ -788,8 +818,13 @@ function renderRanking() {
     const criterio = filtroRanking?.value || "pontuacao";
     const filtroPosicao = document.getElementById("filtro-posicao-ranking");
     const posicaoSelecionada = filtroPosicao?.value || "todas";
-    const ranking = lerRanking()
+    const filtroSelecao = document.getElementById("filtro-selecao-ranking");
+    const selecaoSelecionada = filtroSelecao?.value || "";
+    const carreiras = lerRanking();
+    const ranking = carreiras
         .filter((carreira) => {
+            const correspondeSelecao = !selecaoSelecionada || carreira.nacionalidade === selecaoSelecionada;
+            if (!correspondeSelecao) return false;
             if (posicaoSelecionada === "todas") return true;
             const detalhe = normalizarPosicaoDetalhada(carreira.posicaoDetalhe || carreira.posicao);
             const categoria = categoriaPosicao(detalhe);
@@ -801,7 +836,10 @@ function renderRanking() {
         .slice(0, 5);
 
     if (ranking.length === 0) {
-        listaRanking.innerHTML = "<li>Nenhuma carreira finalizada ainda.</li>";
+        const mensagem = carreiras.length === 0
+            ? "Nenhuma carreira finalizada ainda."
+            : "Nenhuma carreira corresponde aos filtros selecionados.";
+        listaRanking.innerHTML = `<li>${mensagem}</li>`;
         renderConquistas();
         return;
     }
@@ -855,12 +893,21 @@ function atualizarResumoJogador(nome, idade, ano, nacionalidade = obterCarreiraA
     const selecao = SELECOES.find((item) => item.id === nacionalidade);
     const perfilClube = document.getElementById("perfil-clube");
     const clube = obterClube(clubeId);
+    const perfilContrato = document.getElementById("perfil-contrato");
+    const carreiraAtual = obterCarreiraAtual();
+    const limiteRompimentos = getConfig().geral.limiteRompimentosContrato;
 
     if (perfilNome) perfilNome.textContent = nome || "Jogador";
     if (perfilIdade) perfilIdade.textContent = idade ?? 0;
     if (perfilAno) perfilAno.textContent = ano ?? ANO_INICIAL;
     if (perfilSelecao) perfilSelecao.textContent = selecao ? selecao.nome : "Não definida";
     if (perfilClube) perfilClube.textContent = clube ? clube.nome : "Ainda não escolhido";
+    if (perfilContrato) {
+        const contrato = carreiraAtual.anosContratoRestantes > 0
+            ? `${carreiraAtual.anosContratoRestantes} ${carreiraAtual.anosContratoRestantes === 1 ? "temporada" : "temporadas"} restantes`
+            : clube ? "Vencido" : "Sem contrato";
+        perfilContrato.textContent = `${contrato} · Rompimentos: ${carreiraAtual.rompimentosContratoUsados}/${limiteRompimentos}`;
+    }
 }
 
 function lerHistoricoAtiva() {
@@ -1443,23 +1490,20 @@ function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], na
     };
 }
 
-function escolherClubeParaTemporada(clubeAtual, temporadaInicial) {
+function exibirEscolhaClube(opcoes, titulo, mensagem, clubeSelecionado = "", exibirFiltroLiga = false) {
     const overlay = document.getElementById("modal-confirmacao");
     const tituloEl = document.getElementById("modal-titulo");
     const mensagemEl = document.getElementById("modal-mensagem");
     const opcoesEl = document.getElementById("modal-opcoes-clube");
     const btnCancelar = document.getElementById("modal-cancelar");
     const btnConfirmar = document.getElementById("modal-confirmar");
+    const filtroLigaContainer = document.getElementById("filtro-liga-clube-alvo");
+    const filtroLiga = document.getElementById("selecionar-liga-clube-alvo");
     const icone = overlay?.querySelector(".modal-icone");
 
     if (!overlay || !tituloEl || !mensagemEl || !opcoesEl || !btnCancelar || !btnConfirmar) {
         throw new Error("O diálogo para escolha de clube não está disponível.");
     }
-
-    const ofertas = sortearClubes(3, clubeAtual);
-    const opcoes = temporadaInicial
-        ? ofertas
-        : [{ id: clubeAtual, nome: `Permanecer no ${obterClube(clubeAtual)?.nome || "clube atual"}`, liga: "" }, ...ofertas];
 
     return new Promise((resolve) => {
         const tituloAnterior = tituloEl.textContent;
@@ -1468,17 +1512,50 @@ function escolherClubeParaTemporada(clubeAtual, temporadaInicial) {
         const confirmarAnterior = btnConfirmar.textContent;
         const classeConfirmarAnterior = btnConfirmar.className;
         const iconeAnterior = icone?.textContent;
+        const clubeInicial = opcoes.some((clube) => clube.id === clubeSelecionado)
+            ? clubeSelecionado
+            : opcoes[0]?.id;
 
-        opcoesEl.innerHTML = opcoes.map((clube, indice) => `
-            <label class="opcao-clube">
-                <input type="radio" name="escolha-clube" value="${escaparHTML(clube.id)}" ${indice === 0 ? "checked" : ""}>
-                <span><strong>${escaparHTML(clube.nome)}</strong>${clube.liga ? `<small>${escaparHTML(clube.liga)}</small>` : ""}</span>
-            </label>
-        `).join("");
-        tituloEl.textContent = temporadaInicial ? "Escolha seu primeiro clube" : "Decisão para a nova temporada";
-        mensagemEl.textContent = temporadaInicial
-            ? "Estes são os três clubes disponíveis para começar sua carreira."
-            : "Você pode permanecer no clube atual ou escolher uma das três propostas.";
+        const clubeAlvo = exibirFiltroLiga;
+        let clubeSelecionadoAtual = clubeInicial;
+        if (filtroLigaContainer && filtroLiga) {
+            filtroLigaContainer.hidden = !clubeAlvo;
+            filtroLiga.value = "";
+        }
+        if (clubeAlvo && filtroLiga) {
+            const ligas = [...new Set(opcoes.map((clube) => clube.liga).filter(Boolean))];
+            filtroLiga.innerHTML = '<option value="">Todas as ligas</option>' +
+                ligas.map((liga) => `<option value="${escaparHTML(liga)}">${escaparHTML(liga)}</option>`).join("");
+        }
+
+        const renderOpcoes = () => {
+            const clubesFiltrados = clubeAlvo && filtroLiga?.value
+                ? opcoes.filter((clube) => clube.liga === filtroLiga.value)
+                : opcoes;
+            if (!clubesFiltrados.some((clube) => clube.id === clubeSelecionadoAtual)) {
+                clubeSelecionadoAtual = clubesFiltrados[0]?.id || "";
+            }
+            opcoesEl.innerHTML = clubesFiltrados.map((clube) => `
+                <label class="opcao-clube${clube.desabilitado ? " opcao-clube--desabilitada" : ""}">
+                    <input type="radio" name="escolha-clube" value="${escaparHTML(clube.id)}" ${clube.id === clubeSelecionadoAtual ? "checked" : ""} ${clube.desabilitado ? "disabled" : ""}>
+                    <span><strong>${escaparHTML(clube.nome)}</strong>${clube.liga || clube.detalheContrato ? `<small>${[clube.liga, clube.detalheContrato].filter(Boolean).map(escaparHTML).join(" · ")}</small>` : ""}</span>
+                </label>
+            `).join("");
+        };
+        const aoAlterarLiga = () => {
+            clubeSelecionadoAtual = opcoesEl.querySelector('input[name="escolha-clube"]:checked')?.value || clubeSelecionadoAtual;
+            renderOpcoes();
+        };
+        const aoSelecionarClube = (evento) => {
+            if (evento.target.matches('input[name="escolha-clube"]')) {
+                clubeSelecionadoAtual = evento.target.value;
+            }
+        };
+        renderOpcoes();
+        filtroLiga?.addEventListener("change", aoAlterarLiga);
+        opcoesEl.addEventListener("change", aoSelecionarClube);
+        tituloEl.textContent = titulo;
+        mensagemEl.textContent = mensagem;
         btnCancelar.textContent = "Cancelar";
         btnConfirmar.textContent = "Confirmar clube";
         btnConfirmar.className = "modal-btn modal-btn--confirmar modal-btn--clube";
@@ -1491,6 +1568,8 @@ function escolherClubeParaTemporada(clubeAtual, temporadaInicial) {
             btnCancelar.removeEventListener("click", aoCancelar);
             btnConfirmar.removeEventListener("click", aoConfirmar);
             overlay.removeEventListener("click", aoClicarFora);
+            filtroLiga?.removeEventListener("change", aoAlterarLiga);
+            opcoesEl.removeEventListener("change", aoSelecionarClube);
             tituloEl.textContent = tituloAnterior;
             mensagemEl.textContent = mensagemAnterior;
             btnCancelar.textContent = cancelarAnterior;
@@ -1498,6 +1577,7 @@ function escolherClubeParaTemporada(clubeAtual, temporadaInicial) {
             btnConfirmar.className = classeConfirmarAnterior;
             if (icone) icone.textContent = iconeAnterior;
             opcoesEl.hidden = true;
+            if (filtroLigaContainer) filtroLigaContainer.hidden = true;
             opcoesEl.replaceChildren();
             resolve(clubeId);
         };
@@ -1512,7 +1592,7 @@ function escolherClubeParaTemporada(clubeAtual, temporadaInicial) {
         };
         const aoTeclar = (evento) => {
             if (evento.key === "Escape") fechar(null);
-            else if (evento.key === "Enter") aoConfirmar();
+            else if (evento.key === "Enter" && evento.target !== filtroLiga) aoConfirmar();
         };
 
         btnCancelar.addEventListener("click", aoCancelar);
@@ -1524,10 +1604,100 @@ function escolherClubeParaTemporada(clubeAtual, temporadaInicial) {
     });
 }
 
-function sortearClubeParaTemporada(clubeAtual, temporadaInicial) {
+function obterLimiteDuracaoContrato(idade, idadeLimite) {
+    return Math.max(1, Math.min(5, Math.floor(idadeLimite) - Math.floor(idade) + 1));
+}
+
+function obterDuracaoContrato(idade, idadeLimite) {
+    const anosDisponiveis = obterLimiteDuracaoContrato(idade, idadeLimite);
+    return Math.floor(Math.random() * anosDisponiveis) + 1;
+}
+
+function criarOfertaContrato(clube, idade, idadeLimite) {
+    const anosContrato = obterDuracaoContrato(idade, idadeLimite);
+    return {
+        ...clube,
+        anosContrato,
+        detalheContrato: `Contrato por ${anosContrato} ${anosContrato === 1 ? "ano" : "anos"}`
+    };
+}
+
+async function escolherContratoParaTemporada(clubeAtual, temporadaInicial, idade, idadeLimite, carreiraAtual) {
+    const limiteRompimentos = getConfig().geral.limiteRompimentosContrato;
+    const rompimentosRestantes = Math.max(0, limiteRompimentos - carreiraAtual.rompimentosContratoUsados);
+    const contratoAtivo = !temporadaInicial && carreiraAtual.anosContratoRestantes > 0;
+    const ofertas = sortearClubes(3, clubeAtual, carreiraAtual.clubeAlvo)
+        .map((clube) => criarOfertaContrato(clube, idade, idadeLimite));
+    let opcoes;
+    let mensagem;
+    let clubeSelecionado = "";
+
+    if (temporadaInicial) {
+        opcoes = ofertas;
+        mensagem = `Escolha uma das ofertas para iniciar sua carreira. O contrato não passará da idade limite de ${idadeLimite} anos.`;
+        clubeSelecionado = carreiraAtual.clubeAlvo;
+    } else if (contratoAtivo) {
+        const clube = obterClube(clubeAtual);
+        const permanencia = {
+            ...(clube || { id: clubeAtual, nome: "Clube atual", liga: "" }),
+            anosContrato: carreiraAtual.anosContratoRestantes,
+            detalheContrato: `Contrato vigente: ${carreiraAtual.anosContratoRestantes} ${carreiraAtual.anosContratoRestantes === 1 ? "temporada" : "temporadas"} restantes`
+        };
+        const semRompimentos = rompimentosRestantes === 0;
+        opcoes = [
+            permanencia,
+            ...ofertas.map((oferta) => ({
+                ...oferta,
+                desabilitado: semRompimentos,
+                detalheContrato: `${oferta.detalheContrato}${semRompimentos ? " · sem rompimentos disponíveis" : " · custa 1 rompimento"}`
+            }))
+        ];
+        mensagem = semRompimentos
+            ? `Você ainda tem contrato por ${carreiraAtual.anosContratoRestantes} ${carreiraAtual.anosContratoRestantes === 1 ? "temporada" : "temporadas"} e não possui rompimentos disponíveis. As outras ofertas não podem ser aceitas.`
+            : `Você tem ${rompimentosRestantes} ${rompimentosRestantes === 1 ? "rompimento disponível" : "rompimentos disponíveis"}. Mudar antes do vencimento consome 1.`;
+        clubeSelecionado = clubeAtual;
+    } else {
+        const clube = obterClube(clubeAtual);
+        const renovacao = criarOfertaContrato({
+            ...(clube || { id: clubeAtual, nome: "Clube atual", liga: "" }),
+            detalheContrato: ""
+        }, idade, idadeLimite);
+        renovacao.detalheContrato = `Renovar por ${renovacao.anosContrato} ${renovacao.anosContrato === 1 ? "ano" : "anos"}`;
+        opcoes = [renovacao, ...ofertas];
+        mensagem = `Seu contrato venceu. Você pode renovar no ${clube?.nome || "clube atual"} ou aceitar uma oferta sem gastar rompimento. Nenhum contrato passará da idade limite de ${idadeLimite} anos.`;
+        clubeSelecionado = clubeAtual;
+    }
+
+    const clubeEscolhido = await exibirEscolhaClube(
+        opcoes,
+        temporadaInicial ? "Escolha seu primeiro clube" : "Ofertas de contrato",
+        mensagem,
+        clubeSelecionado
+    );
+    const ofertaEscolhida = opcoes.find((opcao) => opcao.id === clubeEscolhido);
+    if (!ofertaEscolhida) return null;
+
+    return {
+        clube: ofertaEscolhida.id,
+        anosContrato: ofertaEscolhida.anosContrato,
+        rompeContrato: contratoAtivo && ofertaEscolhida.id !== clubeAtual
+    };
+}
+
+function escolherClubeAlvo(clubeAlvo) {
+    return exibirEscolhaClube(
+        CLUBES,
+        "Escolha seu clube-alvo",
+        "O clube escolhido terá mais chances de aparecer entre as opções de cada sorteio, mas a escolha não garante uma oferta.",
+        clubeAlvo,
+        true
+    );
+}
+
+function sortearClubeParaTemporada(clubeAtual, temporadaInicial, clubeAlvo = "") {
     const candidatos = temporadaInicial
-        ? sortearClubes(3)
-        : [{ id: clubeAtual }, ...sortearClubes(3, clubeAtual)];
+        ? sortearClubes(3, "", clubeAlvo)
+        : [{ id: clubeAtual }, ...sortearClubes(3, clubeAtual, clubeAlvo)];
     return candidatos[Math.floor(Math.random() * candidatos.length)].id;
 }
 
@@ -1579,6 +1749,8 @@ async function gerar() {
         if (carreiraFinalizada) {
             carreiraAtual.id = gerarIdRanking();
             carreiraAtual.clube = "";
+            carreiraAtual.anosContratoRestantes = 0;
+            carreiraAtual.rompimentosContratoUsados = 0;
             delete carreiraAtual.potencial;
         }
         carreiraAtual.nome = nome;
@@ -1594,26 +1766,42 @@ async function gerar() {
         const ano = proximoAno(historico);
         const clubeAtual = obterClube(historico[historico.length - 1]?.clube)?.id || carreiraAtual.clube;
         const temporadaInicial = historico.length === 0 || !obterClube(clubeAtual);
+        carreiraAtual.anosContratoRestantes = Math.min(
+            carreiraAtual.anosContratoRestantes,
+            obterLimiteDuracaoContrato(idade, idadeLimite)
+        );
 
         if (idade > idadeLimite) {
             mostrarResumoFinal(nome, idadeLimite, ano, historico, POSICOES_CAMPO[posicaoDetalhe]?.nome || dadosPosicao.nome);
             return;
         }
 
-        const clubeEscolhido = await escolherClubeParaTemporada(clubeAtual, temporadaInicial);
-        if (!clubeEscolhido) return;
+        const contratoEscolhido = await escolherContratoParaTemporada(
+            clubeAtual,
+            temporadaInicial,
+            idade,
+            idadeLimite,
+            carreiraAtual
+        );
+        if (!contratoEscolhido) return;
 
-        carreiraAtual.clube = clubeEscolhido;
-        salvarCarreiraAtual(carreiraAtual);
+        carreiraAtual.clube = contratoEscolhido.clube;
+        carreiraAtual.anosContratoRestantes = Math.max(0, contratoEscolhido.anosContrato - 1);
+        if (contratoEscolhido.rompeContrato) {
+            carreiraAtual.rompimentosContratoUsados += 1;
+        }
+        if (!salvarCarreiraAtual(carreiraAtual)) {
+            throw new Error("Não foi possível salvar o contrato da carreira.");
+        }
         if (resumoFinal) {
             resumoFinal.hidden = true;
         }
-        const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id, historico, nacionalidade, clubeEscolhido);
+        const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id, historico, nacionalidade, contratoEscolhido.clube);
         const historicoAtualizado = [...historico, temporada];
 
         document.getElementById("nome").value = nome;
         document.getElementById("idade").value = idade;
-        atualizarResumoJogador(nome, idade, ano, nacionalidade, clubeEscolhido);
+        atualizarResumoJogador(nome, idade, ano, nacionalidade, contratoEscolhido.clube);
         document.getElementById("jogos").textContent = temporada.jogos;
         document.getElementById("gols").textContent = temporada.gols;
         document.getElementById("assi").textContent = temporada.assistencias;
@@ -1702,6 +1890,8 @@ function simularTudo() {
         if (carreiraFinalizada) {
             carreiraAtual.id = gerarIdRanking();
             carreiraAtual.clube = "";
+            carreiraAtual.anosContratoRestantes = 0;
+            carreiraAtual.rompimentosContratoUsados = 0;
             delete carreiraAtual.potencial;
         }
 
@@ -1721,27 +1911,34 @@ function simularTudo() {
         let idade;
         let ano;
         let clubeAtual;
+        let anosContratoRestantes = carreiraAtual.anosContratoRestantes;
 
         if (continuandoCarreira) {
             const ultimaTemporada = historico[historico.length - 1];
             idade = (Number(ultimaTemporada.idade) || 0) + 1;
             ano = proximoAno(historico);
             clubeAtual = ultimaTemporada.clube || carreiraAtual.clube;
+            anosContratoRestantes = Math.min(
+                anosContratoRestantes,
+                obterLimiteDuracaoContrato(idade, idadeLimite)
+            );
         } else {
             idade = dadosValidos.idade;
             ano = ANO_INICIAL;
-            clubeAtual = sortearClubeParaTemporada("", true);
+            clubeAtual = "";
+            anosContratoRestantes = 0;
         }
 
-        carreiraAtual.clube = clubeAtual;
-        salvarCarreiraAtual(carreiraAtual);
-
         while (idade <= idadeLimite) {
-            if (historico.length > 0) {
-                clubeAtual = sortearClubeParaTemporada(clubeAtual, false);
+            if (!obterClube(clubeAtual)) {
+                clubeAtual = sortearClubeParaTemporada("", true, carreiraAtual.clubeAlvo);
+                anosContratoRestantes = obterDuracaoContrato(idade, idadeLimite);
+            } else if (anosContratoRestantes <= 0) {
+                anosContratoRestantes = obterDuracaoContrato(idade, idadeLimite);
             }
             const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id, historico, nacionalidade, clubeAtual);
             historico.push(temporada);
+            anosContratoRestantes = Math.max(0, anosContratoRestantes - 1);
             idade = Number(historico[historico.length - 1].idade) + 1;
             ano = proximoAno(historico);
         }
@@ -1750,7 +1947,10 @@ function simularTudo() {
             const ultimaTemporada = historico[historico.length - 1];
             const idadeUltima = Number(ultimaTemporada.idade) || 0;
             carreiraAtual.clube = ultimaTemporada.clube;
-            salvarCarreiraAtual(carreiraAtual);
+            carreiraAtual.anosContratoRestantes = anosContratoRestantes;
+            if (!salvarCarreiraAtual(carreiraAtual)) {
+                throw new Error("Não foi possível salvar o estado final do contrato.");
+            }
             document.getElementById("idade").value = idadeUltima;
             atualizarResumoJogador(nome, idadeUltima, ano, nacionalidade, ultimaTemporada.clube);
         }
@@ -1831,6 +2031,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const listaRanking = document.getElementById("lista-ranking");
     const filtroRanking = document.getElementById("filtro-ranking");
     const filtroPosicaoRanking = document.getElementById("filtro-posicao-ranking");
+    const filtroSelecaoRanking = document.getElementById("filtro-selecao-ranking");
     const filtroHistorico = document.getElementById("filtro-historico");
     const filtroCarreiraConquistas = document.getElementById("filtro-carreira-conquistas");
     const filtroCategoriaConquistas = document.getElementById("filtro-categoria-conquistas");
@@ -1882,6 +2083,12 @@ document.addEventListener("DOMContentLoaded", () => {
         filtroPosicaoRanking.addEventListener("change", renderRanking);
     }
 
+    if (filtroSelecaoRanking) {
+        filtroSelecaoRanking.innerHTML = '<option value="">Todas as seleções</option>' +
+            SELECOES.map((selecao) => `<option value="${escaparHTML(selecao.id)}">${escaparHTML(selecao.nome)}</option>`).join("");
+        filtroSelecaoRanking.addEventListener("change", renderRanking);
+    }
+
     if (listaRanking) {
         listaRanking.addEventListener("click", (evento) => {
             const botaoRemover = evento.target.closest(".remover-ranking");
@@ -1907,6 +2114,36 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const nacionalidadeInput = document.getElementById("nacionalidade");
     const carreiraAtual = obterCarreiraAtual();
+    const clubeAlvoButton = document.getElementById("clube-alvo");
+    const atualizarBotaoClubeAlvo = () => {
+        const clubeAlvo = obterClube(obterCarreiraAtual().clubeAlvo);
+        if (clubeAlvoButton) {
+            clubeAlvoButton.textContent = clubeAlvo ? `Clube-alvo: ${clubeAlvo.nome}` : "Escolher clube-alvo";
+        }
+    };
+    if (clubeAlvoButton) {
+        clubeAlvoButton.addEventListener("click", async () => {
+            if (processamentoEmAndamento) return;
+            processamentoEmAndamento = true;
+            try {
+                const clubeAlvoAtual = obterCarreiraAtual().clubeAlvo;
+                const clubeAlvo = await escolherClubeAlvo(clubeAlvoAtual);
+                if (clubeAlvo === null) return;
+                const carreiraAtualizada = obterCarreiraAtual();
+                carreiraAtualizada.clubeAlvo = clubeAlvo;
+                if (!salvarCarreiraAtual(carreiraAtualizada)) {
+                    throw new Error("Não foi possível salvar a carreira atual.");
+                }
+                atualizarBotaoClubeAlvo();
+            } catch (erro) {
+                console.error("[FootMain] Erro ao escolher o clube-alvo:", erro);
+                alert("Não foi possível escolher o clube-alvo. Veja o console (F12) para detalhes.");
+            } finally {
+                processamentoEmAndamento = false;
+            }
+        });
+    }
+    atualizarBotaoClubeAlvo();
     if (nacionalidadeInput) {
         nacionalidadeInput.innerHTML = '<option value="">Selecione uma seleção</option>' +
             SELECOES.map((selecao) => `<option value="${selecao.id}">${escaparHTML(selecao.nome)}</option>`).join("");
