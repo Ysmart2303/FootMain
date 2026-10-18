@@ -1102,6 +1102,11 @@ function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao) {
 
     salvarRanking(rankingAtual);
 
+    const filtroCarreiraConquistas = document.getElementById("filtro-carreira-conquistas");
+    if (filtroCarreiraConquistas) {
+        filtroCarreiraConquistas.value = String(carreira.id);
+    }
+
     renderRanking();
 
     const notificacaoConquista = document.getElementById("notificacao-conquista");
