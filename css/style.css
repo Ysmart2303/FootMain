@@ -2007,6 +2007,12 @@ html[data-theme="light"] .modal-btn--transferencias:hover {
     background: #bfdbfe;
 }
 
+html[data-theme="light"] .notificacao-conquista {
+    border-color: #facc15;
+    background: #fef9c3;
+    color: #713f12;
+}
+
 html[data-theme="light"] .side-menu {
     background: #eff6ff;
     color: #172554;
