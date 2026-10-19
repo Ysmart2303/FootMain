@@ -1887,7 +1887,12 @@ html[data-theme="light"] .atributos-resumo > div {
 
 html[data-theme="light"] #inputs,
 html[data-theme="light"] #posi,
-html[data-theme="light"] #posi > div,
+
+html[data-theme="light"] #posi > div:not(.campo-futebol) {
+    background: #eaf2ff;
+    border-color: #bfdbfe;
+}
+
 html[data-theme="light"] #resultados,
 html[data-theme="light"] .resumo-trofeus div,
 html[data-theme="light"] #lista-temporadas li,
@@ -2040,6 +2045,7 @@ html[data-theme="light"] footer a {
 /* Campo interativo 4-3-3 */
 #posi > h3 { color: #f8fafc; font-size: 1.08rem; }
 #posi .campo-instrucao { color: #94a3b8; font-size: .84rem; line-height: 1.4; }
+
 #posi .campo-futebol {
     position: relative;
     display: flex;
