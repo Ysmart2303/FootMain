@@ -2086,9 +2086,14 @@ function simularTudo() {
 
         while (idade <= idadeLimite) {
             if (!obterClube(clubeAtual)) {
+                // Sem clube válido: sorteia um clube inicial (com viés do clube-alvo).
                 clubeAtual = sortearClubeParaTemporada("", true, carreiraAtual.clubeAlvo);
                 anosContratoRestantes = obterDuracaoContrato(idade, idadeLimite);
             } else if (anosContratoRestantes <= 0) {
+                // Contrato venceu: sorteia entre renovar no clube atual
+                // ou aceitar uma das ofertas (sortearClubeParaTemporada já monta
+                // a lista [clubeAtual, ...3 ofertas] e respeita o clube-alvo).
+                clubeAtual = sortearClubeParaTemporada(clubeAtual, false, carreiraAtual.clubeAlvo);
                 anosContratoRestantes = obterDuracaoContrato(idade, idadeLimite);
             }
             const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id, historico, nacionalidade, clubeAtual);
