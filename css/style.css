@@ -688,6 +688,29 @@ button:hover {
     color: #fecaca;
 }
 
+.evento-tag.lesao-moderada {
+    border-color: rgba(251, 146, 60, 0.45);
+    background: rgba(249, 115, 22, 0.14);
+    color: #fed7aa;
+}
+
+.evento-tag.lesao-grave {
+    border-color: rgba(244, 63, 94, 0.5);
+    background: rgba(190, 18, 60, 0.15);
+    color: #fecdd3;
+}
+
+.evento-tag.lesao-carreira {
+    border-color: rgba(220, 38, 38, 0.65);
+    background: rgba(153, 27, 27, 0.22);
+    color: #fee2e2;
+    font-weight: 800;
+}
+
+html[data-theme="light"] .evento-tag.lesao-moderada { color: #9a3412 !important; }
+html[data-theme="light"] .evento-tag.lesao-grave    { color: #9f1239 !important; }
+html[data-theme="light"] .evento-tag.lesao-carreira { color: #7f1d1d !important; }
+
 .evento-tag.sem-eventos {
     color: #cbd5e1;
     font-weight: 500;
