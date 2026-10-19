@@ -154,6 +154,7 @@ function validarTemporada(temporada) {
     const assistencias = Number.isFinite(Number(temporada.assistencias)) ? Math.max(0, Math.floor(Number(temporada.assistencias))) : 0;
     const trofeusColetivos = Array.isArray(temporada.trofeusColetivos) ? temporada.trofeusColetivos.filter((t) => typeof t === "string") : [];
     const trofeusIndividuais = Array.isArray(temporada.trofeusIndividuais) ? temporada.trofeusIndividuais.filter((t) => typeof t === "string") : [];
+    const eventos = normalizarEventosTemporada(temporada.eventos);
 
     const atributos = normalizarAtributos(temporada.atributos, posicaoNormalizada, idade);
 
@@ -179,9 +180,25 @@ function validarTemporada(temporada) {
         overall,
         trofeusColetivos,
         trofeusIndividuais,
+        eventos,
         data: typeof temporada.data === "string" && temporada.data ? temporada.data : new Date().toLocaleString("pt-BR"),
         carreiraId: typeof temporada.carreiraId === "string" && temporada.carreiraId ? temporada.carreiraId : "legacy"
     };
+}
+
+function normalizarEventosTemporada(eventos) {
+    if (!Array.isArray(eventos)) {
+        return [];
+    }
+
+    const tiposValidos = new Set(["hat-trick", "assistencia", "lesao", "cartao-vermelho"]);
+    return eventos
+        .filter((evento) => evento && tiposValidos.has(evento.tipo))
+        .map((evento) => ({
+            tipo: evento.tipo,
+            jogo: Math.max(1, Math.min(1000, Math.floor(Number(evento.jogo) || 1))),
+            jogosPerdidos: Math.max(1, Math.min(10, Math.floor(Number(evento.jogosPerdidos) || 1)))
+        }));
 }
 
 function lerHistorico() {
@@ -701,6 +718,7 @@ function renderDetalhesCarreira(carreira) {
                 <span>${temporada.gols} gols</span>
                 <span>${temporada.assistencias} assistências</span>
                 <small>${trofeus.length ? escaparHTML(trofeus.join(", ")) : "Sem títulos nesta temporada"}</small>
+                <div class="temporada-eventos">${formatarEventosTemporada(temporada.eventos)}</div>
             </div>`;
         }).join("")
         : '<p class="detalhes-sem-historico">Os dados por temporada não estão disponíveis para esta carreira antiga.</p>';
@@ -1068,11 +1086,31 @@ function renderHistorico() {
                     <div class="titulo-tags">${renderTrofeus(trofeusColetivos)}</div>
                     <p class="titulo-categoria">Títulos individuais:</p>
                     <div class="titulo-tags">${renderTrofeus(trofeusIndividuais)}</div>
+                    <p class="titulo-categoria">Eventos da temporada:</p>
+                    ${formatarEventosTemporada(temporada.eventos)}
                     <small>${temporada.data}</small>
                 </li>
             `;
         })
         .join("");
+}
+
+function formatarEventosTemporada(eventos) {
+    const eventosValidos = normalizarEventosTemporada(eventos);
+    if (eventosValidos.length === 0) {
+        return '<div class="eventos-tags"><span class="evento-tag sem-eventos">Nenhum evento</span></div>';
+    }
+
+    const descricoes = {
+        "hat-trick": (evento) => `⚽ Hat-trick no jogo ${evento.jogo}: +3 gols`,
+        assistencia: (evento) => `🎯 Passe decisivo no jogo ${evento.jogo}: +2 assistências`,
+        lesao: (evento) => `🩹 Lesão no jogo ${evento.jogo}: fora por ${evento.jogosPerdidos} ${evento.jogosPerdidos === 1 ? "jogo" : "jogos"}`,
+        "cartao-vermelho": (evento) => `🟥 Cartão vermelho no jogo ${evento.jogo}: suspensão de ${evento.jogosPerdidos} ${evento.jogosPerdidos === 1 ? "jogo" : "jogos"}`
+    };
+
+    return `<div class="eventos-tags">${eventosValidos
+        .map((evento) => `<span class="evento-tag ${evento.tipo}">${escaparHTML(descricoes[evento.tipo](evento))}</span>`)
+        .join("")}</div>`;
 }
 
 function proximaIdade(historico = lerHistoricoAtiva()) {
@@ -1399,24 +1437,6 @@ function renderAtributos(temporada) {
 
 /* ========== Nova engine de simulação por overall ========== */
 
-// Calcula o overall com pesos por posição.
-function calcularOverall(posicao, atributos) {
-    const pesos = {
-        ata: { finalizacao: 0.35, drible: 0.22, velocidade: 0.18, passe: 0.15, fisico: 0.10 },
-        me:  { passe: 0.35, drible: 0.25, finalizacao: 0.15, velocidade: 0.15, fisico: 0.10 },
-        zag: { defesa: 0.45, fisico: 0.30, passe: 0.15, velocidade: 0.10 },
-        go:  { reflexos: 0.50, fisico: 0.20, defesa: 0.20, passe: 0.10 }
-    };
-    const peso = pesos[posicao] || pesos.ata;
-    let soma = 0;
-    let total = 0;
-    for (const chave in peso) {
-        soma += (Number(atributos?.[chave]) || 0) * peso[chave];
-        total += peso[chave];
-    }
-    return Math.max(1, Math.min(99, Math.round(soma / total)));
-}
-
 // Amostra uma Poisson (Knuth). Serve para "quantos gols nesse jogo".
 function amostrarPoisson(lambda) {
     if (lambda <= 0) return 0;
@@ -1520,15 +1540,43 @@ function simularTemporadaPorJogo(posicao, atributos, idade) {
     let jogos = 0;
     let gols = 0;
     let assistencias = 0;
+    let jogosAfastado = 0;
+    const eventos = [];
+    const chanceHatTrick = { ata: 0.009, me: 0.006, zag: 0.002, go: 0 }[posicao] || 0;
+    const chancePasseDecisivo = { ata: 0.008, me: 0.012, zag: 0.003, go: 0.001 }[posicao] || 0;
 
     for (let i = 0; i < maxJogos; i++) {
+        if (jogosAfastado > 0) {
+            jogosAfastado--;
+            continue;
+        }
         if (Math.random() > probParticipar) continue;
         jogos++;
         gols        += amostrarPoisson(lambdaGol);
         assistencias += amostrarPoisson(lambdaAssist);
+
+        const numeroJogo = i + 1;
+        if (Math.random() < chanceHatTrick) {
+            gols += 3;
+            eventos.push({ tipo: "hat-trick", jogo: numeroJogo });
+        }
+        if (Math.random() < chancePasseDecisivo) {
+            assistencias += 2;
+            eventos.push({ tipo: "assistencia", jogo: numeroJogo });
+        }
+
+        if (Math.random() < 0.012) {
+            const jogosPerdidos = 1 + Math.floor(Math.random() * 5);
+            eventos.push({ tipo: "lesao", jogo: numeroJogo, jogosPerdidos });
+            jogosAfastado = jogosPerdidos;
+        } else if (Math.random() < 0.004) {
+            const jogosPerdidos = 1 + Math.floor(Math.random() * 2);
+            eventos.push({ tipo: "cartao-vermelho", jogo: numeroJogo, jogosPerdidos });
+            jogosAfastado = jogosPerdidos;
+        }
     }
 
-    return { jogos, gols, assistencias, overall };
+    return { jogos, gols, assistencias, overall, eventos };
 }
 
 function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], nacionalidade = "", clubeId = "") {
@@ -1570,6 +1618,7 @@ function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], na
         jogos: sim.jogos,
         gols: sim.gols,
         assistencias: sim.assistencias,
+        eventos: sim.eventos,
         overall: overall,
         potencial: carreiraAtual.potencial,
         atributos: atributos,

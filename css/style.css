@@ -655,6 +655,44 @@ button:hover {
     font-weight: 700;
 }
 
+.eventos-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.evento-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 9px;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 9px;
+    background: rgba(148, 163, 184, 0.12);
+    color: #e2e8f0;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.evento-tag.hat-trick,
+.evento-tag.assistencia {
+    border-color: rgba(74, 222, 128, 0.35);
+    background: rgba(34, 197, 94, 0.12);
+    color: #bbf7d0;
+}
+
+.evento-tag.lesao,
+.evento-tag.cartao-vermelho {
+    border-color: rgba(248, 113, 113, 0.35);
+    background: rgba(239, 68, 68, 0.12);
+    color: #fecaca;
+}
+
+.evento-tag.sem-eventos {
+    color: #cbd5e1;
+    font-weight: 500;
+}
+
 #lista-temporadas small {
     display: block;
     margin-top: 8px;
@@ -1883,6 +1921,21 @@ html[data-theme="light"] .conquistas-resumo > div,
 html[data-theme="light"] .atributos-resumo > div {
     background: #e0ecff;
     border-color: #bfdbfe;
+}
+
+html[data-theme="light"] .evento-tag,
+html[data-theme="light"] .evento-tag.sem-eventos {
+    color: #334155 !important;
+}
+
+html[data-theme="light"] .evento-tag.hat-trick,
+html[data-theme="light"] .evento-tag.assistencia {
+    color: #166534 !important;
+}
+
+html[data-theme="light"] .evento-tag.lesao,
+html[data-theme="light"] .evento-tag.cartao-vermelho {
+    color: #991b1b !important;
 }
 
 html[data-theme="light"] #inputs,

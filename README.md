@@ -32,6 +32,7 @@ Todos os dados ficam salvos no localStorage do navegador, então suas carreiras,
 · Potencial único por jogador — Cada carreira tem seu próprio teto de evolução (de comum a gênio).
 · Engine por overall — Simulação jogo a jogo com distribuição de Poisson para gols e assistências.
 · Curva de carreira realista — Evolução na juventude, pico aos 25-29, declínio físico após os 33.
+· Eventos sazonais — Lesões e suspensões reduzem jogos; hat-tricks e passes decisivos adicionam gols e assistências, com registro no histórico.
 · Simulação completa — Gere temporada por temporada ou simule a carreira inteira de uma vez.
 
 💼 Contratos e transferências
@@ -135,6 +136,7 @@ Para cada jogo da temporada:
 
 · Uma probabilidade de participação é calculada (baseada no overall + fator idade).
 · Se o jogador entra em campo, os gols e assistências são sorteados por distribuição de Poisson, cujo λ (média esperada) depende dos atributos ofensivos e da posição.
+· Eventos também podem ocorrer: lesões e cartões vermelhos afastam o jogador de jogos seguintes; hat-tricks adicionam 3 gols e passes decisivos adicionam 2 assistências. Os eventos são salvos e exibidos no histórico da temporada.
 
 4️⃣ Títulos
 
