@@ -1555,7 +1555,7 @@ function simularTemporadaPorJogo(posicao, atributos, idade) {
         gols        += amostrarPoisson(lambdaGol);
         assistencias += amostrarPoisson(lambdaAssist);
 
-        const numeroJogo = i + 1;
+        const numeroJogo = jogos;
         if (Math.random() < chanceHatTrick) {
             gols += 3;
             eventos.push({ tipo: "hat-trick", jogo: numeroJogo });
