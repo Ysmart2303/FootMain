@@ -181,6 +181,9 @@ function validarTemporada(temporada) {
         trofeusColetivos,
         trofeusIndividuais,
         eventos,
+        lesaoGrave: !!temporada.lesaoGrave,
+        lesaoCarreira: !!temporada.lesaoCarreira,
+        jogosForaProximaTemporada: Math.max(0, Math.min(62, Math.floor(Number(temporada.jogosForaProximaTemporada) || 0))),
         data: typeof temporada.data === "string" && temporada.data ? temporada.data : new Date().toLocaleString("pt-BR"),
         carreiraId: typeof temporada.carreiraId === "string" && temporada.carreiraId ? temporada.carreiraId : "legacy"
     };
@@ -191,13 +194,19 @@ function normalizarEventosTemporada(eventos) {
         return [];
     }
 
-    const tiposValidos = new Set(["hat-trick", "assistencia", "lesao", "cartao-vermelho"]);
+    const tiposValidos = new Set([
+        "hat-trick", "assistencia", "lesao", "lesao-moderada",
+        "lesao-grave", "lesao-carreira", "cartao-vermelho"
+    ]);
+
     return eventos
         .filter((evento) => evento && tiposValidos.has(evento.tipo))
         .map((evento) => ({
             tipo: evento.tipo,
             jogo: Math.max(1, Math.min(1000, Math.floor(Number(evento.jogo) || 1))),
-            jogosPerdidos: Math.max(1, Math.min(10, Math.floor(Number(evento.jogosPerdidos) || 1)))
+            jogosPerdidos: Math.max(1, Math.min(1000, Math.floor(Number(evento.jogosPerdidos) || 1))),
+            jogosForaProximaTemporada: Math.max(0, Math.min(62, Math.floor(Number(evento.jogosForaProximaTemporada) || 0))),
+            idade: Math.max(0, Math.min(99, Math.floor(Number(evento.idade) || 0)))
         }));
 }
 
@@ -1105,6 +1114,9 @@ function formatarEventosTemporada(eventos) {
         "hat-trick": (evento) => `⚽ Hat-trick no jogo ${evento.jogo}: +3 gols`,
         assistencia: (evento) => `🎯 Passe decisivo no jogo ${evento.jogo}: +2 assistências`,
         lesao: (evento) => `🩹 Lesão no jogo ${evento.jogo}: fora por ${evento.jogosPerdidos} ${evento.jogosPerdidos === 1 ? "jogo" : "jogos"}`,
+        "lesao-moderada": (evento) => `🤕 Lesão moderada no jogo ${evento.jogo}: fora por ${evento.jogosPerdidos} jogos`,
+        "lesao-grave": (evento) => `🏥 Lesão grave no jogo ${evento.jogo}: perdeu o resto da temporada${evento.jogosForaProximaTemporada ? ` e mais ${evento.jogosForaProximaTemporada} jogos da próxima` : ""}`,
+        "lesao-carreira": (evento) => `💔 Lesão gravíssima no jogo ${evento.jogo}: encerrou a carreira`,
         "cartao-vermelho": (evento) => `🟥 Cartão vermelho no jogo ${evento.jogo}: suspensão de ${evento.jogosPerdidos} ${evento.jogosPerdidos === 1 ? "jogo" : "jogos"}`
     };
 
@@ -1490,7 +1502,7 @@ function obterModificadorPotencial(chave, posicao) {
 }
 
 // Simula a temporada jogo a jogo com base no overall e nos atributos.
-function simularTemporadaPorJogo(posicao, atributos, idade) {
+function simularTemporadaPorJogo(posicao, atributos, idade, jogosForaInicioTemporada = 0) {
     const cfg = getConfig();
     const overall = calcularOverall(posicao, atributos);
 
@@ -1515,7 +1527,7 @@ function simularTemporadaPorJogo(posicao, atributos, idade) {
     const fin = Number(atributos?.finalizacao) || OVERALL_PADRAO;
     const pas = Number(atributos?.passe)       || OVERALL_PADRAO;
     const dri = Number(atributos?.drible)      || OVERALL_PADRAO;
-  
+
     let lambdaGol = 0;
     let lambdaAssist = 0;
 
@@ -1537,13 +1549,49 @@ function simularTemporadaPorJogo(posicao, atributos, idade) {
     lambdaGol    *= fatorIdade * (cfg.geral.multiplicadorGols || 1);
     lambdaAssist *= fatorIdade * (cfg.geral.multiplicadorAssistencias || 1);
 
+    // ===== Configuração de lesões (lida da página de configurações) =====
+    const cfgLesoes = cfg.lesoes || {};
+    const multLesoes = Number.isFinite(Number(cfgLesoes.multiplicador))
+        ? Math.max(0, Number(cfgLesoes.multiplicador))
+        : 1.0;
+
+    let fatorLesao = 1.0;
+    if (idade >= 33) {
+        fatorLesao = Number.isFinite(Number(cfgLesoes.fatorIdoso))
+            ? Number(cfgLesoes.fatorIdoso) : 1.8;
+    } else if (idade >= 29) {
+        fatorLesao = Number.isFinite(Number(cfgLesoes.fatorVeterano))
+            ? Number(cfgLesoes.fatorVeterano) : 1.3;
+    } else if (idade <= 24) {
+        fatorLesao = Number.isFinite(Number(cfgLesoes.fatorJovem))
+            ? Number(cfgLesoes.fatorJovem) : 0.8;
+    }
+    fatorLesao = Math.max(0, fatorLesao);
+
+    const escala = fatorLesao * multLesoes;
+
+    const chanceLeve     = Math.max(0, (Number.isFinite(Number(cfgLesoes.chanceLeve))     ? Number(cfgLesoes.chanceLeve)     : 0.012)   * escala);
+    const chanceModerada = Math.max(0, (Number.isFinite(Number(cfgLesoes.chanceModerada)) ? Number(cfgLesoes.chanceModerada) : 0.0015)  * escala);
+    const chanceGrave    = Math.max(0, (Number.isFinite(Number(cfgLesoes.chanceGrave))    ? Number(cfgLesoes.chanceGrave)    : 0.0003)  * escala);
+    const chanceCarreira = Math.max(0, (Number.isFinite(Number(cfgLesoes.chanceCarreira)) ? Number(cfgLesoes.chanceCarreira) : 0.00003) * escala);
+
+    // Limites cumulativos (cada jogo)
+    const limCarreira = chanceCarreira;
+    const limGrave    = limCarreira + chanceGrave;
+    const limModerada = limGrave    + chanceModerada;
+    const limLeve     = limModerada + chanceLeve;
+
     let jogos = 0;
     let gols = 0;
     let assistencias = 0;
-    let jogosAfastado = 0;
+    let jogosAfastado = Math.max(0, Math.floor(jogosForaInicioTemporada) || 0);
     const eventos = [];
     const chanceHatTrick = { ata: 0.009, me: 0.006, zag: 0.002, go: 0 }[posicao] || 0;
     const chancePasseDecisivo = { ata: 0.008, me: 0.012, zag: 0.003, go: 0.001 }[posicao] || 0;
+
+    let lesaoGrave = false;
+    let lesaoCarreira = false;
+    let jogosForaProximaTemporada = 0;
 
     for (let i = 0; i < maxJogos; i++) {
         if (jogosAfastado > 0) {
@@ -1565,18 +1613,55 @@ function simularTemporadaPorJogo(posicao, atributos, idade) {
             eventos.push({ tipo: "assistencia", jogo: numeroJogo });
         }
 
-        if (Math.random() < 0.012) {
-            const jogosPerdidos = 1 + Math.floor(Math.random() * 5);
+        // ===== Sistema de lesões (configurável) =====
+        const sorteioLesao = Math.random();
+
+        if (sorteioLesao < limCarreira) {
+            // Lesão gravíssima — encerra a carreira
+            eventos.push({ tipo: "lesao-carreira", jogo: numeroJogo, idade: idade });
+            lesaoCarreira = true;
+            break;
+        } else if (sorteioLesao < limGrave) {
+            // Lesão grave — perde o resto da temporada + parte da próxima
+            const jogosRestantes = maxJogos - i;
+            const jogosProxima = Math.floor(Math.random() * 25); // 0–24
+            eventos.push({
+                tipo: "lesao-grave",
+                jogo: numeroJogo,
+                jogosPerdidos: jogosRestantes,
+                jogosForaProximaTemporada: jogosProxima
+            });
+            lesaoGrave = true;
+            jogosForaProximaTemporada = jogosProxima;
+            break;
+        } else if (sorteioLesao < limModerada) {
+            // Lesão moderada — 8 a 20 jogos
+            const jogosPerdidos = 8 + Math.floor(Math.random() * 13);
+            eventos.push({ tipo: "lesao-moderada", jogo: numeroJogo, jogosPerdidos });
+            jogosAfastado = jogosPerdidos;
+        } else if (sorteioLesao < limLeve) {
+            // Lesão leve — 1 a 6 jogos
+            const jogosPerdidos = 1 + Math.floor(Math.random() * 6);
             eventos.push({ tipo: "lesao", jogo: numeroJogo, jogosPerdidos });
             jogosAfastado = jogosPerdidos;
         } else if (Math.random() < 0.004) {
+            // Cartão vermelho
             const jogosPerdidos = 1 + Math.floor(Math.random() * 2);
             eventos.push({ tipo: "cartao-vermelho", jogo: numeroJogo, jogosPerdidos });
             jogosAfastado = jogosPerdidos;
         }
     }
 
-    return { jogos, gols, assistencias, overall, eventos };
+    return {
+        jogos,
+        gols,
+        assistencias,
+        overall,
+        eventos,
+        lesaoGrave,
+        lesaoCarreira,
+        jogosForaProximaTemporada
+    };
 }
 
 function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], nacionalidade = "", clubeId = "") {
@@ -1588,33 +1673,30 @@ function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], na
     }
     const carreiraAtual = obterCarreiraAtual();
 
+    // NOVO: se a temporada anterior teve lesão grave, o jogador começa
+    // a atual já afastado por N jogos.
+    const ultima = temporadasAnteriores[temporadasAnteriores.length - 1];
+    const jogosForaInicio = ultima?.jogosForaProximaTemporada || 0;
+
     const atributos = evoluirAtributos(temporadasAnteriores, categoria, idade, carreiraAtual.potencial);
     const overall = calcularOverall(categoria, atributos);
-    const sim = simularTemporadaPorJogo(categoria, atributos, idade);
+    const sim = simularTemporadaPorJogo(categoria, atributos, idade, jogosForaInicio);
 
     const trofeus = gerarTrofeusTemporada(
-        dados.nome,
-        sim.jogos,
-        sim.gols,
-        sim.assistencias,
-        ano,
-        idade,
-        temporadasAnteriores,
-        nacionalidade,
-        clubeId
+        dados.nome, sim.jogos, sim.gols, sim.assistencias,
+        ano, idade, temporadasAnteriores, nacionalidade, clubeId
     );
 
     const clube = obterClube(clubeId);
 
     return {
-        nome: nome,
-        idade: idade,
+        nome, idade,
         posicao: POSICOES_CAMPO[posicaoDetalhe]?.nome || dados.nome,
         posicaoKey: categoria,
         posicaoDetalhe,
-        nacionalidade: nacionalidade,
+        nacionalidade,
         clube: clube ? clube.id : "",
-        ano: ano,
+        ano,
         jogos: sim.jogos,
         gols: sim.gols,
         assistencias: sim.assistencias,
@@ -1624,6 +1706,9 @@ function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], na
         atributos: atributos,
         trofeusColetivos: trofeus.trofeusColetivos,
         trofeusIndividuais: trofeus.trofeusIndividuais,
+        lesaoGrave: sim.lesaoGrave || false,                    // NOVO
+        lesaoCarreira: sim.lesaoCarreira || false,              // NOVO
+        jogosForaProximaTemporada: sim.jogosForaProximaTemporada || 0, // NOVO
         data: new Date().toLocaleString("pt-BR"),
         carreiraId: carreiraAtual.id || gerarIdRanking()
     };
@@ -1970,6 +2055,14 @@ async function gerar() {
         salvarHistorico([...historicoDeOutrasCarreiras, ...historicoAtualizado]);
         renderHistorico();
         renderAtributos(temporada);
+
+        // Lesão gravíssima encerra a carreira imediatamente.
+        if (temporada.lesaoCarreira) {
+            const posicaoNome = POSICOES_CAMPO[posicaoDetalhe]?.nome || dadosPosicao.nome;
+            mostrarResumoFinal(nome, idadeLimite, ano, historicoAtualizado, posicaoNome);
+            alert(`💔 ${nome} sofreu uma lesão gravíssima e precisou encerrar a carreira aos ${idade} anos.`);
+        }
+      
     } catch (erro) {
         console.error("[FootMain] Erro em gerar():", erro);
         alert("Ocorreu um erro ao gerar a temporada. Veja o console (F12) para detalhes.");
@@ -2098,6 +2191,12 @@ function simularTudo() {
             }
             const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id, historico, nacionalidade, clubeAtual);
             historico.push(temporada);
+            
+            // Lesão gravíssima encerra a carreira imediatamente.
+            if (temporada.lesaoCarreira) {
+                break;
+            }
+            
             anosContratoRestantes = Math.max(0, anosContratoRestantes - 1);
             idade = Number(historico[historico.length - 1].idade) + 1;
             ano = proximoAno(historico);
