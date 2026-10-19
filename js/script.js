@@ -1224,7 +1224,12 @@ function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao) {
     if (resumoSelecao) resumoSelecao.textContent = selecao ? selecao.nome : "Não definida";
     const resumoClube = document.getElementById("resumo-clube");
     if (resumoClube) resumoClube.textContent = obterClube(carreiraAtual.clube)?.nome || "Não definido";
-    document.getElementById("resumo-idade-limite").textContent = idadeLimite;
+    
+    const idadeEncerramento = historico.length > 0
+        ? (Number(historico[historico.length - 1].idade) || idadeLimite)
+        : idadeLimite;
+    document.getElementById("resumo-idade-limite").textContent = idadeEncerramento;
+  
     document.getElementById("resumo-jogos").textContent = totais.jogos;
     document.getElementById("resumo-gols").textContent = totais.gols;
     document.getElementById("resumo-assistencias").textContent = totais.assistencias;
