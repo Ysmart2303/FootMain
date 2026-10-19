@@ -4,7 +4,7 @@
  */
 
 const STORAGE_KEY_CONFIG = "footmain_config_v1";
-const VERSAO_APP = "1.7.6";
+const VERSAO_APP = "1.9.0";
 
 /* ---------- Definições base (as "de fábrica") ---------- */
 const POSICOES_PADRAO = {
@@ -251,6 +251,10 @@ const FORCAS_CLUBES_PADRAO = (() => {
     }, {});
 })();
 
+/* Lesoes */
+
+
+
 /* ---------- Configurações padrão ---------- */
 const CONFIG_PADRAO = {
     geral: {
@@ -278,6 +282,18 @@ const CONFIG_PADRAO = {
         anoInicioMundialClubes: 2029,
         cicloCopaDoMundo: 4
     },
+
+    lesoes: {
+        multiplicador: 1.0,      // escala global (0 = sem lesões)
+        chanceLeve: 0.012,       // 1,2% por jogo
+        chanceModerada: 0.0015,  // 0,15% por jogo
+        chanceGrave: 0.0003,     // 0,03% por jogo
+        chanceCarreira: 0.00003, // 0,003% por jogo
+        fatorJovem: 0.8,         // ≤24 anos
+        fatorVeterano: 1.3,      // 29–32 anos
+        fatorIdoso: 1.8          // 33+ anos
+    },
+  
     selecao: {
         potencias: {
             espanha: 99,
@@ -312,19 +328,20 @@ const PRESETS_CONFIG = {
     padrao: {},
     arcade: {
         geral: { multiplicadorJogos: 1.2, multiplicadorGols: 1.6, multiplicadorAssistencias: 1.5, multiplicadorTitulos: 1.4, multiplicadorPremios: 1.5 },
-        titulos: { chanceLigaNacional: 0.40, chanceCopaContinental: 0.30, chanceBolaDeOuro: 0.40 }
+        titulos: { chanceLigaNacional: 0.40, chanceCopaContinental: 0.30, chanceBolaDeOuro: 0.40 }, lesoes: { multiplicador: 0.4 }
     },
     realista: {
         geral: { multiplicadorTitulos: 0.7, multiplicadorPremios: 0.75 },
-        titulos: { chanceLigaNacional: 0.18, chanceCopaContinental: 0.10, chanceBolaDeOuro: 0.15 }
+        titulos: { chanceLigaNacional: 0.18, chanceCopaContinental: 0.10, chanceBolaDeOuro: 0.15 }, lesoes: { multiplicador: 1.0 }
     },
     hardcore: {
         geral: { multiplicadorJogos: 0.9, multiplicadorGols: 0.7, multiplicadorAssistencias: 0.8, multiplicadorTitulos: 0.4, multiplicadorPremios: 0.5 },
-        titulos: { chanceLigaNacional: 0.10, chanceCopaNacional: 0.08, chanceCopaContinental: 0.05, chanceCopaDoMundo: 0.03, chanceBolaDeOuro: 0.08 }
+        titulos: { chanceLigaNacional: 0.10, chanceCopaNacional: 0.08, chanceCopaContinental: 0.05, chanceCopaDoMundo: 0.03, chanceBolaDeOuro: 0.08 },
+        lesoes: { multiplicador: 2.0, chanceCarreira: 0.00008}
     },
     lendario: {
         geral: { multiplicadorJogos: 1.3, multiplicadorGols: 2.0, multiplicadorAssistencias: 1.8, multiplicadorTitulos: 1.8, multiplicadorPremios: 2.0 },
-        titulos: { chanceLigaNacional: 0.55, chanceCopaContinental: 0.45, chanceCopaDoMundo: 0.30, chanceBolaDeOuro: 0.55 }
+        titulos: { chanceLigaNacional: 0.55, chanceCopaContinental: 0.45, chanceCopaDoMundo: 0.30, chanceBolaDeOuro: 0.55 }, lesoes: { multiplicador: 0.3 }
     }
 };
 
@@ -357,6 +374,18 @@ function carregarConfig() {
         config.geral.limiteRompimentosContrato = Number.isFinite(limiteRompimentos)
             ? Math.max(0, Math.min(10, Math.floor(limiteRompimentos)))
             : CONFIG_PADRAO.geral.limiteRompimentosContrato;
+
+        // Sanitize lesões
+        if (!config.lesoes || typeof config.lesoes !== "object") {
+            config.lesoes = clonarConfig(CONFIG_PADRAO.lesoes);
+        }
+        Object.keys(CONFIG_PADRAO.lesoes).forEach((chave) => {
+            const valor = Number(config.lesoes[chave]);
+            config.lesoes[chave] = Number.isFinite(valor) && valor >= 0
+                ? valor
+                : CONFIG_PADRAO.lesoes[chave];
+        });
+
         return config;
     } catch (erro) {
         console.error("Erro ao carregar configurações:", erro);
