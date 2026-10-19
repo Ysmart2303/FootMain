@@ -47,6 +47,22 @@ const SCHEMA_CONFIG = [
         ]
     },
     {
+        id: "lesoes",
+        titulo: "Lesões",
+        icone: "🩹",
+        descricao: "Chances são por jogo disputado. Use o multiplicador geral para escalar tudo de uma vez; os fatores por idade ajustam a frequência conforme o jogador envelhece.",
+        campos: [
+            { caminho: "lesoes.multiplicador",  label: "Multiplicador geral",                     tipo: "range", min: 0, max: 5,      passo: 0.1 },
+            { caminho: "lesoes.chanceLeve",     label: "Lesão leve (1–6 jogos)",                   tipo: "range", min: 0, max: 0.05,   passo: 0.001,   formato: "percentual" },
+            { caminho: "lesoes.chanceModerada", label: "Lesão moderada (8–20 jogos)",              tipo: "range", min: 0, max: 0.02,   passo: 0.0001,  formato: "percentual" },
+            { caminho: "lesoes.chanceGrave",    label: "Lesão grave (perde a temporada)",          tipo: "range", min: 0, max: 0.01,   passo: 0.0001,  formato: "percentual" },
+            { caminho: "lesoes.chanceCarreira", label: "Lesão gravíssima (encerra a carreira)",    tipo: "range", min: 0, max: 0.001,  passo: 0.00001, formato: "percentual" },
+            { caminho: "lesoes.fatorJovem",     label: "Fator por idade — jovem (≤24 anos)",       tipo: "range", min: 0, max: 3,      passo: 0.1 },
+            { caminho: "lesoes.fatorVeterano",  label: "Fator por idade — veterano (29–32 anos)",  tipo: "range", min: 0, max: 3,      passo: 0.1 },
+            { caminho: "lesoes.fatorIdoso",     label: "Fator por idade — veterano (33+ anos)",    tipo: "range", min: 0, max: 3,      passo: 0.1 }
+        ]
+    },
+    {
         id: "selecao",
         titulo: "Força das seleções",
         icone: "🌎",
@@ -73,6 +89,35 @@ const PRESETS_UI = [
 ];
 
 /* --- Helpers --- */
+function formatarValorCampo(valor, passo, formato = "") {
+    const num = Number(valor);
+    const passoNum = Number(passo) || 1;
+
+    if (!Number.isFinite(num)) return "0";
+
+    if (formato === "percentual") {
+        if (num === 0) return "0%";
+        const pct = num * 100;
+        const passoPct = passoNum * 100;
+        let decimais = 0;
+        if (passoPct < 0.01) decimais = 4;
+        else if (passoPct < 0.1) decimais = 3;
+        else if (passoPct < 1) decimais = 2;
+        else if (passoPct < 10) decimais = 1;
+        let texto = pct.toFixed(decimais);
+        if (decimais > 0) {
+            texto = texto.replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+        }
+        return texto + "%";
+    }
+
+    if (passoNum < 1) {
+        const decimais = (String(passoNum).split(".")[1] || "").length;
+        return num.toFixed(decimais);
+    }
+    return String(Math.round(num));
+}
+
 function obterPorCaminho(obj, caminho) {
     return caminho.split(".").reduce((atual, parte) => atual?.[parte], obj);
 }
@@ -97,6 +142,7 @@ function mostrarNotificacao(mensagem, tipo = "info") {
 /* --- Render --- */
 function renderPresets() {
     const container = document.getElementById("presets-config");
+    if (!container) return;
     container.innerHTML = `<p class="config-intro">Comece por um preset:</p>
         <div class="presets-lista">
             ${PRESETS_UI.map(p => `<button type="button" class="preset-btn" data-preset="${p.id}">
@@ -109,41 +155,34 @@ function renderPresets() {
         if (!btn) return;
         const presetId = btn.dataset.preset;
         if (aplicarPreset(presetId)) {
-            renderCampos(); // atualiza todos os inputs com os novos valores
+            renderCampos();
             atualizarJSON();
             mostrarNotificacao(`Preset "${btn.textContent.trim()}" aplicado.`, "ok");
         }
     });
 }
 
-function renderCampos() {
-    const config = carregarConfig();
-    const container = document.getElementById("grupos-config");
-
-    container.innerHTML = SCHEMA_CONFIG.map((grupo, indice) => `
-        <details class="config-grupo" data-grupo="${grupo.id}">
-            <summary class="config-grupo-resumo">
-                <span class="config-grupo-icone">${grupo.icone}</span>
-                <span class="config-grupo-titulo">${grupo.titulo}</span>
-                <span class="config-grupo-seta" aria-hidden="true">⌄</span>
-            </summary>
-            ${grupo.descricao ? `<p class="config-grupo-desc">${grupo.descricao}</p>` : ""}
-            <div class="config-campos">
-                ${grupo.campos.map(campo => renderCampo(campo, obterPorCaminho(config, campo.caminho))).join("")}
-            </div>
-        </details>
-    `).join("") + renderGrupoClubes(config);
-
-    // Atribuição direta evita acumular listeners quando preset/JSON redesenha os campos.
-    renderCamposClubes(config);
-    container.oninput = aoAlterarCampo;
-    container.onchange = (evento) => {
-        if (evento.target?.id === "filtro-liga-clubes") {
-            renderCamposClubes(carregarConfig());
-            return;
-        }
-        aoAlterarCampo(evento);
-    };
+function renderCampo(campo, valor) {
+    const idSeguro = campo.caminho.replace(/\./g, "-");
+    if (campo.tipo === "range") {
+        const valorFormatado = formatarValorCampo(valor, campo.passo, campo.formato);
+        return `
+            <div class="config-campo config-campo--range">
+                <div class="config-campo-topo">
+                    <label for="${idSeguro}">${campo.label}</label>
+                    <output id="out-${idSeguro}">${valorFormatado}</output>
+                </div>
+                <input type="range" id="${idSeguro}" data-caminho="${campo.caminho}"
+                       data-formato="${campo.formato || ""}"
+                       min="${campo.min}" max="${campo.max}" step="${campo.passo}" value="${valor}">
+            </div>`;
+    }
+    return `
+        <div class="config-campo">
+            <label for="${idSeguro}">${campo.label}</label>
+            <input type="number" id="${idSeguro}" data-caminho="${campo.caminho}"
+                   min="${campo.min ?? ""}" max="${campo.max ?? ""}" step="${campo.passo ?? 1}" value="${valor}">
+        </div>`;
 }
 
 function renderGrupoClubes(config) {
@@ -182,26 +221,36 @@ function renderCamposClubes(config = carregarConfig()) {
     }).join("");
 }
 
-function renderCampo(campo, valor) {
-    const idSeguro = campo.caminho.replace(/\./g, "-");
-    if (campo.tipo === "range") {
-        const valorFormatado = campo.passo < 1 ? Number(valor).toFixed(2) : String(Math.round(Number(valor)));
-        return `
-            <div class="config-campo config-campo--range">
-                <div class="config-campo-topo">
-                    <label for="${idSeguro}">${campo.label}</label>
-                    <output id="out-${idSeguro}">${valorFormatado}</output>
-                </div>
-                <input type="range" id="${idSeguro}" data-caminho="${campo.caminho}"
-                       min="${campo.min}" max="${campo.max}" step="${campo.passo}" value="${valor}">
-            </div>`;
-    }
-    return `
-        <div class="config-campo">
-            <label for="${idSeguro}">${campo.label}</label>
-            <input type="number" id="${idSeguro}" data-caminho="${campo.caminho}"
-                   min="${campo.min ?? ""}" max="${campo.max ?? ""}" step="${campo.passo ?? 1}" value="${valor}">
-        </div>`;
+// ✅ ESTA É A FUNÇÃO QUE ESTAVA FALTANDO
+function renderCampos() {
+    const config = carregarConfig();
+    const container = document.getElementById("grupos-config");
+    if (!container) return;
+
+    container.innerHTML = SCHEMA_CONFIG.map((grupo) => `
+        <details class="config-grupo" data-grupo="${grupo.id}">
+            <summary class="config-grupo-resumo">
+                <span class="config-grupo-icone">${grupo.icone}</span>
+                <span class="config-grupo-titulo">${grupo.titulo}</span>
+                <span class="config-grupo-seta" aria-hidden="true">⌄</span>
+            </summary>
+            ${grupo.descricao ? `<p class="config-grupo-desc">${grupo.descricao}</p>` : ""}
+            <div class="config-campos">
+                ${grupo.campos.map(campo => renderCampo(campo, obterPorCaminho(config, campo.caminho))).join("")}
+            </div>
+        </details>
+    `).join("") + renderGrupoClubes(config);
+
+    renderCamposClubes(config);
+
+    container.oninput = aoAlterarCampo;
+    container.onchange = (evento) => {
+        if (evento.target?.id === "filtro-liga-clubes") {
+            renderCamposClubes(carregarConfig());
+            return;
+        }
+        aoAlterarCampo(evento);
+    };
 }
 
 function aoAlterarCampo(evento) {
@@ -223,7 +272,10 @@ function aoAlterarCampo(evento) {
 
     if (input.type === "range") {
         const out = document.getElementById(`out-${input.id}`);
-        if (out) out.textContent = input.step && Number(input.step) < 1 ? valor.toFixed(2) : String(Math.round(valor));
+        if (out) {
+            const formato = input.dataset.formato || "";
+            out.textContent = formatarValorCampo(valor, input.step, formato);
+        }
     }
     atualizarJSON();
 }
