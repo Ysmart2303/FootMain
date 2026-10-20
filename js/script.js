@@ -41,6 +41,89 @@ function obterClube(clubeId) {
     return CLUBES.find((clube) => clube.id === clubeId) || null;
 }
 
+const MAPA_TROFEUS_POR_LIGA = {
+    "Premier League": {
+        liga: "Premier League",
+        copa: "Carabao Cup",
+        continental: "Champions League"
+    },
+    "La Liga": {
+        liga: "La Liga",
+        copa: "Copa del Rey",
+        continental: "Champions League"
+    },
+    "Serie A": {
+        liga: "Serie A",
+        copa: "Coppa Italia",
+        continental: "Champions League"
+    },
+    "Bundesliga": {
+        liga: "Bundesliga",
+        copa: "DFB-Pokal",
+        continental: "Champions League"
+    },
+    "Ligue 1": {
+        liga: "Ligue 1",
+        copa: "Coupe de France",
+        continental: "Champions League"
+    },
+    "Brasileirão": {
+        liga: "Série A Br",
+        copa: "Copa do Brasil",
+        continental: "Libertadores"
+    }
+};
+
+function obterNomesTrofeusClube(clubeId) {
+    const clube = obterClube(clubeId);
+    return MAPA_TROFEUS_POR_LIGA[clube?.liga] || {
+        liga: "Liga Nacional",
+        copa: "Copa Nacional",
+        continental: "Copa Continental"
+    };
+}
+
+function ehTituloContinental(trofeu) {
+    return trofeu === "Copa Continental"
+        || trofeu === "Champions League"
+        || trofeu === "Libertadores";
+}
+
+function normalizarNomeTrofeu(trofeu, clubeId) {
+    if (typeof trofeu !== "string") return trofeu;
+
+    const nomes = obterNomesTrofeusClube(clubeId);
+
+    if (trofeu === "Liga Nacional") return nomes.liga;
+    if (trofeu === "Copa Nacional") return nomes.copa;
+    if (trofeu === "Copa Continental") return nomes.continental;
+
+    return trofeu;
+}
+
+function mapearTrofeusTemporada(temporada, campo = "trofeusColetivos") {
+    const lista = Array.isArray(temporada?.[campo]) ? temporada[campo] : [];
+
+    if (campo !== "trofeusColetivos") {
+        return lista.slice();
+    }
+
+    return lista.map((trofeu) => normalizarNomeTrofeu(trofeu, temporada?.clube));
+}
+
+function obterTrofeusColetivosDaCarreira(carreira) {
+    const temporadas = obterTemporadasDaCarreira(carreira);
+
+    if (temporadas.length > 0) {
+        return temporadas.flatMap((temporada) =>
+            mapearTrofeusTemporada(temporada, "trofeusColetivos")
+        );
+    }
+
+    return (Array.isArray(carreira.trofeusColetivos) ? carreira.trofeusColetivos : [])
+        .map((trofeu) => normalizarNomeTrofeu(trofeu, carreira.clube));
+}
+
 function sortearClubes(quantidade, clubeExcluir = "", clubeAlvo = "") {
     const disponiveis = CLUBES.filter((clube) => clube.id !== clubeExcluir);
     for (let indice = 0; indice < quantidade; indice++) {
@@ -568,8 +651,10 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
     const multColetivos = cfg.geral.multiplicadorTitulos;
     const multIndividuais = cfg.geral.multiplicadorPremios;
     const forcaClube = Math.max(1, Math.min(100, Number(cfg.clubes?.potencias?.[clubeId]) || 70));
+
     // Força 75 mantém aproximadamente a chance-base; clubes mais fortes aumentam e mais fracos reduzem.
     const fatorClube = 0.4 + forcaClube / 125;
+    const nomesTrofeus = obterNomesTrofeusClube(clubeId);
 
     const trofeusColetivos = [];
     const trofeusIndividuais = [];
@@ -587,22 +672,26 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
 
     // -------- Títulos coletivos --------
     if (jogos >= 35 && sortearPremio(t.chanceCopaContinental * multColetivos * fatorClube)) {
-        trofeusColetivos.push("Copa Continental");
+        trofeusColetivos.push(nomesTrofeus.continental);
     }
+
     if (jogos >= 30 && sortearPremio(t.chanceLigaNacional * multColetivos * fatorClube)) {
-        trofeusColetivos.push("Liga Nacional");
+        trofeusColetivos.push(nomesTrofeus.liga);
     }
+
     if (jogos >= 25 && sortearPremio(t.chanceCopaNacional * multColetivos * fatorClube)) {
-        trofeusColetivos.push("Copa Nacional");
+        trofeusColetivos.push(nomesTrofeus.copa);
     }
+
     if (jogos >= 35 && cicloCopaDoMundo && sortearPremio(t.chanceCopaDoMundo * multColetivos)) {
         trofeusColetivos.push("Copa do Mundo");
     }
+
     if (jogos >= 25) {
         trofeusColetivos.push(...gerarTrofeusSelecao(nacionalidade, temporadaAtual, multColetivos));
     }
 
-    const ganhouContinentalNestaTemporada = trofeusColetivos.includes("Copa Continental");
+    const ganhouContinentalNestaTemporada = trofeusColetivos.includes(nomesTrofeus.continental);
 
     // Início do ciclo mundial atual (para checar se ganhou continental no mesmo ciclo).
     const inicioCicloMundial =
@@ -615,13 +704,14 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
                 Number(temporada.ano) >= inicioCicloMundial &&
                 Number(temporada.ano) <= temporadaAtual &&
                 Array.isArray(temporada.trofeusColetivos) &&
-                temporada.trofeusColetivos.includes("Copa Continental")
+                temporada.trofeusColetivos.some(ehTituloContinental)
         );
 
     if (jogos >= 35 && ganhouContinentalNestaTemporada &&
         sortearPremio(t.chanceIntercontinental * multColetivos * fatorClube)) {
         trofeusColetivos.push("Intercontinental");
     }
+
     if (jogos >= 35 && anoCopaDoMundoDeClubes && ganhouContinentalNoCiclo &&
         sortearPremio(t.chanceMundialClubes * multColetivos * fatorClube)) {
         trofeusColetivos.push("Copa do Mundo de Clubes");
@@ -711,15 +801,18 @@ function renderDetalhesCarreira(carreira) {
     const mediaGols = carreira.jogos > 0 ? (carreira.gols / carreira.jogos).toFixed(2).replace(".", ",") : "0,00";
     const melhorTemporada = temporadas.reduce((melhor, temporada) => !melhor || (Number(temporada.gols) || 0) > (Number(melhor.gols) || 0) ? temporada : melhor, null);
     const titulosMelhorTemporada = melhorTemporada
-        ? [
-            ...(Array.isArray(melhorTemporada.trofeusColetivos) ? melhorTemporada.trofeusColetivos : []),
-            ...(Array.isArray(melhorTemporada.trofeusIndividuais) ? melhorTemporada.trofeusIndividuais : [])
-        ]
-        : [];
+      ? [
+        ...mapearTrofeusTemporada(melhorTemporada, "trofeusColetivos"),
+        ...mapearTrofeusTemporada(melhorTemporada, "trofeusIndividuais")
+      ]
+      : [];
 
     const listaTemporadas = totalTemporadas
         ? temporadas.map((temporada) => {
-            const trofeus = [...(temporada.trofeusColetivos || []), ...(temporada.trofeusIndividuais || [])];
+            const trofeus = [
+                ...mapearTrofeusTemporada(temporada, "trofeusColetivos"),
+                ...mapearTrofeusTemporada(temporada, "trofeusIndividuais")
+            ];
             return `<div class="temporada-carreira-detalhe">
                 <strong>${escaparHTML(temporada.ano)} · ${escaparHTML(temporada.idade)} anos</strong>
                 <span>${escaparHTML(obterClube(temporada.clube)?.nome || "Clube não definido")}</span>
@@ -966,7 +1059,7 @@ function renderRanking() {
 
     listaRanking.innerHTML = ranking
         .map((carreira, index) => {
-            const trofeusColetivos = Array.isArray(carreira.trofeusColetivos) ? carreira.trofeusColetivos : [];
+            const trofeusColetivos = obterTrofeusColetivosDaCarreira(carreira);
             const trofeusIndividuais = Array.isArray(carreira.trofeusIndividuais) ? carreira.trofeusIndividuais : [];
             const premios = contarPremios(carreira);
             const trofeusHtml = [
@@ -1070,8 +1163,8 @@ function renderHistorico() {
 
     lista.innerHTML = temporadas
         .map((temporada) => {
-            const trofeusColetivos = Array.isArray(temporada.trofeusColetivos) ? temporada.trofeusColetivos : [];
-            const trofeusIndividuais = Array.isArray(temporada.trofeusIndividuais) ? temporada.trofeusIndividuais : [];
+            const trofeusColetivos = mapearTrofeusTemporada(temporada, "trofeusColetivos");
+            const trofeusIndividuais = mapearTrofeusTemporada(temporada, "trofeusIndividuais");
             const premios = contarPremios(temporada);
 
             const renderTrofeus = (trofeus) => {
@@ -1178,8 +1271,8 @@ function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao) {
 
     const trofeus = historico.reduce(
         (resultado, temporada) => {
-            resultado.coletivos.push(...(Array.isArray(temporada.trofeusColetivos) ? temporada.trofeusColetivos : []));
-            resultado.individuais.push(...(Array.isArray(temporada.trofeusIndividuais) ? temporada.trofeusIndividuais : []));
+            resultado.coletivos.push(...mapearTrofeusTemporada(temporada, "trofeusColetivos"));
+            resultado.individuais.push(...mapearTrofeusTemporada(temporada, "trofeusIndividuais"));
             return resultado;
         },
         { coletivos: [], individuais: [] }
@@ -2089,8 +2182,8 @@ function atualizarTitulosResultados(temporada) {
         return;
     }
 
-    const coletivos = Array.isArray(temporada.trofeusColetivos) ? temporada.trofeusColetivos : [];
-    const individuais = Array.isArray(temporada.trofeusIndividuais) ? temporada.trofeusIndividuais : [];
+    const coletivos = mapearTrofeusTemporada(temporada, "trofeusColetivos");
+    const individuais = mapearTrofeusTemporada(temporada, "trofeusIndividuais");
     anoElemento.textContent = `Títulos da temporada ${temporada.ano}`;
     coletivosElemento.textContent = coletivos.length ? coletivos.join(", ") : "Nenhum";
     individuaisElemento.textContent = individuais.length ? individuais.join(", ") : "Nenhum";
