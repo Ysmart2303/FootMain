@@ -637,7 +637,8 @@ function gerarTrofeusSelecao(nacionalidade, ano, multiplicadorTitulos) {
                 europa: "Eurocopa",
                 americaNorte: "Copa Ouro",
                 africa: "Copa das Nações Africanas",
-                asia: "Copa da Ásia"
+                asia: "Copa da Ásia",
+                oceania: "Copa das Nações da OFC"
             }[selecao.regiao],
             participantes: SELECOES.filter((item) => item.regiao === selecao.regiao)
         }
