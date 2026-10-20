@@ -2987,3 +2987,35 @@ html[data-theme="light"] #lista-temporadas .temporada-card .titulo-tag--individu
         gap: 12px;
     }
 }
+
+/* Botão de apagar carreira no ranking */
+#lista-ranking .remover-ranking {
+    margin-top: 8px;
+    width: 100%;
+    background: linear-gradient(135deg, #ef4444, #b91c1c);
+    color: #fff;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-weight: 800;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+}
+
+#lista-ranking .remover-ranking:hover {
+    background: linear-gradient(135deg, #dc2626, #991b1b);
+    opacity: 0.95;
+    transform: translateY(-1px);
+}
+
+/* Ajuste para o tema claro */
+html[data-theme="light"] #lista-ranking .remover-ranking {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff !important; /* Força o texto a ficar branco, ignorando a regra global do tema claro */
+    border-color: #b91c1c;
+}
+
+html[data-theme="light"] #lista-ranking .remover-ranking:hover {
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+}
