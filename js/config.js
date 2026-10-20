@@ -4,7 +4,7 @@
  */
 
 const STORAGE_KEY_CONFIG = "footmain_config_v1";
-const VERSAO_APP = "1.11.0";
+const VERSAO_APP = "1.11.1";
 
 /* ---------- Definições base (as "de fábrica") ---------- */
 const POSICOES_PADRAO = {
@@ -98,7 +98,20 @@ const SELECOES = [
     { id: "senegal", nome: "Senegal", regiao: "africa" },
     { id: "ira", nome: "Irã", regiao: "asia" },
     { id: "mexico", nome: "México", regiao: "americaNorte" },
-    { id: "estadosUnidos", nome: "Estados Unidos", regiao: "americaNorte" }
+    { id: "estadosUnidos", nome: "Estados Unidos", regiao: "americaNorte" },
+    // Seleções adicionais: cobertura das seis confederações/continentes do jogo
+    { id: "noruega", nome: "Noruega", regiao: "europa" },
+    { id: "dinamarca", nome: "Dinamarca", regiao: "europa" },
+    { id: "austria", nome: "Áustria", regiao: "europa" },
+    { id: "equador", nome: "Equador", regiao: "americaSul" },
+    { id: "chile", nome: "Chile", regiao: "americaSul" },
+    { id: "canada", nome: "Canadá", regiao: "americaNorte" },
+    { id: "coreiaDoSul", nome: "Coreia do Sul", regiao: "asia" },
+    { id: "arabiaSaudita", nome: "Arábia Saudita", regiao: "asia" },
+    { id: "egito", nome: "Egito", regiao: "africa" },
+    { id: "africaDoSul", nome: "África do Sul", regiao: "africa" },
+    { id: "australia", nome: "Austrália", regiao: "oceania" },
+    { id: "novaZelandia", nome: "Nova Zelândia", regiao: "oceania" }
 ];
 
 
@@ -790,26 +803,40 @@ const CONFIG_PADRAO = {
   
     selecao: {
         potencias: {
-            espanha: 99,
-            argentina: 98,
-            franca: 97,
-            inglaterra: 96,
-            portugal: 94,
-            brasil: 93,
-            holanda: 91,
-            belgica: 89,
+            // Escala de força baseada na classificação FIFA masculina de 7/10/2026.
+            // A posição no ranking é convertida em uma escala de jogo de 1 a 100.
+            espanha: 100,
+            argentina: 99,
+            franca: 98,
+            inglaterra: 97,
+            portugal: 96,
+            brasil: 95,
+            marrocos: 94,
+            belgica: 93,
+            holanda: 92,
+            mexico: 91,
+            colombia: 90,
+            suica: 89,
             alemanha: 88,
             croacia: 87,
-            marrocos: 86,
-            italia: 85,
-            colombia: 84,
-            uruguai: 83,
-            suica: 82,
-            japao: 81,
-            senegal: 80,
-            ira: 79,
-            mexico: 78,
-            estadosUnidos: 77
+            italia: 86,
+            estadosUnidos: 85,
+            japao: 84,
+            senegal: 83,
+            noruega: 82,
+            uruguai: 81,
+            dinamarca: 80,
+            austria: 79,
+            equador: 76,
+            ira: 75,
+            australia: 74,
+            coreiaDoSul: 72,
+            canada: 66,
+            egito: 61,
+            chile: 58,
+            africaDoSul: 53,
+            arabiaSaudita: 48,
+            novaZelandia: 18
         }
     },
     clubes: {
