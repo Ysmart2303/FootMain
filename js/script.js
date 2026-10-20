@@ -1062,7 +1062,12 @@ function renderRanking() {
                 ? detalhe === posicaoSelecionada
                 : categoria === posicaoSelecionada;
         })
-        .sort((a, b) => (Number(b[criterio]) || 0) - (Number(a[criterio]) || 0))
+        .sort((a, b) => {
+            const maiorOver = (carreira) => Math.max(0, ...(carreira.temporadas || []).map((temporada) => Number(temporada.overall) || 0));
+            const valorA = criterio === "over" ? maiorOver(a) : (Number(a[criterio]) || 0);
+            const valorB = criterio === "over" ? maiorOver(b) : (Number(b[criterio]) || 0);
+            return valorB - valorA;
+        })
         .slice(0, 5);
 
     if (ranking.length === 0) {
@@ -1092,7 +1097,7 @@ function renderRanking() {
                     <span class="rank-medal">${medalha}</span>
                     <strong>#${index + 1} - ${escaparHTML(carreira.nome)}</strong>
                     <p>Posição: ${escaparHTML(carreira.posicao)} | Seleção: ${escaparHTML(SELECOES.find((selecao) => selecao.id === carreira.nacionalidade)?.nome || "Não definida")} | Último clube: ${escaparHTML(obterClube(carreira.clube)?.nome || "Não definido")} | Pontuação: ${carreira.pontuacao}</p>
-                    <p>Jogos: ${carreira.jogos} | Gols: ${carreira.gols} | Assistências: ${carreira.assistencias} | Prêmios: ${premios}</p>
+                    <p>Jogos: ${carreira.jogos} | Gols: ${carreira.gols} | Assistências: ${carreira.assistencias} | Prêmios: ${premios} | Maior Over: ${Math.max(0, ...(carreira.temporadas || []).map((temporada) => Number(temporada.overall) || 0))}</p>
                     <p>Títulos coletivos: ${trofeusColetivos.length} | Títulos individuais: ${trofeusIndividuais.length}</p>
                     <div class="ranking-trofeus">${conteudoTrofeus}</div>
                     <small>Idade limite: ${carreira.idadeLimite} anos</small>
@@ -1199,7 +1204,7 @@ function renderHistorico() {
                     <strong>Temporada ${temporada.ano}</strong>
                     <span> - ${temporada.posicao}</span>
                     <span> - ${escaparHTML(obterClube(temporada.clube)?.nome || "Clube não definido")}</span>
-                    <p>Jogador: ${temporada.nome} | Idade: ${temporada.idade} anos</p>
+                    <p>Jogador: ${temporada.nome} | Idade: ${temporada.idade} anos | Over: ${temporada.overall}</p>
                     <p>Jogos: ${temporada.jogos} | Gols: ${temporada.gols} | Assistências: ${temporada.assistencias} | Prêmios: ${premios}</p>
                     <p class="titulo-categoria">Títulos coletivos:</p>
                     <div class="titulo-tags">${renderTrofeus(trofeusColetivos)}</div>
