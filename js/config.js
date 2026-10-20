@@ -4,7 +4,7 @@
  */
 
 const STORAGE_KEY_CONFIG = "footmain_config_v1";
-const VERSAO_APP = "1.11.1";
+const VERSAO_APP = "1.11.2";
 
 /* ---------- Definições base (as "de fábrica") ---------- */
 const POSICOES_PADRAO = {
@@ -111,7 +111,55 @@ const SELECOES = [
     { id: "egito", nome: "Egito", regiao: "africa" },
     { id: "africaDoSul", nome: "África do Sul", regiao: "africa" },
     { id: "australia", nome: "Austrália", regiao: "oceania" },
-    { id: "novaZelandia", nome: "Nova Zelândia", regiao: "oceania" }
+    { id: "novaZelandia", nome: "Nova Zelândia", regiao: "oceania" },
+        // ─── ÁFRICA (cobertura ampliada) ───
+    { id: "nigeria", nome: "Nigéria", regiao: "africa" },
+    { id: "argelia", nome: "Argélia", regiao: "africa" },
+    { id: "costaDoMarfim", nome: "Costa do Marfim", regiao: "africa" },
+    { id: "tunisia", nome: "Tunísia", regiao: "africa" },
+    { id: "camaroes", nome: "Camarões", regiao: "africa" },
+    { id: "gana", nome: "Gana", regiao: "africa" },
+    { id: "mali", nome: "Mali", regiao: "africa" },
+    { id: "burkinaFaso", nome: "Burkina Faso", regiao: "africa" },
+    { id: "rdCongo", nome: "RD Congo", regiao: "africa" },
+    { id: "caboVerde", nome: "Cabo Verde", regiao: "africa" },
+    { id: "guine", nome: "Guiné", regiao: "africa" },
+    { id: "zambia", nome: "Zâmbia", regiao: "africa" },
+    
+    // ─── ÁSIA (cobertura ampliada) ───
+    { id: "catar", nome: "Catar", regiao: "asia" },
+    { id: "uzbequistao", nome: "Uzbequistão", regiao: "asia" },
+    { id: "emiradosArabes", nome: "Emirados Árabes Unidos", regiao: "asia" },
+    { id: "iraque", nome: "Iraque", regiao: "asia" },
+    { id: "jordania", nome: "Jordânia", regiao: "asia" },
+    { id: "china", nome: "China", regiao: "asia" },
+    { id: "coreiaDoNorte", nome: "Coreia do Norte", regiao: "asia" },
+    { id: "oma", nome: "Omã", regiao: "asia" },
+    { id: "tailandia", nome: "Tailândia", regiao: "asia" },
+    { id: "siria", nome: "Síria", regiao: "asia" },
+    
+    // ─── OCEANIA (cobertura ampliada) ───
+    { id: "fiji", nome: "Fiji", regiao: "oceania" },
+    { id: "novaCaledonia", nome: "Nova Caledônia", regiao: "oceania" },
+    { id: "ilhasSalomao", nome: "Ilhas Salomão", regiao: "oceania" },
+    { id: "tait", nome: "Taiti", regiao: "oceania" },
+    { id: "papuaNovaGuine", nome: "Papua-Nova Guiné", regiao: "oceania" },
+    
+    // ─── AMÉRICA DO NORTE / CENTRAL (cobertura ampliada) ───
+    { id: "costaRica", nome: "Costa Rica", regiao: "americaNorte" },
+    { id: "panama", nome: "Panamá", regiao: "americaNorte" },
+    { id: "jamaica", nome: "Jamaica", regiao: "americaNorte" },
+    { id: "honduras", nome: "Honduras", regiao: "americaNorte" },
+    { id: "elSalvador", nome: "El Salvador", regiao: "americaNorte" },
+    { id: "haiti", nome: "Haiti", regiao: "americaNorte" },
+    { id: "guatemala", nome: "Guatemala", regiao: "americaNorte" },
+    { id: "trinidadTobago", nome: "Trinidad e Tobago", regiao: "americaNorte" },
+    
+    // ─── AMÉRICA DO SUL (CONMEBOL completa) ───
+    { id: "paraguai", nome: "Paraguai", regiao: "americaSul" },
+    { id: "venezuela", nome: "Venezuela", regiao: "americaSul" },
+    { id: "peru", nome: "Peru", regiao: "americaSul" },
+    { id: "bolivia", nome: "Bolívia", regiao: "americaSul" },
 ];
 
 
@@ -836,7 +884,55 @@ const CONFIG_PADRAO = {
             chile: 58,
             africaDoSul: 53,
             arabiaSaudita: 48,
-            novaZelandia: 18
+            novaZelandia: 18,
+            // ─── AFRICA ───
+            nigeria: 64,
+            argelia: 60,
+            costaDoMarfim: 60,
+            tunisia: 57,
+            camaroes: 56,
+            gana: 53,
+            mali: 51,
+            burkinaFaso: 49,
+            rdCongo: 46,
+            caboVerde: 44,
+            guine: 43,
+            zambia: 38,
+            
+            // ─── ASIA ───
+            catar: 53,
+            uzbequistao: 50,
+            emiradosArabes: 48,
+            iraque: 46,
+            jordania: 45,
+            china: 41,
+            coreiaDoNorte: 40,
+            oma: 38,
+            tailandia: 37,
+            siria: 35,
+            
+            // ─── OCEANIA ───
+            fiji: 21,
+            novaCaledonia: 20,
+            ilhasSalomao: 19,
+            tait: 19,
+            papuaNovaGuine: 18,
+            
+            // ─── AMÉRICA DO NORTE / CENTRAL ───
+            costaRica: 59,
+            panama: 56,
+            jamaica: 48,
+            honduras: 43,
+            elSalvador: 41,
+            haiti: 40,
+            guatemala: 39,
+            trinidadTobago: 37,
+            
+            // ─── AMÉRICA DO SUL ───
+            paraguai: 56,
+            venezuela: 49,
+            peru: 47,
+            bolivia: 41
         }
     },
     clubes: {
