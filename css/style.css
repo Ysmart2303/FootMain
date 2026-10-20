@@ -616,43 +616,9 @@ button:hover {
     font: inherit;
 }
 
-#lista-temporadas li,
-#lista-ranking li {
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    border-radius: 12px;
-    padding: 14px 16px;
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8));
-    color: #e2e8f0;
-}
-
 #lista-temporadas p {
     margin-top: 6px;
     line-height: 1.4;
-}
-
-#lista-temporadas .titulo-categoria {
-    margin-top: 8px;
-    color: #cbd5e1;
-    font-size: 0.94rem;
-}
-
-#lista-temporadas .titulo-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 6px;
-}
-
-#lista-temporadas .titulo-tag {
-    display: inline-flex;
-    align-items: center;
-    padding: 4px 8px;
-    border-radius: 999px;
-    background: rgba(96, 165, 250, 0.14);
-    border: 1px solid rgba(96, 165, 250, 0.25);
-    color: #e0f2fe;
-    font-size: 0.76rem;
-    font-weight: 700;
 }
 
 .eventos-tags {
@@ -740,26 +706,6 @@ html[data-theme="light"] .evento-tag.lesao-carreira { color: #7f1d1d !important;
     border-color: rgba(251, 146, 60, 0.6);
 }
 
-#lista-ranking strong {
-    color: #facc15;
-}
-
-#lista-ranking .rank-medal {
-    position: absolute;
-    top: 10px;
-    right: 12px;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8rem;
-    font-weight: 800;
-    color: #0f172a;
-    background: #f8fafc;
-}
-
 #lista-ranking li.top-1 .rank-medal {
     background: linear-gradient(135deg, #facc15, #f59e0b);
 }
@@ -770,13 +716,6 @@ html[data-theme="light"] .evento-tag.lesao-carreira { color: #7f1d1d !important;
 
 #lista-ranking li.top-3 .rank-medal {
     background: linear-gradient(135deg, #fdba74, #f97316);
-}
-
-#lista-ranking .ranking-trofeus {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 8px;
 }
 
 #lista-ranking .ranking-trofeu {
@@ -801,17 +740,7 @@ html[data-theme="light"] .evento-tag.lesao-carreira { color: #7f1d1d !important;
     color: #fef3c7;
 }
 
-#lista-ranking .remover-ranking {
-    margin-top: 12px;
-    width: 100%;
-    background: linear-gradient(135deg, #ef4444, #b91c1c);
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    padding: 8px 12px;
-    font-weight: 700;
-    cursor: pointer;
-}
+
 
 #limparHistorico,
 #limparRanking {
@@ -855,11 +784,6 @@ button {
 #historico,
 #ranking {
     min-width: 0;
-}
-
-#lista-temporadas li,
-#lista-ranking li {
-    overflow-wrap: anywhere;
 }
 
 @media (max-width: 600px) {
@@ -1026,11 +950,6 @@ button {
         padding-left: 0;
     }
 
-    #lista-temporadas li,
-    #lista-ranking li {
-        padding: 12px;
-    }
-
     footer {
         font-size: 0.9rem;
         padding: 16px 10px 24px;
@@ -1069,110 +988,355 @@ button {
     }
 }
 
-/* Detalhes da trajetória dentro de cada item do ranking */
-#lista-ranking .detalhes-carreira {
-    margin-top: 14px;
-    border-top: 1px solid rgba(148, 163, 184, 0.25);
-    padding-top: 12px;
+/* ==================================================
+   TRAJETÓRIA DA CARREIRA (dentro do card do ranking)
+   ================================================== */
+
+.detalhes-carreira {
+    margin-top: 2px;
 }
 
-#lista-ranking .detalhes-carreira summary {
-    color: #86efac;
-    font-weight: 700;
-    cursor: pointer;
-    padding: 5px 0;
-}
-
-#lista-ranking .resumo-estatisticas-carreira {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+.detalhes-carreira-summary {
+    display: flex;
+    align-items: center;
     gap: 10px;
-    margin: 12px 0 16px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.14), rgba(16, 185, 129, 0.14));
+    border: 1px solid rgba(96, 165, 250, 0.35);
+    color: #bfdbfe;
+    font-weight: 800;
+    font-size: 0.92rem;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    transition: background 0.2s ease, transform 0.15s ease, border-color 0.15s ease;
 }
 
-#lista-ranking .resumo-estatisticas-carreira div {
+.detalhes-carreira-summary::-webkit-details-marker { display: none; }
+.detalhes-carreira-summary::marker { display: none; content: ""; }
+
+.detalhes-carreira-summary:hover {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.24), rgba(16, 185, 129, 0.24));
+    border-color: rgba(96, 165, 250, 0.55);
+    transform: translateY(-1px);
+}
+
+.detalhes-carreira-summary:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 3px;
+}
+
+.detalhes-carreira-icone { font-size: 1.05rem; }
+
+.detalhes-carreira-badge {
+    margin-left: auto;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: rgba(96, 165, 250, 0.2);
+    border: 1px solid rgba(96, 165, 250, 0.4);
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: #dbeafe;
+    white-space: nowrap;
+}
+
+.detalhes-carreira-seta {
+    font-size: 0.85rem;
+    line-height: 1;
+    transition: transform 0.2s ease;
+}
+
+.detalhes-carreira[open] .detalhes-carreira-seta {
+    transform: rotate(180deg);
+}
+
+.detalhes-carreira[open] .detalhes-carreira-summary {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom-color: transparent;
+}
+
+.detalhes-carreira-conteudo {
     display: flex;
     flex-direction: column;
-    gap: 5px;
-    min-width: 0;
-    padding: 10px;
-    border-radius: 9px;
-    background: rgba(34, 197, 94, 0.08);
-    border: 1px solid rgba(34, 197, 94, 0.18);
+    gap: 16px;
+    padding: 16px;
+    border-radius: 0 0 14px 14px;
+    background: rgba(2, 8, 23, 0.45);
+    border: 1px solid rgba(96, 165, 250, 0.35);
+    border-top: none;
+    animation: trajetoriaFadeIn 0.2s ease;
 }
 
-#lista-ranking .resumo-estatisticas-carreira span,
-#lista-ranking .temporada-carreira-detalhe small {
-    color: #cbd5e1;
-    font-size: 0.82rem;
+@keyframes trajetoriaFadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
-#lista-ranking .resumo-estatisticas-carreira strong {
-    color: #f8fafc;
-    overflow-wrap: anywhere;
-}
-
-#lista-ranking .detalhes-carreira h4 {
-    margin: 12px 0 8px;
-    color: #f8fafc;
-}
-
-#lista-ranking .lista-detalhes-temporadas {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-#lista-ranking .temporada-carreira-detalhe {
+/* ---------- Resumo em cards ---------- */
+.trajetoria-resumo {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 5px 10px;
-    padding: 10px;
-    border-radius: 8px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.trajetoria-resumo-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 14px;
+    border-radius: 12px;
     background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    min-width: 0;
 }
 
-#lista-ranking .temporada-carreira-detalhe strong,
-#lista-ranking .temporada-carreira-detalhe small {
-    grid-column: 1 / -1;
+.trajetoria-resumo-card--destaque {
+    background: linear-gradient(135deg, rgba(250, 204, 21, 0.1), rgba(34, 197, 94, 0.08));
+    border-color: rgba(250, 204, 21, 0.4);
 }
 
-#lista-ranking .temporada-carreira-detalhe strong {
-    color: #86efac;
+.trajetoria-resumo-label {
+    font-size: 0.66rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #94a3b8;
+    line-height: 1.2;
 }
 
-#lista-ranking .temporada-carreira-detalhe small {
+.trajetoria-resumo-valor {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #f8fafc;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
 }
 
-#lista-ranking .detalhes-sem-historico {
+.trajetoria-resumo-card--destaque .trajetoria-resumo-valor { color: #facc15; }
+
+.trajetoria-resumo-extra {
+    font-size: 0.72rem;
     color: #cbd5e1;
-    font-size: 0.9rem;
+    margin-top: 2px;
+    overflow-wrap: anywhere;
 }
 
-@media (max-width: 420px) {
-    #lista-ranking .resumo-estatisticas-carreira {
-        grid-template-columns: 1fr;
-    }
+/* ---------- Lista de temporadas ---------- */
+.trajetoria-titulo-lista {
+    font-size: 0.85rem;
+    color: #dbeafe;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 800;
+    margin: 4px 0 -4px;
 }
 
-/* Caixa rolável para consultar as temporadas sem alongar demais o ranking. */
-#lista-ranking .lista-detalhes-temporadas {
+.trajetoria-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     max-height: 420px;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 2px 8px 2px 0;
+    padding-right: 8px;
     scrollbar-width: thin;
 }
 
-#lista-ranking .melhor-temporada-detalhe small {
-    color: #cbd5e1;
-    font-size: 0.82rem;
-    font-weight: 400;
-    line-height: 1.45;
-    overflow-wrap: anywhere;
+.trajetoria-lista::-webkit-scrollbar { width: 8px; }
+.trajetoria-lista::-webkit-scrollbar-track {
+    background: rgba(148, 163, 184, 0.08);
+    border-radius: 999px;
+}
+.trajetoria-lista::-webkit-scrollbar-thumb {
+    background: rgba(96, 165, 250, 0.4);
+    border-radius: 999px;
+}
+.trajetoria-lista::-webkit-scrollbar-thumb:hover {
+    background: rgba(96, 165, 250, 0.65);
 }
 
+.trajetoria-temporada {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    transition: border-color 0.15s ease, transform 0.15s ease, background 0.15s ease;
+}
+
+.trajetoria-temporada:hover {
+    border-color: rgba(96, 165, 250, 0.4);
+    background: rgba(15, 23, 42, 0.85);
+    transform: translateX(2px);
+}
+
+.trajetoria-temporada-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.trajetoria-ano {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 8px;
+    background: rgba(96, 165, 250, 0.15);
+    border: 1px solid rgba(96, 165, 250, 0.35);
+    color: #bfdbfe;
+    font-weight: 800;
+    font-size: 0.82rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.trajetoria-idade {
+    color: #94a3b8;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.trajetoria-clube {
+    color: #e2e8f0;
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-left: auto;
+    overflow-wrap: anywhere;
+    text-align: right;
+}
+
+.trajetoria-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    font-size: 0.82rem;
+    color: #cbd5e1;
+}
+
+.trajetoria-stats strong {
+    color: #f8fafc;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.trajetoria-trofeus {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.trajetoria-trofeu {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: rgba(250, 204, 21, 0.12);
+    border: 1px solid rgba(250, 204, 21, 0.35);
+    color: #fef3c7;
+}
+
+.trajetoria-trofeu--vazio {
+    background: rgba(148, 163, 184, 0.08);
+    border-color: rgba(148, 163, 184, 0.2);
+    color: #94a3b8;
+    font-weight: 500;
+    font-style: italic;
+}
+
+.trajetoria-eventos .eventos-tags { margin-top: 0; }
+
+.trajetoria-vazio {
+    padding: 14px;
+    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.5);
+    color: #94a3b8;
+    font-size: 0.88rem;
+    text-align: center;
+}
+
+/* ---------- Responsivo ---------- */
+@media (max-width: 600px) {
+    .trajetoria-resumo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    .trajetoria-clube {
+        margin-left: 0;
+        text-align: left;
+        width: 100%;
+    }
+
+    .detalhes-carreira-conteudo { padding: 12px; }
+}
+
+/* ---------- Tema claro ---------- */
+html[data-theme="light"] .detalhes-carreira-summary {
+    background: linear-gradient(135deg, #dbeafe, #dcfce7);
+    border-color: #93c5fd;
+    color: #1e40af !important;
+}
+
+html[data-theme="light"] .detalhes-carreira-summary:hover {
+    background: linear-gradient(135deg, #bfdbfe, #bbf7d0);
+    border-color: #60a5fa;
+}
+
+html[data-theme="light"] .detalhes-carreira-badge {
+    background: #bfdbfe;
+    border-color: #93c5fd;
+    color: #1e40af;
+}
+
+html[data-theme="light"] .detalhes-carreira-conteudo {
+    background: #eff6ff;
+    border-color: #93c5fd;
+}
+
+html[data-theme="light"] .trajetoria-resumo-card,
+html[data-theme="light"] .trajetoria-temporada {
+    background: #f8fbff;
+    border-color: #bfdbfe;
+}
+
+html[data-theme="light"] .trajetoria-resumo-card--destaque {
+    background: linear-gradient(135deg, #fef9c3, #dcfce7);
+    border-color: #facc15;
+}
+
+html[data-theme="light"] .trajetoria-resumo-label { color: #475569; }
+html[data-theme="light"] .trajetoria-resumo-valor { color: #172554; }
+html[data-theme="light"] .trajetoria-resumo-card--destaque .trajetoria-resumo-valor { color: #b45309; }
+html[data-theme="light"] .trajetoria-resumo-extra { color: #475569; }
+
+html[data-theme="light"] .trajetoria-titulo-lista { color: #1e40af; }
+html[data-theme="light"] .trajetoria-ano {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+}
+html[data-theme="light"] .trajetoria-idade { color: #475569; }
+html[data-theme="light"] .trajetoria-clube { color: #172554; }
+html[data-theme="light"] .trajetoria-stats { color: #475569; }
+html[data-theme="light"] .trajetoria-stats strong { color: #172554; }
+html[data-theme="light"] .trajetoria-trofeu {
+    background: #fef9c3;
+    border-color: #facc15;
+    color: #713f12;
+}
+html[data-theme="light"] .trajetoria-trofeu--vazio {
+    background: #e0ecff;
+    border-color: #bfdbfe;
+    color: #64748b;
+}
+html[data-theme="light"] .trajetoria-vazio {
+    background: #e0ecff;
+    color: #475569;
+}
 
 /* Conquistas e recordes */
 #conquistas {
@@ -1936,8 +2100,6 @@ html[data-theme="light"] #lista-ranking strong {
     color: #1e40af !important;
 }
 
-html[data-theme="light"] #lista-temporadas li,
-html[data-theme="light"] #lista-ranking li,
 html[data-theme="light"] #lista-ranking .resumo-estatisticas-carreira div,
 html[data-theme="light"] #lista-ranking .temporada-carreira-detalhe,
 html[data-theme="light"] .conquistas-resumo > div,
@@ -2309,4 +2471,519 @@ html[data-theme="light"] .versao-app {
 html[data-theme="light"] .secao-colapsavel .seta { color: #1d4ed8; }
 html[data-theme="light"] .secao-colapsavel > summary:focus-visible {
     outline-color: #1d4ed8;
+}
+
+/* ==================================================
+   HISTÓRICO + RANKING — CARDS REDESENHADOS
+   ================================================== */
+
+#lista-temporadas,
+#lista-ranking {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 0;
+    margin: 0;
+}
+
+.temporada-card,
+.ranking-card {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 18px 20px 16px 24px;
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(20, 30, 50, 0.9));
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    box-shadow: 0 6px 20px rgba(2, 8, 23, 0.35);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.temporada-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: linear-gradient(180deg, #22c55e, #3b82f6);
+}
+
+.ranking-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: linear-gradient(180deg, #64748b, #334155);
+}
+
+.ranking-card.top-1::before { background: linear-gradient(180deg, #facc15, #f59e0b); }
+.ranking-card.top-2::before { background: linear-gradient(180deg, #e2e8f0, #94a3b8); }
+.ranking-card.top-3::before { background: linear-gradient(180deg, #fdba74, #f97316); }
+
+.temporada-card:hover,
+.ranking-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(96, 165, 250, 0.45);
+    box-shadow: 0 12px 28px rgba(2, 8, 23, 0.5);
+}
+
+.ranking-card.top-1 { border-color: rgba(250, 204, 21, 0.5); }
+.ranking-card.top-2 { border-color: rgba(203, 213, 225, 0.4); }
+.ranking-card.top-3 { border-color: rgba(251, 146, 60, 0.4); }
+
+/* ---------- HEADER ---------- */
+.temporada-header,
+.ranking-header {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.temporada-ano {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: rgba(96, 165, 250, 0.12);
+    border: 1px solid rgba(96, 165, 250, 0.32);
+    min-width: 72px;
+}
+
+.temporada-ano-label {
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #93c5fd;
+    font-weight: 800;
+}
+
+.temporada-ano strong {
+    font-size: 1.45rem;
+    color: #f8fafc;
+    line-height: 1;
+    margin-top: 3px;
+    font-variant-numeric: tabular-nums;
+}
+
+.temporada-identidade,
+.ranking-titulo-bloco {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.temporada-nome,
+.ranking-nome {
+    font-weight: 800;
+    color: #f8fafc;
+    font-size: 1.05rem;
+    overflow-wrap: anywhere;
+}
+
+.temporada-idade {
+    color: #94a3b8;
+    font-size: 0.85rem;
+}
+
+.temporada-badges,
+.ranking-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* ---------- BADGES ---------- */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    background: rgba(148, 163, 184, 0.15);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    color: #e2e8f0;
+    white-space: nowrap;
+}
+.badge--pos     { background: rgba(168, 85, 247, 0.15); border-color: rgba(168, 85, 247, 0.4); color: #e9d5ff; }
+.badge--clube   { background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.4); color: #bfdbfe; }
+.badge--over    { background: rgba(34, 197, 94, 0.15);  border-color: rgba(34, 197, 94, 0.4);  color: #bbf7d0; }
+.badge--selecao { background: rgba(251, 191, 36, 0.15); border-color: rgba(251, 191, 36, 0.4); color: #fef3c7; }
+
+/* ---------- STATS ---------- */
+.temporada-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.ranking-stats {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.stat-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 8px;
+    border-radius: 12px;
+    background: rgba(2, 8, 23, 0.5);
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+.stat-card:hover { background: rgba(2, 8, 23, 0.72); transform: translateY(-1px); }
+
+.stat-label {
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #f8fafc;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+.stat-value--gol    { color: #4ade80; }
+.stat-value--assist { color: #60a5fa; }
+.stat-value--premio { color: #facc15; }
+
+/* ---------- TÍTULOS / EVENTOS ---------- */
+.temporada-titulos {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.titulos-grupo,
+.temporada-eventos {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.titulos-grupo-label {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #cbd5e1;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.titulo-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.titulo-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    background: rgba(96, 165, 250, 0.12);
+    border: 1px solid rgba(96, 165, 250, 0.32);
+    color: #dbeafe;
+}
+.titulo-tag--coletivo    { background: rgba(34, 197, 94, 0.12);  border-color: rgba(34, 197, 94, 0.4);  color: #bbf7d0; }
+.titulo-tag--individual  { background: rgba(250, 204, 21, 0.12); border-color: rgba(250, 204, 21, 0.4); color: #fef3c7; }
+.titulo-tag--vazio       { background: rgba(148, 163, 184, 0.08); border-color: rgba(148, 163, 184, 0.2); color: #94a3b8; font-weight: 500; font-style: italic; }
+
+/* ---------- FOOTER DO CARD ---------- */
+.temporada-footer {
+    padding-top: 10px;
+    border-top: 1px solid rgba(148, 163, 184, 0.1);
+    text-align: right;
+}
+.temporada-footer small { color: #64748b; font-size: 0.75rem; }
+
+/* ---------- RANKING: medalha e pontuação ---------- */
+.rank-medal {
+    position: static !important;
+    top: auto !important;
+    right: auto !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    font-size: 1.4rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #475569, #334155);
+    color: #f8fafc;
+    border: 2px solid rgba(148, 163, 184, 0.35);
+    flex-shrink: 0;
+}
+
+.ranking-card.top-1 .rank-medal {
+    background: linear-gradient(135deg, #facc15, #f59e0b);
+    color: #0f172a;
+    border-color: #fde68a;
+    box-shadow: 0 0 22px rgba(250, 204, 21, 0.45);
+}
+.ranking-card.top-2 .rank-medal {
+    background: linear-gradient(135deg, #e2e8f0, #94a3b8);
+    color: #0f172a;
+    border-color: #f1f5f9;
+}
+.ranking-card.top-3 .rank-medal {
+    background: linear-gradient(135deg, #fdba74, #f97316);
+    color: #0f172a;
+    border-color: #fed7aa;
+}
+
+.ranking-pontos {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(250, 204, 21, 0.08);
+    border: 1px solid rgba(250, 204, 21, 0.3);
+}
+.ranking-pontos .stat-value { color: #facc15; font-size: 1.4rem; }
+
+/* ---------- RESPONSIVO ---------- */
+@media (max-width: 600px) {
+    .temporada-card,
+    .ranking-card {
+        padding: 16px 14px 14px 18px;
+    }
+
+    .temporada-header,
+    .ranking-header {
+        grid-template-columns: auto 1fr;
+        gap: 12px;
+    }
+
+    .temporada-badges,
+    .ranking-pontos {
+        grid-column: 1 / -1;
+        justify-self: start;
+    }
+
+    .ranking-pontos {
+        align-items: flex-start;
+        width: 100%;
+    }
+
+    .temporada-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ranking-stats   { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    .temporada-titulos { grid-template-columns: 1fr; }
+
+    .rank-medal { width: 44px; height: 44px; font-size: 1.15rem; }
+}
+
+/* ---------- TEMA CLARO ---------- */
+html[data-theme="light"] .temporada-card,
+html[data-theme="light"] .ranking-card {
+    background: linear-gradient(180deg, #eff6ff, #e0ecff);
+    border-color: #93c5fd;
+    box-shadow: 0 6px 20px rgba(30, 58, 138, 0.12);
+}
+
+html[data-theme="light"] .temporada-ano {
+    background: #dbeafe;
+    border-color: #93c5fd;
+}
+html[data-theme="light"] .temporada-ano-label { color: #1e40af; }
+html[data-theme="light"] .temporada-ano strong { color: #172554; }
+
+html[data-theme="light"] .temporada-nome,
+html[data-theme="light"] .ranking-nome,
+html[data-theme="light"] .stat-value,
+html[data-theme="light"] .titulos-grupo-label,
+html[data-theme="light"] .temporada-idade { color: #172554 !important; }
+
+html[data-theme="light"] .stat-label { color: #475569; }
+html[data-theme="light"] .stat-card {
+    background: #f8fbff;
+    border-color: #bfdbfe;
+}
+
+html[data-theme="light"] .stat-value--gol    { color: #15803d !important; }
+html[data-theme="light"] .stat-value--assist { color: #1d4ed8 !important; }
+html[data-theme="light"] .stat-value--premio { color: #b45309 !important; }
+
+html[data-theme="light"] .badge { background: #e0ecff; border-color: #93c5fd; color: #1e3a5f; }
+html[data-theme="light"] .badge--pos     { background: #ede9fe; border-color: #c4b5fd; color: #5b21b6; }
+html[data-theme="light"] .badge--clube   { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8; }
+html[data-theme="light"] .badge--over    { background: #dcfce7; border-color: #86efac; color: #166534; }
+html[data-theme="light"] .badge--selecao { background: #fef3c7; border-color: #facc15; color: #713f12; }
+
+html[data-theme="light"] .titulo-tag--coletivo   { background: #dcfce7; border-color: #86efac; color: #166534; }
+html[data-theme="light"] .titulo-tag--individual { background: #fef9c3; border-color: #facc15; color: #713f12; }
+
+html[data-theme="light"] .temporada-footer small { color: #64748b; }
+
+html[data-theme="light"] .ranking-pontos { background: #fef9c3; border-color: #facc15; }
+html[data-theme="light"] .ranking-pontos .stat-value { color: #b45309; }
+
+/* ============================================
+   FIX — sobrescrever regras antigas que ainda
+   afetam os novos cards do histórico/ranking
+   ============================================ */
+
+/* Base dos cards: voltar ao padding/borda/background novos */
+#lista-temporadas > li.temporada-card,
+#lista-ranking > li.ranking-card {
+    padding: 18px 20px 16px 24px;
+    border-radius: 16px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(20, 30, 50, 0.9));
+}
+
+@media (max-width: 600px) {
+    #lista-temporadas > li.temporada-card,
+    #lista-ranking > li.ranking-card {
+        padding: 16px 14px 14px 18px;
+    }
+}
+
+/* Top 1/2/3 do ranking: manter cor e sombra do card novo */
+#lista-ranking > li.ranking-card.top-1 { border-color: rgba(250, 204, 21, 0.5); box-shadow: 0 6px 20px rgba(2, 8, 23, 0.35); }
+#lista-ranking > li.ranking-card.top-2 { border-color: rgba(203, 213, 225, 0.4); box-shadow: 0 6px 20px rgba(2, 8, 23, 0.35); }
+#lista-ranking > li.ranking-card.top-3 { border-color: rgba(251, 146, 60, 0.4); box-shadow: 0 6px 20px rgba(2, 8, 23, 0.35); }
+
+/* Ranking: matar o "tudo amarelo" e recolorir cada valor */
+#lista-ranking > li.ranking-card .ranking-nome { color: #f8fafc; }
+#lista-ranking > li.ranking-card .stat-value { color: #f8fafc; }
+#lista-ranking > li.ranking-card .stat-value--gol { color: #4ade80; }
+#lista-ranking > li.ranking-card .stat-value--assist { color: #60a5fa; }
+#lista-ranking > li.ranking-card .stat-value--premio { color: #facc15; }
+#lista-ranking > li.ranking-card .ranking-pontos .stat-value { color: #facc15; }
+
+/* Histórico: devolver cor verde/dourada às pills de troféus */
+#lista-temporadas .temporada-card .titulo-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    background: rgba(96, 165, 250, 0.12);
+    border: 1px solid rgba(96, 165, 250, 0.32);
+    color: #dbeafe;
+}
+#lista-temporadas .temporada-card .titulo-tag--coletivo {
+    background: rgba(34, 197, 94, 0.12);
+    border-color: rgba(34, 197, 94, 0.4);
+    color: #bbf7d0;
+}
+#lista-temporadas .temporada-card .titulo-tag--individual {
+    background: rgba(250, 204, 21, 0.12);
+    border-color: rgba(250, 204, 21, 0.4);
+    color: #fef3c7;
+}
+#lista-temporadas .temporada-card .titulo-tag--vazio {
+    background: rgba(148, 163, 184, 0.08);
+    border-color: rgba(148, 163, 184, 0.2);
+    color: #94a3b8;
+    font-style: italic;
+    font-weight: 500;
+}
+
+/* Footer small sem margin extra */
+#lista-temporadas .temporada-card .temporada-footer small {
+    display: inline;
+    margin-top: 0;
+    color: #64748b;
+    font-size: 0.75rem;
+}
+
+/* ============================================
+   Tema claro — cards com o gradiente novo
+   ============================================ */
+
+html[data-theme="light"] #lista-temporadas > li.temporada-card,
+html[data-theme="light"] #lista-ranking > li.ranking-card {
+    background: linear-gradient(180deg, #eff6ff, #e0ecff);
+    border-color: #93c5fd;
+}
+
+/* Pills no tema claro */
+html[data-theme="light"] #lista-temporadas .temporada-card .titulo-tag {
+    background: #dbeafe;
+    border-color: #93c5fd;
+}
+html[data-theme="light"] #lista-temporadas .temporada-card .titulo-tag--coletivo {
+    background: #dcfce7;
+    border-color: #86efac;
+}
+html[data-theme="light"] #lista-temporadas .temporada-card .titulo-tag--individual {
+    background: #fef9c3;
+    border-color: #facc15;
+}
+
+/* ============================================
+   FIX DEFINITIVO: Histórico e Ranking
+   ============================================ */
+
+/* 1. Impede que os cards sejam esmagados pelo flex container */
+.temporada-card,
+.ranking-card {
+    flex-shrink: 0; 
+    flex-grow: 0;
+}
+
+/* 2. Reseta completamente o <header> e <footer> globais dentro dos cards */
+.temporada-card header,
+.ranking-card header,
+.temporada-card footer,
+.ranking-card footer {
+    all: unset; /* Remove position: sticky, fundo azul, paddings gigantes, etc. */
+    box-sizing: border-box;
+}
+
+/* 3. Reaplica o layout desejado para o header interno */
+.temporada-card header,
+.ranking-card header {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+/* 4. Reaplica o layout do footer interno */
+.temporada-card footer,
+.ranking-card footer {
+    display: block;
+    width: 100%;
+    padding-top: 10px;
+    border-top: 1px solid rgba(148, 163, 184, 0.1);
+    text-align: right;
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+/* Ajuste no celular para o header não quebrar */
+@media (max-width: 600px) {
+    .temporada-card header,
+    .ranking-card header {
+        grid-template-columns: auto 1fr;
+        gap: 12px;
+    }
 }
