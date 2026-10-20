@@ -815,14 +815,19 @@ function renderDetalhesCarreira(carreira) {
     const temporadas = obterTemporadasDaCarreira(carreira);
     const totalTemporadas = temporadas.length;
     const totalTitulos = (carreira.trofeusColetivos || []).length;
-    const mediaGols = carreira.jogos > 0 ? (carreira.gols / carreira.jogos).toFixed(2).replace(".", ",") : "0,00";
-    const melhorTemporada = temporadas.reduce((melhor, temporada) => !melhor || (Number(temporada.gols) || 0) > (Number(melhor.gols) || 0) ? temporada : melhor, null);
+    const mediaGols = carreira.jogos > 0
+        ? (carreira.gols / carreira.jogos).toFixed(2).replace(".", ",")
+        : "0,00";
+    const melhorTemporada = temporadas.reduce(
+        (melhor, temporada) => !melhor || (Number(temporada.gols) || 0) > (Number(melhor.gols) || 0) ? temporada : melhor,
+        null
+    );
     const titulosMelhorTemporada = melhorTemporada
-      ? [
-        ...mapearTrofeusTemporada(melhorTemporada, "trofeusColetivos"),
-        ...mapearTrofeusTemporada(melhorTemporada, "trofeusIndividuais")
-      ]
-      : [];
+        ? [
+            ...mapearTrofeusTemporada(melhorTemporada, "trofeusColetivos"),
+            ...mapearTrofeusTemporada(melhorTemporada, "trofeusIndividuais")
+        ]
+        : [];
 
     const listaTemporadas = totalTemporadas
         ? temporadas.map((temporada) => {
@@ -830,32 +835,60 @@ function renderDetalhesCarreira(carreira) {
                 ...mapearTrofeusTemporada(temporada, "trofeusColetivos"),
                 ...mapearTrofeusTemporada(temporada, "trofeusIndividuais")
             ];
-            return `<div class="temporada-carreira-detalhe">
-                <strong>${escaparHTML(temporada.ano)} · ${escaparHTML(temporada.idade)} anos</strong>
-                <span>${escaparHTML(obterClube(temporada.clube)?.nome || "Clube não definido")}</span>
-                <span>${temporada.jogos} jogos</span>
-                <span>${temporada.gols} gols</span>
-                <span>${temporada.assistencias} assistências</span>
-                <small>${trofeus.length ? escaparHTML(trofeus.join(", ")) : "Sem títulos nesta temporada"}</small>
-                <div class="temporada-eventos">${formatarEventosTemporada(temporada.eventos)}</div>
+            const clube = obterClube(temporada.clube);
+            const trofeusHtml = trofeus.length
+                ? trofeus.map(t => `<span class="trajetoria-trofeu">${escaparHTML(t)}</span>`).join("")
+                : '<span class="trajetoria-trofeu trajetoria-trofeu--vazio">Sem títulos</span>';
+
+            return `<div class="trajetoria-temporada">
+                <div class="trajetoria-temporada-header">
+                    <span class="trajetoria-ano">${escaparHTML(temporada.ano)}</span>
+                    <span class="trajetoria-idade">${escaparHTML(temporada.idade)} anos</span>
+                    <span class="trajetoria-clube">${escaparHTML(clube?.nome || "Sem clube")}</span>
+                </div>
+                <div class="trajetoria-stats">
+                    <span><strong>${temporada.jogos}</strong> jogos</span>
+                    <span><strong>${temporada.gols}</strong> gols</span>
+                    <span><strong>${temporada.assistencias}</strong> assist.</span>
+                </div>
+                <div class="trajetoria-trofeus">${trofeusHtml}</div>
+                <div class="trajetoria-eventos">${formatarEventosTemporada(temporada.eventos)}</div>
             </div>`;
         }).join("")
-        : '<p class="detalhes-sem-historico">Os dados por temporada não estão disponíveis para esta carreira antiga.</p>';
+        : '<p class="trajetoria-vazio">Os dados por temporada não estão disponíveis para esta carreira antiga.</p>';
 
     return `<details class="detalhes-carreira">
-        <summary>Ver trajetória completa</summary>
-        <div class="resumo-estatisticas-carreira">
-            <div><span>Temporadas</span><strong>${totalTemporadas || "—"}</strong></div>
-            <div><span>Média de gols por jogo</span><strong>${mediaGols}</strong></div>
-            <div><span>Títulos coletivos</span><strong>${totalTitulos}</strong></div>
-            <div class="melhor-temporada-detalhe">
-                <span>Melhor temporada</span>
-                <strong>${melhorTemporada ? `${escaparHTML(melhorTemporada.ano)} · ${Number(melhorTemporada.gols) || 0} gols` : "—"}</strong>
-                ${melhorTemporada ? `<span>${Number(melhorTemporada.assistencias) || 0} assistências</span><small>${titulosMelhorTemporada.length ? `Títulos conquistados: ${escaparHTML(titulosMelhorTemporada.join(", "))}` : "Nenhum título conquistado nesta temporada"}</small>` : ""}
+        <summary class="detalhes-carreira-summary">
+            <span class="detalhes-carreira-icone">📊</span>
+            <span>Ver trajetória completa</span>
+            ${totalTemporadas ? `<span class="detalhes-carreira-badge">${totalTemporadas} temp.</span>` : ""}
+            <span class="detalhes-carreira-seta">▾</span>
+        </summary>
+        <div class="detalhes-carreira-conteudo">
+            <div class="trajetoria-resumo">
+                <div class="trajetoria-resumo-card">
+                    <span class="trajetoria-resumo-label">Temporadas</span>
+                    <strong class="trajetoria-resumo-valor">${totalTemporadas || "—"}</strong>
+                </div>
+                <div class="trajetoria-resumo-card">
+                    <span class="trajetoria-resumo-label">Média gols/jogo</span>
+                    <strong class="trajetoria-resumo-valor">${mediaGols}</strong>
+                </div>
+                <div class="trajetoria-resumo-card">
+                    <span class="trajetoria-resumo-label">Títulos coletivos</span>
+                    <strong class="trajetoria-resumo-valor">${totalTitulos}</strong>
+                </div>
+                <div class="trajetoria-resumo-card trajetoria-resumo-card--destaque">
+                    <span class="trajetoria-resumo-label">Melhor temporada</span>
+                    <strong class="trajetoria-resumo-valor">${melhorTemporada ? `${Number(melhorTemporada.gols) || 0} gols` : "—"}</strong>
+                    ${melhorTemporada
+                        ? `<small class="trajetoria-resumo-extra">${escaparHTML(melhorTemporada.ano)} · ${Number(melhorTemporada.assistencias) || 0} assist.${titulosMelhorTemporada.length ? ` · ${titulosMelhorTemporada.length} título${titulosMelhorTemporada.length === 1 ? "" : "s"}` : ""}</small>`
+                        : ""}
+                </div>
             </div>
+            <h4 class="trajetoria-titulo-lista">Temporada por temporada</h4>
+            <div class="trajetoria-lista">${listaTemporadas}</div>
         </div>
-        <h4>Temporada por temporada</h4>
-        <div class="lista-detalhes-temporadas">${listaTemporadas}</div>
     </details>`;
 }
 
@@ -1079,34 +1112,71 @@ function renderRanking() {
         return;
     }
 
-    listaRanking.innerHTML = ranking
-        .map((carreira, index) => {
-            const trofeusColetivos = obterTrofeusColetivosDaCarreira(carreira);
-            const trofeusIndividuais = Array.isArray(carreira.trofeusIndividuais) ? carreira.trofeusIndividuais : [];
-            const premios = contarPremios(carreira);
-            const trofeusHtml = [
-                ...(trofeusColetivos.length ? [`<span class="ranking-trofeu coletivo">${escaparHTML(formatarTrofeus(trofeusColetivos))}</span>`] : []),
-                ...(trofeusIndividuais.length ? [`<span class="ranking-trofeu individual">${escaparHTML(formatarTrofeus(trofeusIndividuais))}</span>`] : [])
-            ];
-            const conteudoTrofeus = trofeusHtml.length ? trofeusHtml.join("") : '<span class="ranking-trofeu coletivo">Nenhum</span>';
-            const medalha = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "#";
-            const classeTop = index === 0 ? "top-1" : index === 1 ? "top-2" : index === 2 ? "top-3" : "";
-
-            return `
-                <li class="${classeTop}">
-                    <span class="rank-medal">${medalha}</span>
-                    <strong>#${index + 1} - ${escaparHTML(carreira.nome)}</strong>
-                    <p>Posição: ${escaparHTML(carreira.posicao)} | Seleção: ${escaparHTML(SELECOES.find((selecao) => selecao.id === carreira.nacionalidade)?.nome || "Não definida")} | Último clube: ${escaparHTML(obterClube(carreira.clube)?.nome || "Não definido")} | Pontuação: ${carreira.pontuacao}</p>
-                    <p>Jogos: ${carreira.jogos} | Gols: ${carreira.gols} | Assistências: ${carreira.assistencias} | Prêmios: ${premios} | Maior Over: ${Math.max(0, ...(carreira.temporadas || []).map((temporada) => Number(temporada.overall) || 0))}</p>
-                    <p>Títulos coletivos: ${trofeusColetivos.length} | Títulos individuais: ${trofeusIndividuais.length}</p>
-                    <div class="ranking-trofeus">${conteudoTrofeus}</div>
-                    <small>Idade limite: ${carreira.idadeLimite} anos</small>
-                    ${renderDetalhesCarreira(carreira)}
-                    <button type="button" class="remover-ranking" data-id="${escaparHTML(carreira.id || "")}" aria-label="Apagar ${escaparHTML(carreira.nome)} do ranking">Apagar</button>
-                </li>
-            `;
-        })
-        .join("");
+    listaRanking.innerHTML = ranking.map((carreira, index) => {
+      const trofeusColetivos = obterTrofeusColetivosDaCarreira(carreira);
+      const trofeusIndividuais = Array.isArray(carreira.trofeusIndividuais) ? carreira.trofeusIndividuais : [];
+      const premios = contarPremios(carreira);
+      const medalha = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `#${index + 1}`;
+      const classeTop = index === 0 ? "top-1" : index === 1 ? "top-2" : index === 2 ? "top-3" : "";
+      const maiorOver = Math.max(0, ...(carreira.temporadas || []).map(t => Number(t.overall) || 0));
+      const selecao = SELECOES.find(s => s.id === carreira.nacionalidade);
+      const clube = obterClube(carreira.clube);
+  
+      const renderTrofeus = (trofeus, tipo) => {
+          if (!trofeus.length) {
+              return '<span class="titulo-tag titulo-tag--vazio">Nenhum</span>';
+          }
+          
+          // Agrupa os troféus repetidos e conta a quantidade
+          const contagem = trofeus.reduce((acc, t) => {
+              acc[t] = (acc[t] || 0) + 1;
+              return acc;
+          }, {});
+      
+          // Gera uma pill para cada tipo de troféu (ex: 3x Copa do Mundo)
+          return Object.entries(contagem)
+              .map(([nome, qtd]) => `<span class="titulo-tag titulo-tag--${tipo}">${qtd}x ${escaparHTML(nome)}</span>`)
+              .join("");
+      };  
+      return `
+          <li class="ranking-card ${classeTop}">
+              <div class="ranking-header">
+                  <span class="rank-medal">${medalha}</span>
+                  <div class="ranking-titulo-bloco">
+                      <strong class="ranking-nome">${escaparHTML(carreira.nome)}</strong>
+                      <div class="ranking-badges">
+                          <span class="badge badge--pos">${escaparHTML(carreira.posicao)}</span>
+                          <span class="badge badge--selecao">${escaparHTML(selecao?.nome || "Sem seleção")}</span>
+                          <span class="badge badge--clube">${escaparHTML(clube?.nome || "Sem clube")}</span>
+                      </div>
+                  </div>
+                  <div class="ranking-pontos">
+                      <span class="stat-label">Pontos</span>
+                      <strong class="stat-value">${carreira.pontuacao}</strong>
+                  </div>
+              </div>
+              <div class="temporada-stats ranking-stats">
+                  <div class="stat-card"><span class="stat-label">Jogos</span><strong class="stat-value">${carreira.jogos}</strong></div>
+                  <div class="stat-card"><span class="stat-label">Gols</span><strong class="stat-value stat-value--gol">${carreira.gols}</strong></div>
+                  <div class="stat-card"><span class="stat-label">Assist.</span><strong class="stat-value stat-value--assist">${carreira.assistencias}</strong></div>
+                  <div class="stat-card"><span class="stat-label">Prêmios</span><strong class="stat-value stat-value--premio">${premios}</strong></div>
+                  <div class="stat-card"><span class="stat-label">Maior OVR</span><strong class="stat-value">${maiorOver}</strong></div>
+              </div>
+              <div class="temporada-titulos">
+                  <div class="titulos-grupo">
+                      <span class="titulos-grupo-label">🏆 Coletivos (${trofeusColetivos.length})</span>
+                      <div class="titulo-tags">${renderTrofeus(trofeusColetivos, "coletivo")}</div>
+                  </div>
+                  <div class="titulos-grupo">
+                      <span class="titulos-grupo-label">🌟 Individuais (${trofeusIndividuais.length})</span>
+                      <div class="titulo-tags">${renderTrofeus(trofeusIndividuais, "individual")}</div>
+                  </div>
+              </div>
+              ${renderDetalhesCarreira(carreira)}
+              <button type="button" class="remover-ranking" data-id="${escaparHTML(carreira.id || "")}" aria-label="Apagar ${escaparHTML(carreira.nome)} do ranking">Apagar</button>
+          </li>
+      `;
+  }).join("");
 
     renderConquistas();
 }
@@ -1171,7 +1241,7 @@ function renderHistorico() {
     if (!lista) return;
 
     if (historico.length === 0) {
-        lista.innerHTML = "<li>Nenhuma temporada salva ainda.</li>";
+        lista.innerHTML = '<li class="temporada-vazia">Nenhuma temporada salva ainda.</li>';
         return;
     }
 
@@ -1183,40 +1253,57 @@ function renderHistorico() {
               return valorB - valorA;
           });
 
-    lista.innerHTML = temporadas
-        .map((temporada) => {
-            const trofeusColetivos = mapearTrofeusTemporada(temporada, "trofeusColetivos");
-            const trofeusIndividuais = mapearTrofeusTemporada(temporada, "trofeusIndividuais");
-            const premios = contarPremios(temporada);
+    const renderTrofeus = (trofeus, tipo) => trofeus.length
+        ? trofeus.map(t => `<span class="titulo-tag titulo-tag--${tipo}">${escaparHTML(t)}</span>`).join("")
+        : '<span class="titulo-tag titulo-tag--vazio">Nenhum</span>';
 
-            const renderTrofeus = (trofeus) => {
-                if (!trofeus.length) {
-                    return '<span class="titulo-tag">Nenhum</span>';
-                }
+    lista.innerHTML = temporadas.map((temporada) => {
+        const trofeusColetivos = mapearTrofeusTemporada(temporada, "trofeusColetivos");
+        const trofeusIndividuais = mapearTrofeusTemporada(temporada, "trofeusIndividuais");
+        const premios = contarPremios(temporada);
+        const clube = obterClube(temporada.clube);
 
-                return trofeus
-                    .map((trofeu) => `<span class="titulo-tag">${trofeu}</span>`)
-                    .join("");
-            };
-
-            return `
-                <li>
-                    <strong>Temporada ${temporada.ano}</strong>
-                    <span> - ${temporada.posicao}</span>
-                    <span> - ${escaparHTML(obterClube(temporada.clube)?.nome || "Clube não definido")}</span>
-                    <p>Jogador: ${temporada.nome} | Idade: ${temporada.idade} anos | Over: ${temporada.overall}</p>
-                    <p>Jogos: ${temporada.jogos} | Gols: ${temporada.gols} | Assistências: ${temporada.assistencias} | Prêmios: ${premios}</p>
-                    <p class="titulo-categoria">Títulos coletivos:</p>
-                    <div class="titulo-tags">${renderTrofeus(trofeusColetivos)}</div>
-                    <p class="titulo-categoria">Títulos individuais:</p>
-                    <div class="titulo-tags">${renderTrofeus(trofeusIndividuais)}</div>
-                    <p class="titulo-categoria">Eventos da temporada:</p>
+        return `
+            <li class="temporada-card">
+                <div class="temporada-header">
+                    <div class="temporada-ano">
+                        <span class="temporada-ano-label">Temporada</span>
+                        <strong>${temporada.ano}</strong>
+                    </div>
+                    <div class="temporada-identidade">
+                        <span class="temporada-nome">${escaparHTML(temporada.nome)}</span>
+                        <span class="temporada-idade">${temporada.idade} anos</span>
+                    </div>
+                    <div class="temporada-badges">
+                        <span class="badge badge--pos">${escaparHTML(temporada.posicao)}</span>
+                        <span class="badge badge--clube">${escaparHTML(clube?.nome || "Sem clube")}</span>
+                        <span class="badge badge--over">OVR ${temporada.overall}</span>
+                    </div>
+                </div>
+                <div class="temporada-stats">
+                    <div class="stat-card"><span class="stat-label">Jogos</span><strong class="stat-value">${temporada.jogos}</strong></div>
+                    <div class="stat-card"><span class="stat-label">Gols</span><strong class="stat-value stat-value--gol">${temporada.gols}</strong></div>
+                    <div class="stat-card"><span class="stat-label">Assist.</span><strong class="stat-value stat-value--assist">${temporada.assistencias}</strong></div>
+                    <div class="stat-card"><span class="stat-label">Prêmios</span><strong class="stat-value stat-value--premio">${premios}</strong></div>
+                </div>
+                <div class="temporada-titulos">
+                    <div class="titulos-grupo">
+                        <span class="titulos-grupo-label">🏆 Coletivos</span>
+                        <div class="titulo-tags">${renderTrofeus(trofeusColetivos, "coletivo")}</div>
+                    </div>
+                    <div class="titulos-grupo">
+                        <span class="titulos-grupo-label">🌟 Individuais</span>
+                        <div class="titulo-tags">${renderTrofeus(trofeusIndividuais, "individual")}</div>
+                    </div>
+                </div>
+                <div class="temporada-eventos">
+                    <span class="titulos-grupo-label">⚡ Eventos da temporada</span>
                     ${formatarEventosTemporada(temporada.eventos)}
-                    <small>${temporada.data}</small>
-                </li>
-            `;
-        })
-        .join("");
+                </div>
+                <div class="temporada-footer"><small>${temporada.data}</small></div>
+            </li>
+        `;
+    }).join("");
 }
 
 function formatarEventosTemporada(eventos) {
