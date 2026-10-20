@@ -42,36 +42,49 @@ function obterClube(clubeId) {
 }
 
 const MAPA_TROFEUS_POR_LIGA = {
-    "Premier League": {
-        liga: "Premier League",
-        copa: "Carabao Cup",
-        continental: "Champions League"
-    },
-    "La Liga": {
-        liga: "La Liga",
-        copa: "Copa del Rey",
-        continental: "Champions League"
-    },
-    "Serie A": {
-        liga: "Serie A",
-        copa: "Coppa Italia",
-        continental: "Champions League"
-    },
-    "Bundesliga": {
-        liga: "Bundesliga",
-        copa: "DFB-Pokal",
-        continental: "Champions League"
-    },
-    "Ligue 1": {
-        liga: "Ligue 1",
-        copa: "Coupe de France",
-        continental: "Champions League"
-    },
-    "Brasileirão": {
-        liga: "Série A Br",
-        copa: "Copa do Brasil",
-        continental: "Libertadores"
-    }
+    // Europa
+    "Premier League": { liga: "Premier League", copa: "Carabao Cup", continental: "Champions League" },
+    "La Liga": { liga: "La Liga", copa: "Copa del Rey", continental: "Champions League" },
+    "Serie A": { liga: "Serie A", copa: "Coppa Italia", continental: "Champions League" },
+    "Bundesliga": { liga: "Bundesliga", copa: "DFB-Pokal", continental: "Champions League" },
+    "Ligue 1": { liga: "Ligue 1", copa: "Coupe de France", continental: "Champions League" },
+    "Primeira Liga": { liga: "Primeira Liga", copa: "Taça de Portugal", continental: "Champions League" },
+    "Eredivisie": { liga: "Eredivisie", copa: "KNVB Beker", continental: "Champions League" },
+    "Süper Lig": { liga: "Süper Lig", copa: "Türkiye Kupası", continental: "Champions League" },
+    "Belgian Pro League": { liga: "Belgian Pro League", copa: "Belgian Cup", continental: "Champions League" },
+    "Scottish Premiership": { liga: "Scottish Premiership", copa: "Scottish Cup", continental: "Champions League" },
+    "Swiss Super League": { liga: "Swiss Super League", copa: "Schweizer Cup", continental: "Champions League" },
+    "Austrian Bundesliga": { liga: "Austrian Bundesliga", copa: "ÖFB-Cup", continental: "Champions League" },
+    "Russian Premier League": { liga: "Russian Premier League", copa: "Russian Cup", continental: "Champions League" },
+    "Ukrainian Premier League": { liga: "Ukrainian Premier League", copa: "Ukrainian Cup", continental: "Champions League" },
+    "Greek Super League": { liga: "Greek Super League", copa: "Greek Cup", continental: "Champions League" },
+
+    // América do Sul
+    "Brasileirão": { liga: "Série A Br", copa: "Copa do Brasil", continental: "Libertadores" },
+    "Argentine Primera División": { liga: "Liga Profesional", copa: "Copa Argentina", continental: "Libertadores" },
+    "Colombian Primera A": { liga: "Liga BetPlay", copa: "Copa Colombia", continental: "Libertadores" },
+    "Chilean Primera División": { liga: "Primera División", copa: "Copa Chile", continental: "Libertadores" },
+    "Uruguayan Primera División": { liga: "Primera División", copa: "Copa Uruguay", continental: "Libertadores" },
+    "Ecuadorian Serie A": { liga: "LigaPro", copa: "Copa Ecuador", continental: "Libertadores" },
+    "Paraguayan Primera División": { liga: "Primera División", copa: "Copa Paraguay", continental: "Libertadores" },
+
+    // América do Norte / Central
+    "MLS": { liga: "MLS Cup", copa: "US Open Cup", continental: "CONCACAF Champions Cup" },
+    "Liga MX": { liga: "Liga MX", copa: "Copa MX", continental: "CONCACAF Champions Cup" },
+
+    // Ásia
+    "Saudi Pro League": { liga: "Saudi Pro League", copa: "King's Cup", continental: "AFC Champions League" },
+    "J1 League": { liga: "J1 League", copa: "Emperor's Cup", continental: "AFC Champions League" },
+    "K League 1": { liga: "K League 1", copa: "Korean FA Cup", continental: "AFC Champions League" },
+    "Chinese Super League": { liga: "Chinese Super League", copa: "Chinese FA Cup", continental: "AFC Champions League" },
+
+    // África
+    "Egyptian Premier League": { liga: "Egyptian Premier League", copa: "Egypt Cup", continental: "CAF Champions League" },
+    "South African Premier Division": { liga: "Betway Premiership", copa: "Nedbank Cup", continental: "CAF Champions League" },
+    "Moroccan Botola": { liga: "Botola Pro", copa: "Coupe du Trône", continental: "CAF Champions League" },
+
+    // Oceania
+    "Australian A-League": { liga: "A-League", copa: "Australia Cup", continental: "AFC Champions League" }
 };
 
 function obterNomesTrofeusClube(clubeId) {
@@ -86,7 +99,10 @@ function obterNomesTrofeusClube(clubeId) {
 function ehTituloContinental(trofeu) {
     return trofeu === "Copa Continental"
         || trofeu === "Champions League"
-        || trofeu === "Libertadores";
+        || trofeu === "Libertadores"
+        || trofeu === "CONCACAF Champions Cup"
+        || trofeu === "AFC Champions League"
+        || trofeu === "CAF Champions League";
 }
 
 function normalizarNomeTrofeu(trofeu, clubeId) {
