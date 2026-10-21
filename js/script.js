@@ -2233,11 +2233,100 @@ function escolherClubeAlvo(clubeAlvo) {
     );
 }
 
-function sortearClubeParaTemporada(clubeAtual, temporadaInicial, clubeAlvo = "") {
-    const candidatos = temporadaInicial
-        ? sortearClubes(3, "", clubeAlvo)
-        : [{ id: clubeAtual }, ...sortearClubes(3, clubeAtual, clubeAlvo)];
-    return candidatos[Math.floor(Math.random() * candidatos.length)].id;
+// Estima a relevância de cada destino para orientar transferências automáticas.
+// A força configurada do clube é combinada com o prestígio geral da liga.
+function obterPrestigioClube(clube) {
+    if (!clube) return 0;
+
+    const prestigioLigas = {
+        "Premier League": 24, "La Liga": 24, "Serie A": 22,
+        "Bundesliga": 22, "Ligue 1": 20, "Primeira Liga": 16,
+        "Eredivisie": 16, "Brasileirão": 19, "Saudi Pro League": 16,
+        "MLS": 13, "Liga MX": 14, "Argentine Primera División": 14,
+        "Belgian Pro League": 13, "Süper Lig": 14, "Scottish Premiership": 12,
+        "Swiss Super League": 11, "Austrian Bundesliga": 11,
+        "Russian Premier League": 12, "Ukrainian Premier League": 9,
+        "Greek Super League": 10, "Colombian Primera A": 10,
+        "Chilean Primera División": 10, "Uruguayan Primera División": 9,
+        "Ecuadorian Serie A": 9, "Paraguayan Primera División": 8,
+        "J1 League": 11, "K League 1": 9, "Chinese Super League": 9,
+        "Egyptian Premier League": 9, "South African Premier Division": 8,
+        "Moroccan Botola": 8, "Australian A-League": 8
+    };
+
+    const config = typeof getConfig === "function" ? getConfig() : null;
+    const forca = Number(config?.clubes?.potencias?.[clube.id]);
+    return (Number.isFinite(forca) ? forca : 60) * 0.72
+        + (prestigioLigas[clube.liga] || 8) * 1.15;
+}
+
+function sortearIndicePorPesos(pesos) {
+    const total = pesos.reduce((soma, peso) => soma + peso, 0);
+    let sorteio = Math.random() * total;
+    for (let i = 0; i < pesos.length; i++) {
+        sorteio -= pesos[i];
+        if (sorteio <= 0) return i;
+    }
+    return Math.max(0, pesos.length - 1);
+}
+
+function sortearClubesParaCarreira(quantidade, clubeExcluir, clubeAlvo, historico) {
+    const temporadas = Array.isArray(historico) ? historico : [];
+    // Sem histórico, mantém o sorteio original para não favorecer clubes sem motivo.
+    if (temporadas.length === 0) return sortearClubes(quantidade, clubeExcluir, clubeAlvo);
+    const clubesAnteriores = temporadas.map((temporada) => obterClube(temporada.clube)).filter(Boolean);
+    const prestigiosAnteriores = clubesAnteriores.map(obterPrestigioClube);
+    const maiorPrestigio = Math.max(0, ...prestigiosAnteriores);
+    const prestigioMedio = prestigiosAnteriores.length
+        ? prestigiosAnteriores.reduce((soma, valor) => soma + valor, 0) / prestigiosAnteriores.length
+        : 0;
+    const ultimoOver = Number(temporadas[temporadas.length - 1]?.overall) || 50;
+    const melhorOver = Math.max(0, ...temporadas.map((temporada) => Number(temporada.overall) || 0));
+
+    // O histórico pesa mais que uma temporada isolada; o Over atual ajuda a
+    // diferenciar um veterano ainda de elite de outro já em declínio.
+    const reputacao = prestigiosAnteriores.length
+        ? maiorPrestigio * 0.62 + prestigioMedio * 0.18 + Math.max(ultimoOver, melhorOver) * 0.20
+        : Math.max(ultimoOver, 50);
+
+    const disponiveis = CLUBES.filter((clube) => clube.id !== clubeExcluir);
+    const sorteados = [];
+    while (sorteados.length < Math.min(quantidade, disponiveis.length)) {
+        const pesos = disponiveis.map((clube) => {
+            const prestigio = obterPrestigioClube(clube);
+            // Preferência gradual, sem bloquear ligas menores ou surpresas.
+            const distancia = (prestigio - reputacao) / 17;
+            let peso = Math.exp(Math.max(-2.2, Math.min(2.2, distancia)));
+            if (clube.id === clubeAlvo) peso *= 1.8;
+            return Math.max(0.08, peso);
+        });
+        const indice = sortearIndicePorPesos(pesos);
+        sorteados.push(disponiveis.splice(indice, 1)[0]);
+    }
+    return sorteados;
+}
+
+function sortearClubeParaTemporada(clubeAtual, temporadaInicial, clubeAlvo = "", historico = []) {
+    if (temporadaInicial && (!Array.isArray(historico) || historico.length === 0)) {
+        const ofertasIniciais = sortearClubes(3, "", clubeAlvo);
+        return ofertasIniciais[Math.floor(Math.random() * ofertasIniciais.length)].id;
+    }
+    const ofertas = sortearClubesParaCarreira(3, temporadaInicial ? "" : clubeAtual, clubeAlvo, historico);
+    const candidatos = temporadaInicial ? ofertas : [{ id: clubeAtual }, ...ofertas];
+    const temporadas = Array.isArray(historico) ? historico : [];
+    const prestigiosAnteriores = temporadas.map((temporada) => obterPrestigioClube(obterClube(temporada.clube))).filter((valor) => valor > 0);
+    const maiorPrestigio = Math.max(0, ...prestigiosAnteriores);
+    const ultimoOver = Number(temporadas[temporadas.length - 1]?.overall) || 50;
+    const reputacao = Math.max(maiorPrestigio, ultimoOver);
+    const pesos = candidatos.map((candidato) => {
+        const prestigio = obterPrestigioClube(obterClube(candidato.id));
+        // Permanecer é uma opção real, mas um destino compatível pode vencer.
+        let peso = Math.exp(Math.max(-2.2, Math.min(2.2, (prestigio - reputacao) / 20)));
+        if (candidato.id === clubeAtual) peso *= 1.25;
+        if (candidato.id === clubeAlvo) peso *= 1.8;
+        return Math.max(0.1, peso);
+    });
+    return candidatos[sortearIndicePorPesos(pesos)].id;
 }
 
 let processamentoEmAndamento = false;
@@ -2495,13 +2584,13 @@ function simularTudo() {
         while (idade <= idadeLimite) {
             if (!obterClube(clubeAtual)) {
                 // Sem clube válido: sorteia um clube inicial (com viés do clube-alvo).
-                clubeAtual = sortearClubeParaTemporada("", true, carreiraAtual.clubeAlvo);
+                clubeAtual = sortearClubeParaTemporada("", true, carreiraAtual.clubeAlvo, historico);
                 anosContratoRestantes = obterDuracaoContrato(idade, idadeLimite);
             } else if (anosContratoRestantes <= 0) {
                 // Contrato venceu: sorteia entre renovar no clube atual
                 // ou aceitar uma das ofertas (sortearClubeParaTemporada já monta
                 // a lista [clubeAtual, ...3 ofertas] e respeita o clube-alvo).
-                clubeAtual = sortearClubeParaTemporada(clubeAtual, false, carreiraAtual.clubeAlvo);
+                clubeAtual = sortearClubeParaTemporada(clubeAtual, false, carreiraAtual.clubeAlvo, historico);
                 anosContratoRestantes = obterDuracaoContrato(idade, idadeLimite);
             }
             const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id, historico, nacionalidade, clubeAtual);
