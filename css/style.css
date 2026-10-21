@@ -315,6 +315,14 @@ main {
     color: #e2e8f0;
 }
 
+.input-field--full {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
 #inputs input,
 #inputs select {
     border: 1px solid rgba(148, 163, 184, 0.35);
@@ -338,6 +346,10 @@ main {
 
 #inputs .clube-alvo-btn {
     background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
+#inputs .input-field--full > * {
+    width: 100%;
 }
 
 #posi {
@@ -856,6 +868,10 @@ button {
         align-items: stretch;
     }
 
+    .input-field--full {
+        width: 100%;
+    }
+
     #posi {
         display: flex;
     }
@@ -1077,7 +1093,7 @@ button {
 /* ---------- Resumo em cards ---------- */
 .trajetoria-resumo {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 10px;
 }
 
@@ -1398,6 +1414,28 @@ html[data-theme="light"] .trajetoria-vazio {
     margin: 0;
 }
 
+.conquistas-bloco {
+    margin-top: 24px;
+    padding: 18px;
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: 16px;
+    background: rgba(2, 8, 23, 0.28);
+}
+
+.conquistas-bloco h3 {
+    margin: 0 0 14px;
+}
+
+.conquistas-bloco--recordes {
+    margin-top: 28px;
+    border-color: rgba(250, 204, 21, 0.28);
+    background: rgba(30, 24, 8, 0.2);
+}
+
+.conquistas-bloco--recordes > .conquistas-intro {
+    margin: -4px 0 14px;
+}
+
 .grade-conquistas,
 .grade-recordes {
     display: grid;
@@ -1514,6 +1552,15 @@ html[data-theme="light"] .trajetoria-vazio {
 @media (max-width: 600px) {
     #conquistas {
         padding: 20px 14px;
+    }
+
+    .conquistas-bloco {
+        margin-top: 18px;
+        padding: 14px;
+    }
+
+    .conquistas-bloco--recordes {
+        margin-top: 22px;
     }
 
     .grade-conquistas,
@@ -1762,6 +1809,102 @@ html[data-theme="light"] .trajetoria-vazio {
     color: #e2e8f0;
     cursor: pointer;
     text-align: left;
+}
+
+.select-modal-source {
+    display: none !important;
+}
+
+.select-modal-trigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 10px;
+    background: #0f172a;
+    color: #f8fafc;
+    font: inherit;
+    font-weight: 500;
+    text-align: left;
+}
+
+.select-modal-trigger-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.modal-opcoes-overlay {
+    z-index: 1100;
+}
+
+.modal-opcoes-caixa {
+    width: min(100%, 520px);
+    align-items: stretch;
+    text-align: left;
+    border-color: rgba(96, 165, 250, 0.45);
+}
+
+.modal-opcoes-caixa .modal-icone {
+    align-self: center;
+    background: rgba(59, 130, 246, 0.14);
+    border-color: rgba(96, 165, 250, 0.35);
+}
+
+.modal-opcoes-caixa h3 {
+    margin: 0;
+}
+
+.modal-opcoes-busca {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 10px;
+    background: #0f172a;
+    color: #f8fafc;
+    font: inherit;
+}
+
+.modal-opcoes-lista {
+    display: grid;
+    gap: 8px;
+    width: 100%;
+    max-height: min(55vh, 420px);
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.opcao-select-modal {
+    width: 100%;
+    min-height: 48px;
+    margin: 0;
+}
+
+.opcao-select-modal--selecionada {
+    border-color: rgba(96, 165, 250, 0.75);
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.32), rgba(29, 78, 216, 0.2));
+}
+
+.opcao-select-modal-marcador {
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(148, 163, 184, 0.45);
+    border-radius: 50%;
+    color: #93c5fd;
+    font-weight: 800;
+}
+
+.select-modal-vazio {
+    padding: 14px;
+    color: #94a3b8;
+    text-align: center;
 }
 
 .opcao-clube--desabilitada {
@@ -2144,6 +2287,22 @@ html[data-theme="light"] .modal-caixa {
     background: #eaf2ff;
     border-color: #bfdbfe;
 }
+
+html[data-theme="light"] .select-modal-trigger,
+html[data-theme="light"] .modal-opcoes-busca {
+    background: #f8fbff;
+    border-color: #93c5fd;
+    color: #172554;
+}
+
+html[data-theme="light"] .opcao-select-modal--selecionada {
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    border-color: #60a5fa;
+}
+
+html[data-theme="light"] .opcao-select-modal-marcador { color: #1d4ed8; }
+
+
 
 html[data-theme="light"] .conquista-card.bloqueada {
     opacity: 1;
@@ -2621,21 +2780,21 @@ html[data-theme="light"] .secao-colapsavel > summary:focus-visible {
 /* ---------- STATS ---------- */
 .temporada-stats {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
 }
 
 .ranking-stats {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .stat-card {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
-    padding: 12px 8px;
-    border-radius: 12px;
+    gap: 3px;
+    padding: 9px 6px;
+    border-radius: 10px;
     background: rgba(2, 8, 23, 0.5);
     border: 1px solid rgba(148, 163, 184, 0.15);
     transition: transform 0.15s ease, background 0.15s ease;
@@ -2643,7 +2802,7 @@ html[data-theme="light"] .secao-colapsavel > summary:focus-visible {
 .stat-card:hover { background: rgba(2, 8, 23, 0.72); transform: translateY(-1px); }
 
 .stat-label {
-    font-size: 0.68rem;
+    font-size: 0.62rem;
     font-weight: 800;
     color: #94a3b8;
     text-transform: uppercase;
@@ -2652,7 +2811,7 @@ html[data-theme="light"] .secao-colapsavel > summary:focus-visible {
 }
 
 .stat-value {
-    font-size: 1.35rem;
+    font-size: 1.15rem;
     font-weight: 800;
     color: #f8fafc;
     line-height: 1;
@@ -2786,8 +2945,20 @@ html[data-theme="light"] .secao-colapsavel > summary:focus-visible {
         width: 100%;
     }
 
-    .temporada-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .ranking-stats   { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .temporada-stats,
+    .ranking-stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+    }
+
+    .stat-card {
+        gap: 2px;
+        padding: 7px 4px;
+        border-radius: 8px;
+    }
+
+    .stat-label { font-size: 0.58rem; }
+    .stat-value { font-size: 1rem; }
 
     .temporada-titulos { grid-template-columns: 1fr; }
 

@@ -46,13 +46,15 @@ Todos os dados ficam salvos no localStorage do navegador, então suas carreiras,
 
 · Títulos coletivos: Liga Nacional, Copa Nacional, Copa Continental, Copa do Mundo, Intercontinental, Mundial de Clubes, entre outros.
 · Títulos individuais: Bola de Ouro, Golden Boy, Chuteira de Ouro, Luva de Ouro.
-· 30 conquistas desbloqueáveis divididas em 6 categorias.
-· Recordes históricos calculados com base em todas as carreiras salvas.
+· 40 conquistas desbloqueáveis divididas em 8 categorias, incluindo hat-tricks e Over.
+· Recordes históricos de gols, assistências, títulos, hat-tricks e Over.
 
 📊 Progressão e rankings
 
 · Histórico completo de temporadas com filtros (gols, assistências, prêmios).
 · Ranking das 5 melhores carreiras com filtros por posição e seleção.
+· Listas de opções dos filtros exibidas em janelas visuais com busca para listas extensas.
+· Exibição do total de hat-tricks feitos por cada jogador no ranking.
 · Detalhes completos da trajetória (temporada a temporada) de cada carreira.
 · Pontuação calculada com pesos para gols, assistências, prêmios e títulos.
 

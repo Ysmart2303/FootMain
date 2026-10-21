@@ -74,12 +74,22 @@
                 <input type="number" placeholder="Ex: 18" id="idade" min="0" value="18">
                 <label for="idade-limite">Idade limite</label>
                 <input type="number" id="idade-limite" min="1" value="40">
-                <label for="nacionalidade">Nacionalidade</label>
-                <select id="nacionalidade">
-                    <option value="">Selecione uma seleção</option>
-                </select>
-                <label for="clube-alvo">Clube-alvo</label>
-                <button id="clube-alvo" class="clube-alvo-btn" type="button">Escolher clube-alvo</button>
+                <div class="input-field input-field--full">
+                    <label for="filtro-regiao-nacionalidade">Filtrar nacionalidade por região</label>
+                    <select id="filtro-regiao-nacionalidade">
+                        <option value="">Todas as regiões</option>
+                    </select>
+                </div>
+                <div class="input-field input-field--full">
+                    <label for="nacionalidade">Nacionalidade</label>
+                    <select id="nacionalidade">
+                        <option value="">Selecione uma seleção</option>
+                    </select>
+                </div>
+                <div class="input-field input-field--full">
+                    <label for="clube-alvo">Clube-alvo</label>
+                    <button id="clube-alvo" class="clube-alvo-btn" type="button">Escolher clube-alvo</button>
+                </div>
             </div>
 
             <div id="posi">
@@ -179,6 +189,8 @@
                     <strong id="resumo-gols">0</strong>
                     <span>Assistências</span>
                     <strong id="resumo-assistencias">0</strong>
+                    <span>Hat-tricks</span>
+                    <strong id="resumo-hat-tricks">0</strong>
                     <span>Prêmios</span>
                     <strong id="resumo-premios">0</strong>
                 </div>
@@ -220,6 +232,7 @@
                             <option value="ordem" selected>Ordem original</option>
                             <option value="gols">Gols</option>
                             <option value="assistencias">Assistências</option>
+                            <option value="hattricks">Hat-tricks</option>
                             <option value="premios">Prêmios</option>
                             <option value="overall">Over</option>
                         </select>
@@ -243,6 +256,7 @@
                             <option value="pontuacao" selected>Pontuação</option>
                             <option value="gols">Gols</option>
                             <option value="assistencias">Assistências</option>
+                            <option value="hattricks">Hat-tricks</option>
                             <option value="premios">Prêmios</option>
                             <option value="over">Maior Over</option>
                         </select>
@@ -299,16 +313,22 @@
                             <option value="Gols">Gols</option>
                             <option value="Assistências">Assistências</option>
                             <option value="Jogos">Jogos</option>
+                            <option value="Hat-tricks">Hat-tricks</option>
+                            <option value="Over">Over</option>
                             <option value="Títulos coletivos">Títulos coletivos</option>
                             <option value="Títulos individuais">Títulos individuais</option>
                             <option value="Longevidade">Longevidade</option>
                         </select>
                     </div>
-                    <h3>Conquistas da carreira</h3>
-                    <div id="lista-conquistas" class="grade-conquistas"></div>
-                    <h3>Recordes históricos</h3>
-                    <p class="conquistas-intro">Os recordes são calculados com base nas carreiras salvas no ranking e nas temporadas disponíveis.</p>
-                    <div id="lista-recordes" class="grade-recordes"></div>
+                    <section class="conquistas-bloco">
+                        <h3>Conquistas da carreira</h3>
+                        <div id="lista-conquistas" class="grade-conquistas"></div>
+                    </section>
+                    <section class="conquistas-bloco conquistas-bloco--recordes">
+                        <h3>Recordes históricos</h3>
+                        <p class="conquistas-intro">Os recordes são calculados com base nas carreiras salvas no ranking e nas temporadas disponíveis.</p>
+                        <div id="lista-recordes" class="grade-recordes"></div>
+                    </section>
                 </div>
             </details>
             <div id="notificacao-conquista" class="notificacao-conquista" role="status" aria-live="polite" hidden></div>
@@ -342,6 +362,7 @@
     </div>
 
 <script src="js/config.js"></script>
+<script src="js/select-modal.js" defer></script>
 <script src="js/script.js" defer></script>
 </body>
 </html>

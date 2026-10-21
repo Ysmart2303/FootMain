@@ -61,24 +61,18 @@ const SCHEMA_CONFIG = [
             { caminho: "lesoes.fatorVeterano",  label: "Fator por idade — veterano (29–32 anos)",  tipo: "range", min: 0, max: 3,      passo: 0.1 },
             { caminho: "lesoes.fatorIdoso",     label: "Fator por idade — veterano (33+ anos)",    tipo: "range", min: 0, max: 3,      passo: 0.1 }
         ]
-    },
-    {
-        id: "selecao",
-        titulo: "Força das seleções",
-        icone: "🌎",
-        descricao: "A força (1 a 100) define a chance proporcional de cada seleção ganhar os torneios em que participa. As competições internacionais continuam seguindo seus ciclos configurados.",
-        campos: SELECOES.map((selecao) => ({
-            caminho: `selecao.potencias.${selecao.id}`,
-            label: selecao.nome,
-            tipo: "range",
-            min: 1,
-            max: 100,
-            passo: 1
-        }))
     }
 ];
 
 const LIGAS_CLUBES = [...new Set(CLUBES.map((clube) => clube.liga))];
+const REGIOES_SELECOES = {
+    africa: "África",
+    americaNorte: "América do Norte",
+    americaSul: "América do Sul",
+    asia: "Ásia",
+    europa: "Europa",
+    oceania: "Oceania"
+};
 
 const PRESETS_UI = [
     { id: "padrao",   nome: "Padrão",   icone: "⚙️" },
@@ -203,6 +197,45 @@ function renderGrupoClubes(config) {
         </details>`;
 }
 
+function renderGrupoSelecoes(config, regiao = "") {
+    const regioes = [...new Set(SELECOES.map((selecao) => selecao.regiao))];
+    const opcoesRegiao = regioes.map((regiaoSelecao) =>
+        `<option value="${regiaoSelecao}"${regiaoSelecao === regiao ? " selected" : ""}>${REGIOES_SELECOES[regiaoSelecao] || regiaoSelecao}</option>`
+    ).join("");
+    const campos = SELECOES
+        .filter((selecao) => !regiao || selecao.regiao === regiao)
+        .map((selecao) => {
+            const campo = {
+                caminho: `selecao.potencias.${selecao.id}`,
+                label: selecao.nome,
+                tipo: "range",
+                min: 1,
+                max: 100,
+                passo: 1
+            };
+            return renderCampo(campo, obterPorCaminho(config, campo.caminho));
+        })
+        .join("");
+
+    return `
+        <details class="config-grupo" data-grupo="selecao">
+            <summary class="config-grupo-resumo">
+                <span class="config-grupo-icone">🌎</span>
+                <span class="config-grupo-titulo">Força das seleções</span>
+                <span class="config-grupo-seta" aria-hidden="true">⌄</span>
+            </summary>
+            <p class="config-grupo-desc">A força (1 a 100) define a chance proporcional de cada seleção ganhar os torneios em que participa. As competições internacionais continuam seguindo seus ciclos configurados.</p>
+            <div class="filtro-liga-clubes">
+                <label for="filtro-regiao-selecoes">Filtrar por região</label>
+                <select id="filtro-regiao-selecoes">
+                    <option value="">Todas as regiões</option>
+                    ${opcoesRegiao}
+                </select>
+            </div>
+            <div class="config-campos">${campos}</div>
+        </details>`;
+}
+
 function renderCamposClubes(config = carregarConfig()) {
     const filtro = document.getElementById("filtro-liga-clubes");
     const container = document.getElementById("campos-forca-clubes");
@@ -227,6 +260,7 @@ function renderCampos() {
     const container = document.getElementById("grupos-config");
     if (!container) return;
 
+    const regiaoSelecoes = document.getElementById("filtro-regiao-selecoes")?.value || "";
     container.innerHTML = SCHEMA_CONFIG.map((grupo) => `
         <details class="config-grupo" data-grupo="${grupo.id}">
             <summary class="config-grupo-resumo">
@@ -239,12 +273,17 @@ function renderCampos() {
                 ${grupo.campos.map(campo => renderCampo(campo, obterPorCaminho(config, campo.caminho))).join("")}
             </div>
         </details>
-    `).join("") + renderGrupoClubes(config);
+    `).join("") + renderGrupoSelecoes(config, regiaoSelecoes) + renderGrupoClubes(config);
 
     renderCamposClubes(config);
+    configurarSeletoresEmModal();
 
     container.oninput = aoAlterarCampo;
     container.onchange = (evento) => {
+        if (evento.target?.id === "filtro-regiao-selecoes") {
+            renderCampos();
+            return;
+        }
         if (evento.target?.id === "filtro-liga-clubes") {
             renderCamposClubes(carregarConfig());
             return;

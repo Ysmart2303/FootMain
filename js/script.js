@@ -1,6 +1,14 @@
 const STORAGE_KEY = "footmain_temporadas";
 const STORAGE_KEY_RANKING = "footmain_ranking";
 const STORAGE_KEY_CARREIRA_ATUAL = "footmain_carreira_atual";
+const REGIOES_SELECOES = {
+    africa: "África",
+    americaNorte: "América do Norte",
+    americaSul: "América do Sul",
+    asia: "Ásia",
+    europa: "Europa",
+    oceania: "Oceania"
+};
 
 const OVERALL_PADRAO = 50;
 
@@ -839,6 +847,7 @@ function renderDetalhesCarreira(carreira) {
             const trofeusHtml = trofeus.length
                 ? trofeus.map(t => `<span class="trajetoria-trofeu">${escaparHTML(t)}</span>`).join("")
                 : '<span class="trajetoria-trofeu trajetoria-trofeu--vazio">Sem títulos</span>';
+            const hatTricks = contarHatTricks([temporada]);
 
             return `<div class="trajetoria-temporada">
                 <div class="trajetoria-temporada-header">
@@ -850,6 +859,7 @@ function renderDetalhesCarreira(carreira) {
                     <span><strong>${temporada.jogos}</strong> jogos</span>
                     <span><strong>${temporada.gols}</strong> gols</span>
                     <span><strong>${temporada.assistencias}</strong> assist.</span>
+                    <span><strong>${hatTricks}</strong> hat-tricks</span>
                 </div>
                 <div class="trajetoria-trofeus">${trofeusHtml}</div>
                 <div class="trajetoria-eventos">${formatarEventosTemporada(temporada.eventos)}</div>
@@ -873,6 +883,10 @@ function renderDetalhesCarreira(carreira) {
                 <div class="trajetoria-resumo-card">
                     <span class="trajetoria-resumo-label">Média gols/jogo</span>
                     <strong class="trajetoria-resumo-valor">${mediaGols}</strong>
+                </div>
+                <div class="trajetoria-resumo-card">
+                    <span class="trajetoria-resumo-label">Hat-tricks</span>
+                    <strong class="trajetoria-resumo-valor">${contarHatTricks(temporadas)}</strong>
                 </div>
                 <div class="trajetoria-resumo-card">
                     <span class="trajetoria-resumo-label">Títulos coletivos</span>
@@ -932,12 +946,22 @@ const CONQUISTAS = [
     { id: "temp-15", nome: "Carreira duradoura", descricao: "Conclua 15 temporadas.", categoria: "Longevidade", icone: "⏳", metrica: "temporadas", meta: 15 },
     { id: "temp-20", nome: "Lenda eterna", descricao: "Conclua 20 temporadas.", categoria: "Longevidade", icone: "♾️", metrica: "temporadas", meta: 20 },
 
+    { id: "hattrick-1", nome: "Hat-trick de estreia", descricao: "Faça 1 hat-trick na carreira.", categoria: "Hat-tricks", icone: "⚽", metrica: "hatTricks", meta: 1 },
+    { id: "hattrick-10", nome: "Especialista em hat-tricks", descricao: "Faça 10 hat-tricks na carreira.", categoria: "Hat-tricks", icone: "🎩", metrica: "hatTricks", meta: 10 },
+    { id: "hattrick-25", nome: "Trinca lendária", descricao: "Faça 25 hat-tricks na carreira.", categoria: "Hat-tricks", icone: "🔥", metrica: "hatTricks", meta: 25 },
+    { id: "hattrick-50", nome: "Rei dos hat-tricks", descricao: "Faça 50 hat-tricks na carreira.", categoria: "Hat-tricks", icone: "👑", metrica: "hatTricks", meta: 50 },
+
+    { id: "over-80", nome: "Destaque mundial", descricao: "Alcance Over 80 na carreira.", categoria: "Over", icone: "⭐", metrica: "maiorOver", meta: 80 },
+    { id: "over-90", nome: "Craque mundial", descricao: "Alcance Over 90 na carreira.", categoria: "Over", icone: "🌟", metrica: "maiorOver", meta: 90 },
+    { id: "over-95", nome: "Lenda do futebol", descricao: "Alcance Over 95 na carreira.", categoria: "Over", icone: "💎", metrica: "maiorOver", meta: 95 },
+    { id: "over-99", nome: "Over máximo", descricao: "Alcance Over 99 na carreira.", categoria: "Over", icone: "👑", metrica: "maiorOver", meta: 99 },
 ];
 
 function obterMetricasCarreira(carreira) {
     const temporadas = obterTemporadasDaCarreira(carreira);
     const titulosColetivos = Array.isArray(carreira.trofeusColetivos) ? carreira.trofeusColetivos.length : 0;
     const titulosIndividuais = Array.isArray(carreira.trofeusIndividuais) ? carreira.trofeusIndividuais.length : 0;
+    const totalTitulos = titulosColetivos + titulosIndividuais;
     return {
         gols: Number(carreira.gols) || 0,
         assistencias: Number(carreira.assistencias) || 0,
@@ -945,7 +969,9 @@ function obterMetricasCarreira(carreira) {
         titulosColetivos,
         titulosIndividuais,
         temporadas: temporadas.length,
-        premios: Number(carreira.premios) || titulos,
+        hatTricks: contarHatTricks(temporadas),
+        maiorOver: Math.max(0, ...temporadas.map((temporada) => Number(temporada.overall) || 0)),
+        premios: Number(carreira.premios) || totalTitulos,
         pontuacao: Number(carreira.pontuacao) || calcularPontuacao(carreira)
     };
 }
@@ -1041,6 +1067,7 @@ function renderConquistas() {
     const temporadasDeTodas = ordenadas.flatMap((item) => obterTemporadasDaCarreira(item).map((temporada) => ({
         ...temporada,
         carreiraNome: item.nome,
+        hatTricksTemporada: contarHatTricks([temporada]),
         pontosTemporada: calcularPontuacao({
             jogos: temporada.jogos,
             gols: temporada.gols,
@@ -1051,12 +1078,20 @@ function renderConquistas() {
         }),
         titulosTemporada: (temporada.trofeusColetivos || []).length + (temporada.trofeusIndividuais || []).length
     })));
+    const carreirasComMetricas = ordenadas.map((item) => ({
+        ...item,
+        hatTricksCarreira: contarHatTricks(obterTemporadasDaCarreira(item)),
+        maiorOver: obterMetricasCarreira(item).maiorOver
+    }));
 
     const recordes = [
         { nome: "Mais gols em uma temporada", campo: "gols", sufixo: "gols", melhor: temporadasDeTodas.reduce((a, b) => !a || b.gols > a.gols ? b : a, null) },
         { nome: "Mais assistências em uma temporada", campo: "assistencias", sufixo: "assistências", melhor: temporadasDeTodas.reduce((a, b) => !a || b.assistencias > a.assistencias ? b : a, null) },
         { nome: "Mais títulos em uma temporada", campo: "titulosTemporada", sufixo: "títulos", melhor: temporadasDeTodas.reduce((a, b) => !a || b.titulosTemporada > a.titulosTemporada ? b : a, null) },
         { nome: "Maior pontuação em uma temporada", campo: "pontosTemporada", sufixo: "pontos", melhor: temporadasDeTodas.reduce((a, b) => !a || b.pontosTemporada > a.pontosTemporada ? b : a, null) },
+        { nome: "Mais hat-tricks em uma temporada", campo: "hatTricksTemporada", sufixo: "hat-tricks", melhor: temporadasDeTodas.reduce((a, b) => !a || b.hatTricksTemporada > a.hatTricksTemporada ? b : a, null) },
+        { nome: "Carreira com mais hat-tricks", campo: "hatTricksCarreira", sufixo: "hat-tricks", melhor: carreirasComMetricas.reduce((a, b) => !a || b.hatTricksCarreira > a.hatTricksCarreira ? b : a, null), carreira: true },
+        { nome: "Carreira com maior Over", campo: "maiorOver", sufixo: "Over", melhor: carreirasComMetricas.reduce((a, b) => !a || b.maiorOver > a.maiorOver ? b : a, null), carreira: true },
         { nome: "Carreira com mais gols", campo: "gols", sufixo: "gols", melhor: ordenadas.reduce((a, b) => !a || b.gols > a.gols ? b : a, null), carreira: true }
     ];
 
@@ -1097,8 +1132,13 @@ function renderRanking() {
         })
         .sort((a, b) => {
             const maiorOver = (carreira) => Math.max(0, ...(carreira.temporadas || []).map((temporada) => Number(temporada.overall) || 0));
-            const valorA = criterio === "over" ? maiorOver(a) : (Number(a[criterio]) || 0);
-            const valorB = criterio === "over" ? maiorOver(b) : (Number(b[criterio]) || 0);
+            const valorOrdenacao = (carreira) => {
+                if (criterio === "over") return maiorOver(carreira);
+                if (criterio === "hattricks") return contarHatTricks(carreira.temporadas || []);
+                return Number(carreira[criterio]) || 0;
+            };
+            const valorA = valorOrdenacao(a);
+            const valorB = valorOrdenacao(b);
             return valorB - valorA;
         })
         .slice(0, 5);
@@ -1119,6 +1159,7 @@ function renderRanking() {
       const medalha = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `#${index + 1}`;
       const classeTop = index === 0 ? "top-1" : index === 1 ? "top-2" : index === 2 ? "top-3" : "";
       const maiorOver = Math.max(0, ...(carreira.temporadas || []).map(t => Number(t.overall) || 0));
+      const hatTricks = contarHatTricks(carreira.temporadas || []);
       const selecao = SELECOES.find(s => s.id === carreira.nacionalidade);
       const clube = obterClube(carreira.clube);
   
@@ -1159,6 +1200,7 @@ function renderRanking() {
                   <div class="stat-card"><span class="stat-label">Jogos</span><strong class="stat-value">${carreira.jogos}</strong></div>
                   <div class="stat-card"><span class="stat-label">Gols</span><strong class="stat-value stat-value--gol">${carreira.gols}</strong></div>
                   <div class="stat-card"><span class="stat-label">Assist.</span><strong class="stat-value stat-value--assist">${carreira.assistencias}</strong></div>
+                  <div class="stat-card"><span class="stat-label">Hat-tricks</span><strong class="stat-value">${hatTricks}</strong></div>
                   <div class="stat-card"><span class="stat-label">Prêmios</span><strong class="stat-value stat-value--premio">${premios}</strong></div>
                   <div class="stat-card"><span class="stat-label">Maior OVR</span><strong class="stat-value">${maiorOver}</strong></div>
               </div>
@@ -1248,8 +1290,13 @@ function renderHistorico() {
     const temporadas = criterio === "ordem"
         ? historico
         : historico.slice().sort((a, b) => {
-              const valorA = criterio === "premios" ? contarPremios(a) : Number(a[criterio]) || 0;
-              const valorB = criterio === "premios" ? contarPremios(b) : Number(b[criterio]) || 0;
+              const valorOrdenacao = (temporada) => {
+                  if (criterio === "premios") return contarPremios(temporada);
+                  if (criterio === "hattricks") return contarHatTricks([temporada]);
+                  return Number(temporada[criterio]) || 0;
+              };
+              const valorA = valorOrdenacao(a);
+              const valorB = valorOrdenacao(b);
               return valorB - valorA;
           });
 
@@ -1261,6 +1308,7 @@ function renderHistorico() {
         const trofeusColetivos = mapearTrofeusTemporada(temporada, "trofeusColetivos");
         const trofeusIndividuais = mapearTrofeusTemporada(temporada, "trofeusIndividuais");
         const premios = contarPremios(temporada);
+        const hatTricks = contarHatTricks([temporada]);
         const clube = obterClube(temporada.clube);
 
         return `
@@ -1284,6 +1332,7 @@ function renderHistorico() {
                     <div class="stat-card"><span class="stat-label">Jogos</span><strong class="stat-value">${temporada.jogos}</strong></div>
                     <div class="stat-card"><span class="stat-label">Gols</span><strong class="stat-value stat-value--gol">${temporada.gols}</strong></div>
                     <div class="stat-card"><span class="stat-label">Assist.</span><strong class="stat-value stat-value--assist">${temporada.assistencias}</strong></div>
+                    <div class="stat-card"><span class="stat-label">Hat-tricks</span><strong class="stat-value">${hatTricks}</strong></div>
                     <div class="stat-card"><span class="stat-label">Prêmios</span><strong class="stat-value stat-value--premio">${premios}</strong></div>
                 </div>
                 <div class="temporada-titulos">
@@ -1373,6 +1422,13 @@ function somarTotaisHistorico(historico) {
     );
 }
 
+function contarHatTricks(temporadas) {
+    return temporadas.reduce(
+        (total, temporada) => total + (temporada.eventos || []).filter((evento) => evento.tipo === "hat-trick").length,
+        0
+    );
+}
+
 function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao) {
     const totais = somarTotaisHistorico(historico);
     const resumoFinal = document.getElementById("resumo-final");
@@ -1435,6 +1491,7 @@ function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao) {
     document.getElementById("resumo-jogos").textContent = totais.jogos;
     document.getElementById("resumo-gols").textContent = totais.gols;
     document.getElementById("resumo-assistencias").textContent = totais.assistencias;
+    document.getElementById("resumo-hat-tricks").textContent = contarHatTricks(historico);
     document.getElementById("resumo-premios").textContent = totais.premios;
     document.getElementById("resumo-coletivos").textContent = formatarTrofeus(trofeus.coletivos);
     document.getElementById("resumo-individuais").textContent = formatarTrofeus(trofeus.individuais);
@@ -1793,7 +1850,7 @@ function simularTemporadaPorJogo(posicao, atributos, idade, jogosForaInicioTempo
     let assistencias = 0;
     let jogosAfastado = Math.max(0, Math.floor(jogosForaInicioTemporada) || 0);
     const eventos = [];
-    const chanceHatTrick = { ata: 0.009, me: 0.006, zag: 0.002, go: 0 }[posicao] || 0;
+    const chanceHatTrick = { ata: 0.04, me: 0.025, zag: 0.008, go: 0 }[posicao] || 0;
     const chancePasseDecisivo = { ata: 0.008, me: 0.012, zag: 0.003, go: 0.001 }[posicao] || 0;
 
     let lesaoGrave = false;
@@ -2579,6 +2636,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const nacionalidadeInput = document.getElementById("nacionalidade");
+    const filtroRegiaoNacionalidade = document.getElementById("filtro-regiao-nacionalidade");
     const carreiraAtual = obterCarreiraAtual();
     const clubeAlvoButton = document.getElementById("clube-alvo");
     const atualizarBotaoClubeAlvo = () => {
@@ -2611,9 +2669,30 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     atualizarBotaoClubeAlvo();
     if (nacionalidadeInput) {
-        nacionalidadeInput.innerHTML = '<option value="">Selecione uma seleção</option>' +
-            SELECOES.map((selecao) => `<option value="${selecao.id}">${escaparHTML(selecao.nome)}</option>`).join("");
+        const regioes = [...new Set(SELECOES.map((selecao) => selecao.regiao))];
+        if (filtroRegiaoNacionalidade) {
+            filtroRegiaoNacionalidade.innerHTML = '<option value="">Todas as regiões</option>' +
+                regioes.map((regiao) => `<option value="${regiao}">${escaparHTML(REGIOES_SELECOES[regiao] || regiao)}</option>`).join("");
+        }
+        const atualizarOpcoesNacionalidade = () => {
+            const regiao = filtroRegiaoNacionalidade?.value || "";
+            const nacionalidades = SELECOES.filter((selecao) => !regiao || selecao.regiao === regiao);
+            const selecaoAtual = SELECOES.find((selecao) => selecao.id === nacionalidadeInput.value);
+            if (selecaoAtual && !nacionalidades.some((selecao) => selecao.id === selecaoAtual.id)) {
+                nacionalidades.unshift(selecaoAtual);
+            }
+            nacionalidadeInput.innerHTML = '<option value="">Selecione uma seleção</option>' +
+                nacionalidades.map((selecao) => {
+                    const foraDaRegiao = regiao && selecao.regiao !== regiao;
+                    const nome = foraDaRegiao ? `${selecao.nome} (seleção atual)` : selecao.nome;
+                    return `<option value="${selecao.id}">${escaparHTML(nome)}</option>`;
+                }).join("");
+        };
+        atualizarOpcoesNacionalidade();
         nacionalidadeInput.value = carreiraAtual.nacionalidade;
+        if (filtroRegiaoNacionalidade) {
+            filtroRegiaoNacionalidade.addEventListener("change", atualizarOpcoesNacionalidade);
+        }
         nacionalidadeInput.addEventListener("change", () => {
             const carreiraAtualizada = obterCarreiraAtual();
             carreiraAtualizada.nacionalidade = nacionalidadeInput.value;
@@ -2626,6 +2705,8 @@ document.addEventListener("DOMContentLoaded", () => {
             );
         });
     }
+
+    configurarSeletoresEmModal();
 
     const idadeInicial = Number(document.getElementById("idade").value) || 0;
     const nomeAtual = normalizarNome(carreiraAtual.nome) || "Jogador";
