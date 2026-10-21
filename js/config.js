@@ -831,6 +831,8 @@ const CONFIG_PADRAO = {
         chanceIntercontinental: 0.35,
         chanceMundialClubes: 0.20,
         chanceBolaDeOuro: 0.25,
+        chanceBolaDeOuroZagueiro: 0.20,
+        chanceBolaDeOuroGoleiro: 0.20,
         chanceGoldenBoy: 0.18,
         chanceChuteiraDeOuro: 0.50,
         chanceLuvaDeOuro: 0.30,

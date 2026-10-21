@@ -659,8 +659,26 @@ button:hover {
     color: #bbf7d0;
 }
 
+.evento-tag.defesa-ultimo-lance,
+.evento-tag.penalti-defendido,
+.evento-tag.falta-defendida,
+.evento-tag.contra-ataque-desarmado,
+.evento-tag.interceptacao-decisiva {
+    border-color: rgba(96, 165, 250, 0.4);
+    background: rgba(59, 130, 246, 0.14);
+    color: #bfdbfe;
+}
+
+.evento-tag.cartao-amarelo,
+.evento-tag.falta-sofrida-goleiro {
+    border-color: rgba(251, 191, 36, 0.4);
+    background: rgba(245, 158, 11, 0.14);
+    color: #fde68a;
+}
+
 .evento-tag.lesao,
-.evento-tag.cartao-vermelho {
+.evento-tag.cartao-vermelho,
+.evento-tag.penalti-causado {
     border-color: rgba(248, 113, 113, 0.35);
     background: rgba(239, 68, 68, 0.12);
     color: #fecaca;
@@ -2261,8 +2279,22 @@ html[data-theme="light"] .evento-tag.assistencia {
     color: #166534 !important;
 }
 
+html[data-theme="light"] .evento-tag.defesa-ultimo-lance,
+html[data-theme="light"] .evento-tag.penalti-defendido,
+html[data-theme="light"] .evento-tag.falta-defendida,
+html[data-theme="light"] .evento-tag.contra-ataque-desarmado,
+html[data-theme="light"] .evento-tag.interceptacao-decisiva {
+    color: #1d4ed8 !important;
+}
+
+html[data-theme="light"] .evento-tag.cartao-amarelo,
+html[data-theme="light"] .evento-tag.falta-sofrida-goleiro {
+    color: #92400e !important;
+}
+
 html[data-theme="light"] .evento-tag.lesao,
-html[data-theme="light"] .evento-tag.cartao-vermelho {
+html[data-theme="light"] .evento-tag.cartao-vermelho,
+html[data-theme="light"] .evento-tag.penalti-causado {
     color: #991b1b !important;
 }
 

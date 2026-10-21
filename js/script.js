@@ -303,7 +303,10 @@ function normalizarEventosTemporada(eventos) {
 
     const tiposValidos = new Set([
         "hat-trick", "assistencia", "lesao", "lesao-moderada",
-        "lesao-grave", "lesao-carreira", "cartao-vermelho"
+        "lesao-grave", "lesao-carreira", "cartao-vermelho",
+        "defesa-ultimo-lance", "penalti-defendido", "falta-defendida",
+        "falta-sofrida-goleiro", "penalti-causado", "contra-ataque-desarmado",
+        "cartao-amarelo", "interceptacao-decisiva"
     ]);
 
     return eventos
@@ -670,7 +673,7 @@ function gerarTrofeusSelecao(nacionalidade, ano, multiplicadorTitulos) {
     return trofeus;
 }
 
-function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, temporadasAnteriores = [], nacionalidade = "", clubeId = "") {
+function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, temporadasAnteriores = [], nacionalidade = "", clubeId = "", eventos = [], overall = OVERALL_PADRAO, posicaoDetalhe = "") {
     const cfg = getConfig();
     const t = cfg.titulos;
     const multColetivos = cfg.geral.multiplicadorTitulos;
@@ -750,6 +753,33 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
         sortearPremio(t.chanceBolaDeOuro * multIndividuais)
     ) {
         trofeusIndividuais.push("Bola de Ouro");
+    }
+
+    const eventosDeDesempenho = Array.isArray(eventos) ? eventos : [];
+    const defesasDecisivas = eventosDeDesempenho.filter((evento) =>
+        ["defesa-ultimo-lance", "penalti-defendido", "falta-defendida"].includes(evento.tipo)
+    ).length;
+    const acoesDefensivasDecisivas = eventosDeDesempenho.filter((evento) =>
+        ["contra-ataque-desarmado", "interceptacao-decisiva"].includes(evento.tipo)
+    ).length;
+
+    if (
+        posicao === "Zagueiro" &&
+        ["ZCE", "ZCD"].includes(posicaoDetalhe) &&
+        jogos >= 30 &&
+        (acoesDefensivasDecisivas >= 2 || (acoesDefensivasDecisivas >= 1 && overall >= 80)) &&
+        sortearPremio(t.chanceBolaDeOuroZagueiro * multIndividuais)
+    ) {
+        trofeusIndividuais.push("Defender of the Year");
+    }
+
+    if (
+        posicao === "Goleiro" &&
+        jogos >= 25 &&
+        (defesasDecisivas >= 2 || (defesasDecisivas >= 1 && overall >= 80)) &&
+        sortearPremio(t.chanceBolaDeOuroGoleiro * multIndividuais)
+    ) {
+        trofeusIndividuais.push("GoalKeeper of the year");
     }
 
     const jaGanhouGoldenBoy = temporadasAnteriores.some(
@@ -1368,7 +1398,15 @@ function formatarEventosTemporada(eventos) {
         "lesao-moderada": (evento) => `🤕 Lesão moderada no jogo ${evento.jogo}: fora por ${evento.jogosPerdidos} jogos`,
         "lesao-grave": (evento) => `🏥 Lesão grave no jogo ${evento.jogo}: perdeu o resto da temporada${evento.jogosForaProximaTemporada ? ` e mais ${evento.jogosForaProximaTemporada} jogos da próxima` : ""}`,
         "lesao-carreira": (evento) => `💔 Lesão gravíssima no jogo ${evento.jogo}: encerrou a carreira`,
-        "cartao-vermelho": (evento) => `🟥 Cartão vermelho no jogo ${evento.jogo}: suspensão de ${evento.jogosPerdidos} ${evento.jogosPerdidos === 1 ? "jogo" : "jogos"}`
+        "cartao-vermelho": (evento) => `🟥 Cartão vermelho no jogo ${evento.jogo}: suspensão de ${evento.jogosPerdidos} ${evento.jogosPerdidos === 1 ? "jogo" : "jogos"}`,
+        "defesa-ultimo-lance": (evento) => `🧤 Defesa no último lance no jogo ${evento.jogo}`,
+        "penalti-defendido": (evento) => `🧤 Pênalti defendido no jogo ${evento.jogo}`,
+        "falta-defendida": (evento) => `🧤 Cobrança de falta defendida no jogo ${evento.jogo}`,
+        "falta-sofrida-goleiro": (evento) => `🤕 Goleiro sofreu falta no jogo ${evento.jogo}`,
+        "penalti-causado": (evento) => `⚠️ Cometeu pênalti no jogo ${evento.jogo}`,
+        "contra-ataque-desarmado": (evento) => `🛡️ Desarmou um contra-ataque decisivo e garantiu a vitória no jogo ${evento.jogo}`,
+        "cartao-amarelo": (evento) => `🟨 Cartão amarelo no jogo ${evento.jogo}`,
+        "interceptacao-decisiva": (evento) => `🛡️ Interceptação decisiva no jogo ${evento.jogo}`
     };
 
     return `<div class="eventos-tags">${eventosValidos
@@ -1766,7 +1804,7 @@ function obterModificadorPotencial(chave, posicao) {
 }
 
 // Simula a temporada jogo a jogo com base no overall e nos atributos.
-function simularTemporadaPorJogo(posicao, atributos, idade, jogosForaInicioTemporada = 0) {
+function simularTemporadaPorJogo(posicao, atributos, idade, jogosForaInicioTemporada = 0, posicaoDetalhe = "") {
     const cfg = getConfig();
     const overall = calcularOverall(posicao, atributos);
 
@@ -1877,6 +1915,19 @@ function simularTemporadaPorJogo(posicao, atributos, idade, jogosForaInicioTempo
             eventos.push({ tipo: "assistencia", jogo: numeroJogo });
         }
 
+        if (posicao === "go") {
+            if (Math.random() < 0.012) eventos.push({ tipo: "defesa-ultimo-lance", jogo: numeroJogo });
+            if (Math.random() < 0.012) eventos.push({ tipo: "penalti-defendido", jogo: numeroJogo });
+            if (Math.random() < 0.02) eventos.push({ tipo: "falta-defendida", jogo: numeroJogo });
+            if (Math.random() < 0.01) eventos.push({ tipo: "falta-sofrida-goleiro", jogo: numeroJogo });
+            if (Math.random() < 0.003) eventos.push({ tipo: "penalti-causado", jogo: numeroJogo });
+        } else if (posicao === "zag" && ["ZCE", "ZCD"].includes(posicaoDetalhe)) {
+            if (Math.random() < 0.035) eventos.push({ tipo: "contra-ataque-desarmado", jogo: numeroJogo });
+            if (Math.random() < 0.012) eventos.push({ tipo: "penalti-causado", jogo: numeroJogo });
+            if (Math.random() < 0.07) eventos.push({ tipo: "cartao-amarelo", jogo: numeroJogo });
+            if (Math.random() < 0.04) eventos.push({ tipo: "interceptacao-decisiva", jogo: numeroJogo });
+        }
+
         // ===== Sistema de lesões (configurável) =====
         const sorteioLesao = Math.random();
 
@@ -1944,11 +1995,11 @@ function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], na
 
     const atributos = evoluirAtributos(temporadasAnteriores, categoria, idade, carreiraAtual.potencial);
     const overall = calcularOverall(categoria, atributos);
-    const sim = simularTemporadaPorJogo(categoria, atributos, idade, jogosForaInicio);
+    const sim = simularTemporadaPorJogo(categoria, atributos, idade, jogosForaInicio, posicaoDetalhe);
 
     const trofeus = gerarTrofeusTemporada(
         dados.nome, sim.jogos, sim.gols, sim.assistencias,
-        ano, idade, temporadasAnteriores, nacionalidade, clubeId
+        ano, idade, temporadasAnteriores, nacionalidade, clubeId, sim.eventos, overall, posicaoDetalhe
     );
 
     const clube = obterClube(clubeId);

@@ -39,6 +39,8 @@ const SCHEMA_CONFIG = [
             { caminho: "titulos.chanceIntercontinental", label: "Intercontinental",       tipo: "range", min: 0, max: 1, passo: 0.01 },
             { caminho: "titulos.chanceMundialClubes",    label: "Mundial de Clubes",      tipo: "range", min: 0, max: 1, passo: 0.01 },
             { caminho: "titulos.chanceBolaDeOuro",       label: "Bola de Ouro",           tipo: "range", min: 0, max: 1, passo: 0.01 },
+            { caminho: "titulos.chanceBolaDeOuroZagueiro", label: "Defender of the Year", tipo: "range", min: 0, max: 1, passo: 0.01 },
+            { caminho: "titulos.chanceBolaDeOuroGoleiro", label: "GoalKeeper of the year", tipo: "range", min: 0, max: 1, passo: 0.01 },
             { caminho: "titulos.chanceGoldenBoy",        label: "Golden Boy",             tipo: "range", min: 0, max: 1, passo: 0.01 },
             { caminho: "titulos.chanceChuteiraDeOuro",   label: "Chuteira de Ouro",       tipo: "range", min: 0, max: 1, passo: 0.01 },
             { caminho: "titulos.chanceLuvaDeOuro",       label: "Luva de Ouro",           tipo: "range", min: 0, max: 1, passo: 0.01 },
