@@ -772,9 +772,12 @@ html[data-theme="light"] .evento-tag.lesao-carreira { color: #7f1d1d !important;
 
 
 
-#limparHistorico,
-#limparRanking {
+#limparHistorico {
     margin-bottom: 16px;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+#limparRanking {
     background: linear-gradient(135deg, #ef4444, #dc2626);
 }
 
@@ -906,6 +909,24 @@ button {
 
     .player-card__meta {
         gap: 8px 14px;
+    }
+
+    /* no player-card__meta, o <strong id="perfil-caps"> ganha destaque */
+    .player-card__meta strong#perfil-caps {
+        display: inline-flex;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgba(251, 191, 36, 0.12);
+        border: 1px solid rgba(251, 191, 36, 0.3);
+        color: #fef3c7;
+        font-weight: 800;
+        font-size: 0.82rem;
+    }
+    
+    html[data-theme="light"] .player-card__meta strong#perfil-caps {
+        background: #fef3c7;
+        border-color: #facc15;
+        color: #713f12 !important;
     }
 
     #inputs,
@@ -3221,4 +3242,223 @@ html[data-theme="light"] #lista-ranking .remover-ranking {
 
 html[data-theme="light"] #lista-ranking .remover-ranking:hover {
     background: linear-gradient(135deg, #dc2626, #b91c1c);
+}
+/* Comparação direta de carreiras */
+.modal-comparacao[hidden] { display: none !important; }
+.modal-comparacao { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(0,0,0,.72); }
+.modal-comparacao__painel { position: relative; width: min(960px, 100%); max-height: 90vh; overflow: auto; padding: 24px; border: 1px solid var(--borda, #344054); border-radius: 16px; background: var(--fundo-card, #131a28); color: var(--texto, #f5f7f9); }
+.modal-comparacao__fechar { position: absolute; top: 10px; right: 14px; border: 0; background: transparent; color: inherit; font-size: 30px; cursor: pointer; }
+.tabela-comparacao { width: 100%; overflow-x: auto; margin: 12px 0 20px; }
+.tabela-comparacao table { width: 100%; border-collapse: collapse; }
+.tabela-comparacao th, .tabela-comparacao td { padding: 9px 12px; border-bottom: 1px solid rgba(150,160,180,.22); text-align: left; }
+.tabela-comparacao thead th { background: rgba(120,150,156,.12); }
+.tabela-comparacao td { text-align: center; }
+.tabela-comparacao .comparacao-vencedor { color: #22c55e; font-weight: 800; background: rgba(34,197,94,.09); }
+.grafico-comparacao { display: block; width: 100%; max-height: 300px; overflow: visible; }
+#resultado-comparacao h3 { margin: 22px 0 8px; }
+@media (max-width: 600px) { .modal-comparacao { padding: 8px; } .modal-comparacao__painel { padding: 18px 12px; } .tabela-comparacao th, .tabela-comparacao td { padding: 7px; font-size: .85rem; } }
+
+
+/* Stats */
+
+.temporada-stats-blocos {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Bloco principal: 3 cards grandes com sub-split */
+.temporada-stats.temporada-stats--principal {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+/* Bloco secundário: 4 cards compactos */
+.temporada-stats.temporada-stats--secundaria {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+/* Sub-split clube/seleção dentro do card */
+.stat-card--split {
+    padding-bottom: 10px;
+    gap: 4px;
+}
+
+.stat-sub {
+    display: flex;
+    gap: 4px;
+    margin-top: 2px;
+    flex-wrap: wrap;
+    justify-content: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.stat-sub-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.stat-sub-item--clube {
+    background: rgba(59, 130, 246, 0.14);
+    border: 1px solid rgba(59, 130, 246, 0.32);
+    color: #bfdbfe;
+}
+
+.stat-sub-item--selecao {
+    background: rgba(251, 191, 36, 0.14);
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    color: #fef3c7;
+}
+
+.stat-sub-item--vazio {
+    background: rgba(148, 163, 184, 0.08);
+    border-color: rgba(148, 163, 184, 0.18);
+    color: #64748b;
+    font-weight: 500;
+    font-style: italic;
+}
+
+/* Responsivo */
+@media (max-width: 600px) {
+    .temporada-stats.temporada-stats--principal {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .temporada-stats.temporada-stats--secundaria {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* Tema claro */
+html[data-theme="light"] .stat-sub-item--clube {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+}
+html[data-theme="light"] .stat-sub-item--selecao {
+    background: #fef3c7;
+    border-color: #facc15;
+    color: #713f12;
+}
+html[data-theme="light"] .stat-sub-item--vazio {
+    background: #e0ecff;
+    border-color: #bfdbfe;
+    color: #64748b;
+}
+
+.trajetoria-stats-split {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.split-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    border: 1px solid transparent;
+}
+
+.split-pill--clube {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.32);
+    color: #bfdbfe;
+}
+
+.split-pill--selecao {
+    background: rgba(251, 191, 36, 0.1);
+    border-color: rgba(251, 191, 36, 0.32);
+    color: #fef3c7;
+}
+
+.split-pill--vazio {
+    opacity: 0.55;
+    font-style: italic;
+    font-weight: 500;
+}
+
+html[data-theme="light"] .split-pill--clube {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+}
+html[data-theme="light"] .split-pill--selecao {
+    background: #fef3c7;
+    border-color: #facc15;
+    color: #713f12;
+}
+
+/* Resumo final */
+
+.resumo-selecao-detalhes {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.08), rgba(59, 130, 246, 0.08));
+    border: 1px solid rgba(251, 191, 36, 0.28);
+}
+
+.resumo-selecao-detalhes h4 {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #fde68a;
+    margin-bottom: 10px;
+    text-align: center;
+    font-weight: 800;
+}
+
+.resumo-selecao-detalhes p {
+    margin: 6px 0;
+    text-align: center;
+    color: #cbd5e1;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.resumo-selecao-detalhes strong {
+    color: #f8fafc;
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+}
+
+html[data-theme="light"] .resumo-selecao-detalhes {
+    background: linear-gradient(135deg, #fef3c7, #dbeafe);
+    border-color: #facc15;
+}
+html[data-theme="light"] .resumo-selecao-detalhes h4 { color: #713f12; }
+html[data-theme="light"] .resumo-selecao-detalhes p { color: #334155; }
+html[data-theme="light"] .resumo-selecao-detalhes strong { color: #172554; }
+
+.temporada-stats.ranking-stats {
+    grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+}
+
+.acoes-ranking {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.acoes-ranking > button {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+@media (max-width: 600px) {
+    .acoes-ranking {
+        flex-direction: column;
+    }
 }
