@@ -4,7 +4,7 @@
  */
 
 const STORAGE_KEY_CONFIG = "footmain_config_v1";
-const VERSAO_APP = "1.16.0";
+const VERSAO_APP = "1.17.0";
 
 /* ---------- Definições base (as "de fábrica") ---------- */
 const POSICOES_PADRAO = {
@@ -821,7 +821,8 @@ const CONFIG_PADRAO = {
         multiplicadorGols: 1,
         multiplicadorAssistencias: 1,
         multiplicadorTitulos: 1,
-        multiplicadorPremios: 1
+        multiplicadorPremios: 1,
+        idadeAposentadoriaSelecao: 32
     },
     titulos: {
         chanceLigaNacional: 0.28,
@@ -837,7 +838,26 @@ const CONFIG_PADRAO = {
         chanceChuteiraDeOuro: 0.50,
         chanceLuvaDeOuro: 0.30,
         anoInicioMundialClubes: 2029,
-        cicloCopaDoMundo: 4
+        cicloCopaDoMundo: 4,
+
+      // ===== Competições secundárias =====
+        chanceEuropaLeague: 0.20,
+        chanceConferenceLeague: 0.18,
+        chanceSulAmericana: 0.16,
+        chanceSupercopaNacional: 0.28,
+        chanceSupercopaContinental: 0.30,
+        chanceMundialSub20: 0.14,
+        chanceMundialSub17: 0.10,
+        chanceEstadual: 0.40,
+        
+        // ===== Novos prêmios =====
+        chancePuskas: 0.04,
+        chanceEquipeDoAno: 0.22,
+        chanceMelhorJogadorCompeticao: 0.15,
+        chanceArtilheiroCompeticao: 0.24,
+        chanceMelhorJovemCompeticao: 0.20,
+        chanceMVPClube: 0.24,
+        chanceReiDaAmerica: 0.15
     },
 
     lesoes: {
@@ -940,6 +960,7 @@ const CONFIG_PADRAO = {
     clubes: {
         potencias: { ...FORCAS_CLUBES_PADRAO }
     }
+  
 };
 
 /* ---------- Presets prontos ---------- */
