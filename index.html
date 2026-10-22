@@ -62,6 +62,7 @@
                     <span>Idade: <strong id="perfil-idade">0</strong></span>
                     <span>Temporada: <strong id="perfil-ano">2024</strong></span>
                     <span>Seleção: <strong id="perfil-selecao">Não definida</strong></span>
+                    <span>Internacional: <strong id="perfil-caps">0 caps · 0 gols</strong></span>
                     <span>Clube: <strong id="perfil-clube">Ainda não escolhido</strong></span>
                     <span>Contrato: <strong id="perfil-contrato">Sem contrato · Rompimentos: 0/3</strong></span>
                 </div>
@@ -194,6 +195,11 @@
                     <span>Prêmios</span>
                     <strong id="resumo-premios">0</strong>
                 </div>
+                <div class="resumo-selecao-detalhes">
+                    <h4>Carreira pela seleção</h4>
+                    <p>Caps: <strong id="resumo-caps">0</strong> · Gols: <strong id="resumo-gols-selecao">0</strong> · Assistências: <strong id="resumo-assistencias-selecao">0</strong></p>
+                    <p>Clube: <strong id="resumo-jogos-clube">0</strong> jogos · MOTM: <strong id="resumo-motm">0</strong> · Cartões: <strong id="resumo-cartoes">0 amarelos / 0 vermelhos</strong></p>
+                </div>
                 <div class="resumo-trofeus">
                     <div>
                         <span>Coletivos</span>
@@ -233,6 +239,8 @@
                             <option value="gols">Gols</option>
                             <option value="assistencias">Assistências</option>
                             <option value="hattricks">Hat-tricks</option>
+                            <option value="motm">MOTM</option>
+                            <option value="caps">Caps pela seleção</option>
                             <option value="premios">Prêmios</option>
                             <option value="overall">Over</option>
                         </select>
@@ -257,6 +265,8 @@
                             <option value="gols">Gols</option>
                             <option value="assistencias">Assistências</option>
                             <option value="hattricks">Hat-tricks</option>
+                            <option value="motm">MOTM</option>
+                            <option value="caps">Caps pela seleção</option>
                             <option value="premios">Prêmios</option>
                             <option value="over">Maior Over</option>
                         </select>
@@ -283,12 +293,23 @@
                             <option value="" selected>Todas as seleções</option>
                         </select>
                     </div>
-                    <button id="limparRanking" type="button">Limpar ranking</button>
-                    <ol id="lista-ranking"></ol>
+                        <div class="acoes-ranking">
+                            <button id="abrir-comparacao" type="button">Comparar carreiras</button>
+                            <button id="limparRanking" type="button">Limpar ranking</button>
+                        </div>
+                        <ol id="lista-ranking"></ol>
                 </div>
             </details>
         </section>
         
+        <div id="modal-comparacao" class="modal-comparacao" hidden role="dialog" aria-modal="true" aria-labelledby="titulo-comparacao">
+            <div class="modal-comparacao__painel"><button type="button" id="fechar-comparacao" class="modal-comparacao__fechar" aria-label="Fechar">×</button>
+                <h2 id="titulo-comparacao">Comparar carreiras</h2>
+                <div class="filtro-ranking"><label for="comparacao-a">Carreira A:</label><select id="comparacao-a"></select><label for="comparacao-b">Carreira B:</label><select id="comparacao-b"></select></div>
+                <div id="resultado-comparacao"></div>
+            </div>
+        </div>
+
         <section id="conquistas">
             <details class="secao-colapsavel">
                 <summary>
@@ -314,6 +335,8 @@
                             <option value="Assistências">Assistências</option>
                             <option value="Jogos">Jogos</option>
                             <option value="Hat-tricks">Hat-tricks</option>
+                            <option value="Seleção">Seleção</option>
+                            <option value="Desempenho">Desempenho</option>
                             <option value="Over">Over</option>
                             <option value="Títulos coletivos">Títulos coletivos</option>
                             <option value="Títulos individuais">Títulos individuais</option>
