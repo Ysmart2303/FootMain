@@ -12,6 +12,108 @@ const REGIOES_SELECOES = {
 
 const OVERALL_PADRAO = 50;
 
+/* ========== Competições secundárias e estaduais ========== */
+
+const ESTADUAIS_BRASIL = {
+    flamengo: "Carioca", fluminense: "Carioca", vasco: "Carioca", botafogo: "Carioca",
+    corinthians: "Paulistão", palmeiras: "Paulistão", "sao-paulo": "Paulistão", santos: "Paulistão",
+    bragantino: "Paulistão", mirassol: "Paulistão",
+    gremio: "Gauchão", internacional: "Gauchão", juventude: "Gauchão",
+    "atletico-mg": "Mineiro", cruzeiro: "Mineiro",
+    bahia: "Baianão", vitoria: "Baianão",
+    sport: "Pernambucano",
+    fortaleza: "Cearense", ceara: "Cearense"
+};
+
+const LIGAS_EUROPA_FORTES = ["Premier League", "La Liga", "Serie A", "Bundesliga", "Ligue 1"];
+const LIGAS_EUROPA_MEDIAS = ["Primeira Liga", "Eredivisie", "Süper Lig", "Belgian Pro League",
+    "Scottish Premiership", "Swiss Super League", "Austrian Bundesliga",
+    "Russian Premier League", "Ukrainian Premier League", "Greek Super League"];
+const LIGAS_SUL_AMERICANAS = ["Brasileirão", "Argentine Primera División", "Colombian Primera A",
+    "Chilean Primera División", "Uruguayan Primera División",
+    "Ecuadorian Serie A", "Paraguayan Primera División"];
+
+function obterPosicaoClubeNaLiga(clubeId) {
+    const clube = obterClube(clubeId);
+    if (!clube) return 99;
+    const cfg = getConfig();
+    const clubesLiga = CLUBES
+        .filter((c) => c.liga === clube.liga)
+        .map((c) => ({ id: c.id, forca: Number(cfg.clubes?.potencias?.[c.id]) || 60 }))
+        .sort((a, b) => b.forca - a.forca);
+    return Math.max(0, clubesLiga.findIndex((c) => c.id === clubeId));
+}
+
+function determinarCompeticaoContinental(clubeId) {
+    const clube = obterClube(clubeId);
+    if (!clube) return { principal: null, secundaria: null };
+    const posicao = obterPosicaoClubeNaLiga(clubeId);
+    const liga = clube.liga;
+
+    if (LIGAS_EUROPA_FORTES.includes(liga)) {
+        if (posicao < 4) return { principal: "Champions League", secundaria: null };
+        if (posicao < 8) return { principal: null, secundaria: "Europa League" };
+        if (posicao < 12) return { principal: null, secundaria: "Conference League" };
+        return { principal: null, secundaria: null };
+    }
+    if (LIGAS_EUROPA_MEDIAS.includes(liga)) {
+        if (posicao < 2) return { principal: "Champions League", secundaria: null };
+        if (posicao < 4) return { principal: null, secundaria: "Europa League" };
+        if (posicao < 6) return { principal: null, secundaria: "Conference League" };
+        return { principal: null, secundaria: null };
+    }
+    if (liga === "Brasileirão") {
+        if (posicao < 6) return { principal: "Libertadores", secundaria: null };
+        if (posicao < 12) return { principal: null, secundaria: "Copa Sul-Americana" };
+        return { principal: null, secundaria: null };
+    }
+    if (LIGAS_SUL_AMERICANAS.includes(liga)) {
+        if (posicao < 4) return { principal: "Libertadores", secundaria: null };
+        if (posicao < 8) return { principal: null, secundaria: "Copa Sul-Americana" };
+        return { principal: null, secundaria: null };
+    }
+    if (liga === "MLS" || liga === "Liga MX") {
+        if (posicao < 4) return { principal: "CONCACAF Champions Cup", secundaria: null };
+        return { principal: null, secundaria: null };
+    }
+    if (["Saudi Pro League", "J1 League", "K League 1", "Chinese Super League"].includes(liga)) {
+        if (posicao < 3) return { principal: "AFC Champions League", secundaria: null };
+        if (posicao < 6) return { principal: null, secundaria: "AFC Champions League 2" };
+        return { principal: null, secundaria: null };
+    }
+    if (["Egyptian Premier League", "South African Premier Division", "Moroccan Botola"].includes(liga)) {
+        if (posicao < 2) return { principal: "CAF Champions League", secundaria: null };
+        if (posicao < 5) return { principal: null, secundaria: "CAF Confederation Cup" };
+        return { principal: null, secundaria: null };
+    }
+    if (liga === "Australian A-League") {
+        if (posicao < 2) return { principal: "AFC Champions League", secundaria: null };
+        return { principal: null, secundaria: "AFC Champions League 2" };
+    }
+    return { principal: null, secundaria: null };
+}
+
+function calcularStatusClube(historico, clubeId) {
+    if (!clubeId || !Array.isArray(historico)) return { status: "jogador", anos: 0, titulos: 0 };
+    const temporadas = historico.filter((t) => t.clube === clubeId);
+    const anos = temporadas.length;
+    const titulos = temporadas.reduce((n, t) => n + (t.trofeusColetivos || []).length, 0);
+    let status = "jogador";
+    if (anos >= 15 && titulos >= 10) status = "camisa-aposentada";
+    else if (anos >= 10 || (anos >= 7 && titulos >= 5)) status = "lenda";
+    else if (anos >= 5 || titulos >= 3) status = "idolo";
+    return { status, anos, titulos };
+}
+
+function obterStatusClubeTexto(status) {
+    return ({
+        "camisa-aposentada": "🏛️ Camisa Aposentada",
+        "lenda": "👑 Lenda do Clube",
+        "idolo": "⭐ Ídolo da Torcida",
+        "jogador": "Jogador"
+    })[status] || "Jogador";
+}
+
 const PESOS_OVERALL = {
     ata: { finalizacao: 0.35, drible: 0.22, velocidade: 0.18, passe: 0.15, fisico: 0.10 },
     me:  { passe: 0.35, drible: 0.25, finalizacao: 0.15, velocidade: 0.15, fisico: 0.10 },
@@ -411,7 +513,9 @@ function obterCarreiraAtual() {
             rompimentosContratoUsados: Number.isFinite(Number(carreira.rompimentosContratoUsados))
                 ? Math.max(0, Math.min(10, Math.floor(Number(carreira.rompimentosContratoUsados))))
                 : 0,
-            potencial: calcularPotencialDaCarreira(carreira)
+            potencial: calcularPotencialDaCarreira(carreira),
+            aposentadoriaSelecao: !!carreira.aposentadoriaSelecao,
+            aposentadoriaVoluntaria: !!carreira.aposentadoriaVoluntaria,
         };
     } catch (erro) {
         console.error("Erro ao ler a carreira atual:", erro);
@@ -436,7 +540,10 @@ function salvarCarreiraAtual(carreira) {
         rompimentosContratoUsados: Number.isFinite(Number(carreiraAtual.rompimentosContratoUsados))
             ? Math.max(0, Math.min(10, Math.floor(Number(carreiraAtual.rompimentosContratoUsados))))
             : 0,
-        potencial: calcularPotencialDaCarreira(carreiraAtual)
+        potencial: calcularPotencialDaCarreira(carreiraAtual),
+
+        aposentadoriaSelecao: !!carreiraAtual.aposentadoriaSelecao,
+        aposentadoriaVoluntaria: !!carreiraAtual.aposentadoriaVoluntaria
     }));
 }
 
@@ -692,14 +799,12 @@ function gerarTrofeusSelecao(nacionalidade, ano, multiplicadorTitulos) {
     return trofeus;
 }
 
-function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, temporadasAnteriores = [], nacionalidade = "", clubeId = "", eventos = [], overall = OVERALL_PADRAO, posicaoDetalhe = "", convocado = false) {
+function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, temporadasAnteriores = [], nacionalidade = "", clubeId = "", eventos = [], overall = OVERALL_PADRAO, posicaoDetalhe = "", convocado = false, atributos = null) {
     const cfg = getConfig();
     const t = cfg.titulos;
     const multColetivos = cfg.geral.multiplicadorTitulos;
     const multIndividuais = cfg.geral.multiplicadorPremios;
     const forcaClube = Math.max(1, Math.min(100, Number(cfg.clubes?.potencias?.[clubeId]) || 70));
-
-    // Força 75 mantém aproximadamente a chance-base; clubes mais fortes aumentam e mais fracos reduzem.
     const fatorClube = 0.4 + forcaClube / 125;
     const nomesTrofeus = obterNomesTrofeusClube(clubeId);
 
@@ -707,123 +812,166 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
     const trofeusIndividuais = [];
     const temporadaAtual = Number(ano) || ANO_INICIAL;
     const ciclo = Math.max(1, Number(t.cicloCopaDoMundo) || 4);
-
-    // Ciclo da Copa do Mundo (a cada N anos, começando em ANO_INICIAL).
     const cicloCopaDoMundo = (temporadaAtual - ANO_INICIAL) % ciclo === 0;
-
-    // Ciclo do Mundial de Clubes (a cada N anos, começando em anoInicioMundialClubes).
     const anoInicioMundial = Number(t.anoInicioMundialClubes) || 2029;
-    const anoCopaDoMundoDeClubes =
-        temporadaAtual >= anoInicioMundial &&
-        (temporadaAtual - anoInicioMundial) % ciclo === 0;
+    const anoCopaDoMundoDeClubes = temporadaAtual >= anoInicioMundial && (temporadaAtual - anoInicioMundial) % ciclo === 0;
 
-    // -------- Títulos coletivos --------
+    // ====== Competição continental principal (já existente) ======
     if (jogos >= 35 && sortearPremio(t.chanceCopaContinental * multColetivos * fatorClube)) {
         trofeusColetivos.push(nomesTrofeus.continental);
     }
-
     if (jogos >= 30 && sortearPremio(t.chanceLigaNacional * multColetivos * fatorClube)) {
         trofeusColetivos.push(nomesTrofeus.liga);
     }
-
     if (jogos >= 25 && sortearPremio(t.chanceCopaNacional * multColetivos * fatorClube)) {
         trofeusColetivos.push(nomesTrofeus.copa);
     }
 
+    // ====== Competições secundárias (novas) ======
+    const competicao = determinarCompeticaoContinental(clubeId);
+    if (competicao.secundaria && jogos >= 30) {
+        const chance = competicao.secundaria === "Europa League"
+            ? (t.chanceEuropaLeague || 0.20)
+            : competicao.secundaria === "Copa Sul-Americana"
+            ? (t.chanceSulAmericana || 0.16)
+            : (t.chanceConferenceLeague || 0.18);
+        if (sortearPremio(chance * multColetivos * fatorClube)) {
+            trofeusColetivos.push(competicao.secundaria);
+        }
+    }
+
+    // ====== Estaduais (clubes brasileiros) ======
+    const estadual = ESTADUAIS_BRASIL[clubeId];
+    if (estadual && jogos >= 20 && sortearPremio((t.chanceEstadual || 0.40) * multColetivos * fatorClube)) {
+        trofeusColetivos.push(estadual);
+    }
+
+    // ====== Copa do Mundo / torneios de seleção (existente) ======
     if (convocado && jogos >= 1 && cicloCopaDoMundo && sortearPremio(t.chanceCopaDoMundo * multColetivos)) {
         trofeusColetivos.push("Copa do Mundo");
     }
-
     if (convocado) {
         trofeusColetivos.push(...gerarTrofeusSelecao(nacionalidade, temporadaAtual, multColetivos));
     }
 
+    // ====== Mundial de Clubes / Intercontinental ======
     const ganhouContinentalNestaTemporada = trofeusColetivos.includes(nomesTrofeus.continental);
+    const inicioCicloMundial = ANO_INICIAL + Math.floor((temporadaAtual - ANO_INICIAL) / ciclo) * ciclo;
+    const ganhouContinentalNoCiclo = ganhouContinentalNestaTemporada ||
+        temporadasAnteriores.some((temporada) =>
+            Number(temporada.ano) >= inicioCicloMundial && Number(temporada.ano) <= temporadaAtual &&
+            Array.isArray(temporada.trofeusColetivos) && temporada.trofeusColetivos.some(ehTituloContinental));
 
-    // Início do ciclo mundial atual (para checar se ganhou continental no mesmo ciclo).
-    const inicioCicloMundial =
-        ANO_INICIAL + Math.floor((temporadaAtual - ANO_INICIAL) / ciclo) * ciclo;
-
-    const ganhouContinentalNoCiclo =
-        ganhouContinentalNestaTemporada ||
-        temporadasAnteriores.some(
-            (temporada) =>
-                Number(temporada.ano) >= inicioCicloMundial &&
-                Number(temporada.ano) <= temporadaAtual &&
-                Array.isArray(temporada.trofeusColetivos) &&
-                temporada.trofeusColetivos.some(ehTituloContinental)
-        );
-
-    if (jogos >= 35 && ganhouContinentalNestaTemporada &&
-        sortearPremio(t.chanceIntercontinental * multColetivos * fatorClube)) {
+    if (jogos >= 35 && ganhouContinentalNestaTemporada && sortearPremio(t.chanceIntercontinental * multColetivos * fatorClube)) {
         trofeusColetivos.push("Intercontinental");
     }
-
-    if (jogos >= 35 && anoCopaDoMundoDeClubes && ganhouContinentalNoCiclo &&
-        sortearPremio(t.chanceMundialClubes * multColetivos * fatorClube)) {
+    if (jogos >= 35 && anoCopaDoMundoDeClubes && ganhouContinentalNoCiclo && sortearPremio(t.chanceMundialClubes * multColetivos * fatorClube)) {
         trofeusColetivos.push("Copa do Mundo de Clubes");
     }
 
-    // -------- Títulos individuais --------
-    if (
-        posicao !== "Goleiro" &&
-        trofeusColetivos.length >= 2 &&
-        (gols >= 20 || assistencias >= 15 || gols + assistencias >= 25) &&
-        sortearPremio(t.chanceBolaDeOuro * multIndividuais)
-    ) {
+    // ====== Supercopas (novas) ======
+    const tempAnterior = temporadasAnteriores[temporadasAnteriores.length - 1];
+    if (tempAnterior) {
+        const ganhouLigaAnt = (tempAnterior.trofeusColetivos || []).includes(nomesTrofeus.liga);
+        const ganhouCopaAnt = (tempAnterior.trofeusColetivos || []).includes(nomesTrofeus.copa);
+        const ganhouContAnt = (tempAnterior.trofeusColetivos || []).includes(nomesTrofeus.continental);
+        const ganhouSecAnt = competicao.secundaria && (tempAnterior.trofeusColetivos || []).includes(competicao.secundaria);
+        if (ganhouLigaAnt && ganhouCopaAnt && sortearPremio((t.chanceSupercopaNacional || 0.28) * multColetivos)) {
+            trofeusColetivos.push("Supercopa Nacional");
+        }
+        if (ganhouContAnt && ganhouSecAnt && sortearPremio((t.chanceSupercopaContinental || 0.30) * multColetivos)) {
+            trofeusColetivos.push("Supercopa Continental");
+        }
+    }
+
+    // ====== Competições de base (novas) ======
+    if (convocado && Number(idade) <= 20 && (temporadaAtual - ANO_INICIAL) % 2 === 0 && sortearPremio((t.chanceMundialSub20 || 0.14) * multColetivos)) {
+        trofeusColetivos.push("Mundial Sub-20");
+    }
+    if (convocado && Number(idade) <= 17 && (temporadaAtual - ANO_INICIAL) % 2 === 0 && sortearPremio((t.chanceMundialSub17 || 0.10) * multColetivos)) {
+        trofeusColetivos.push("Mundial Sub-17");
+    }
+
+    // ====== Prêmios individuais existentes ======
+    if (posicao !== "Goleiro" && trofeusColetivos.length >= 2 && (gols >= 20 || assistencias >= 15 || gols + assistencias >= 25) && sortearPremio(t.chanceBolaDeOuro * multIndividuais)) {
         trofeusIndividuais.push("Bola de Ouro");
     }
 
     const eventosDeDesempenho = Array.isArray(eventos) ? eventos : [];
     const defesasDecisivas = eventosDeDesempenho.filter((evento) =>
-        ["defesa-ultimo-lance", "penalti-defendido", "falta-defendida"].includes(evento.tipo)
-    ).length;
+        ["defesa-ultimo-lance", "penalti-defendido", "falta-defendida"].includes(evento.tipo)).length;
     const acoesDefensivasDecisivas = eventosDeDesempenho.filter((evento) =>
-        ["contra-ataque-desarmado", "interceptacao-decisiva"].includes(evento.tipo)
-    ).length;
+        ["contra-ataque-desarmado", "interceptacao-decisiva"].includes(evento.tipo)).length;
 
-    if (
-        posicao === "Zagueiro" &&
-        ["ZCE", "ZCD"].includes(posicaoDetalhe) &&
-        jogos >= 30 &&
+    if (posicao === "Zagueiro" && ["ZCE", "ZCD"].includes(posicaoDetalhe) && jogos >= 30 &&
         (acoesDefensivasDecisivas >= 2 || (acoesDefensivasDecisivas >= 1 && overall >= 80)) &&
-        sortearPremio(t.chanceBolaDeOuroZagueiro * multIndividuais)
-    ) {
+        sortearPremio(t.chanceBolaDeOuroZagueiro * multIndividuais)) {
         trofeusIndividuais.push("Defender of the Year");
     }
-
-    if (
-        posicao === "Goleiro" &&
-        jogos >= 25 &&
+    if (posicao === "Goleiro" && jogos >= 25 &&
         (defesasDecisivas >= 2 || (defesasDecisivas >= 1 && overall >= 80)) &&
-        sortearPremio(t.chanceBolaDeOuroGoleiro * multIndividuais)
-    ) {
+        sortearPremio(t.chanceBolaDeOuroGoleiro * multIndividuais)) {
         trofeusIndividuais.push("GoalKeeper of the year");
     }
 
-    const jaGanhouGoldenBoy = temporadasAnteriores.some(
-        (temporada) =>
-            Array.isArray(temporada.trofeusIndividuais) &&
-            temporada.trofeusIndividuais.includes("Golden Boy")
-    );
-
-    if (
-        !jaGanhouGoldenBoy &&
-        Number(idade) <= 20 &&
-        Number(idade) >= 0 &&
+    const jaGanhouGoldenBoy = temporadasAnteriores.some((temporada) =>
+        Array.isArray(temporada.trofeusIndividuais) && temporada.trofeusIndividuais.includes("Golden Boy"));
+    if (!jaGanhouGoldenBoy && Number(idade) <= 20 && Number(idade) >= 0 &&
         (gols >= 10 || assistencias >= 8 || gols + assistencias >= 15) &&
-        sortearPremio(t.chanceGoldenBoy * multIndividuais)
-    ) {
+        sortearPremio(t.chanceGoldenBoy * multIndividuais)) {
         trofeusIndividuais.push("Golden Boy");
     }
-
     if (gols > jogos && sortearPremio(t.chanceChuteiraDeOuro * multIndividuais)) {
         trofeusIndividuais.push("Chuteira de Ouro");
     }
-
-    if (posicao === "Goleiro" && jogos >= 30 &&
-        sortearPremio(t.chanceLuvaDeOuro * multIndividuais)) {
+    if (posicao === "Goleiro" && jogos >= 30 && sortearPremio(t.chanceLuvaDeOuro * multIndividuais)) {
         trofeusIndividuais.push("Luva de Ouro");
+    }
+
+    // ====== Novos prêmios individuais ======
+    const fin = Number(atributos?.finalizacao) || 50;
+    const dri = Number(atributos?.drible) || 50;
+    const pas = Number(atributos?.passe) || 50;
+    const totalGolsAssist = gols + assistencias;
+
+    // Puskás
+    if (totalGolsAssist >= 5 && fin >= 72 && dri >= 72 &&
+        sortearPremio((t.chancePuskas || 0.04) * multIndividuais)) {
+        trofeusIndividuais.push("Puskás");
+    }
+    // Equipe do Ano
+    if (jogos >= 30 && overall >= 78 &&
+        sortearPremio((t.chanceEquipeDoAno || 0.22) * multIndividuais * fatorClube)) {
+        trofeusIndividuais.push("Equipe do Ano");
+    }
+    // MVP do Clube
+    if (jogos >= 25 && totalGolsAssist >= 12 &&
+        sortearPremio((t.chanceMVPClube || 0.24) * multIndividuais)) {
+        trofeusIndividuais.push("MVP do Clube");
+    }
+    // Rei da América
+    const selecaoJogador = SELECOES.find((s) => s.id === nacionalidade);
+    const clubeJogador = obterClube(clubeId);
+    if (selecaoJogador?.regiao === "americaSul" && clubeJogador && LIGAS_SUL_AMERICANAS.includes(clubeJogador.liga) &&
+        totalGolsAssist >= 18 && sortearPremio((t.chanceReiDaAmerica || 0.15) * multIndividuais)) {
+        trofeusIndividuais.push("Rei da América");
+    }
+
+    // Melhor / Artilheiro / Melhor Jovem de cada competição continental conquistada
+    for (const titulo of trofeusColetivos) {
+        const ehContinental = ehTituloContinental(titulo) || titulo === "Europa League" ||
+            titulo === "Copa Sul-Americana" || titulo === "Conference League";
+        if (!ehContinental) continue;
+
+        if (sortearPremio((t.chanceMelhorJogadorCompeticao || 0.15) * multIndividuais)) {
+            trofeusIndividuais.push(`Melhor da ${titulo}`);
+        }
+        if (gols >= 5 && sortearPremio((t.chanceArtilheiroCompeticao || 0.24) * multIndividuais)) {
+            trofeusIndividuais.push(`Artilheiro da ${titulo}`);
+        }
+        if (Number(idade) <= 21 && sortearPremio((t.chanceMelhorJovemCompeticao || 0.20) * multIndividuais)) {
+            trofeusIndividuais.push(`Melhor Jovem da ${titulo}`);
+        }
     }
 
     return { trofeusColetivos, trofeusIndividuais };
@@ -1016,6 +1164,21 @@ const CONQUISTAS = [
     { id: "motm-10", nome: "Dono da partida", descricao: "Consiga 10 prêmios de melhor em campo.", categoria: "Desempenho", icone: "⭐", metrica: "motmTotal", meta: 10 },
     { id: "motm-50", nome: "Craque decisivo", descricao: "Consiga 50 prêmios de melhor em campo.", categoria: "Desempenho", icone: "🌟", metrica: "motmTotal", meta: 50 },
 
+    { id: "puskas-1", nome: "Gol de Placa", descricao: "Ganhe o prêmio Puskás.", categoria: "Desempenho", icone: "🎨", metrica: "puskasTotal", meta: 1 },
+    { id: "puskas-3", nome: "Artista da bola", descricao: "Ganhe o Puskás 3 vezes.", categoria: "Desempenho", icone: "🎨", metrica: "puskasTotal", meta: 3 },
+    { id: "equipe-ano-1", nome: "Time dos sonhos", descricao: "Entre na Equipe do Ano.", categoria: "Desempenho", icone: "⭐", metrica: "equipeAnoTotal", meta: 1 },
+    { id: "equipe-ano-5", nome: "Seleção natural", descricao: "Entre na Equipe do Ano 5 vezes.", categoria: "Desempenho", icone: "🌟", metrica: "equipeAnoTotal", meta: 5 },
+    { id: "melhor-comp-1", nome: "Destaque continental", descricao: "Seja eleito melhor jogador de uma competição continental.", categoria: "Desempenho", icone: "🏅", metrica: "melhorCompTotal", meta: 1 },
+    { id: "artilheiro-comp-1", nome: "Artilheiro continental", descricao: "Seja artilheiro de uma competição continental.", categoria: "Gols", icone: "⚽", metrica: "artilheiroCompTotal", meta: 1 },
+    { id: "melhor-jovem-1", nome: "Joia jovem", descricao: "Seja o melhor jovem de uma competição continental.", categoria: "Desempenho", icone: "💎", metrica: "melhorJovemTotal", meta: 1 },
+    { id: "mvp-clube-1", nome: "Dono do time", descricao: "Seja MVP do seu clube.", categoria: "Desempenho", icone: "🎯", metrica: "mvpClubeTotal", meta: 1 },
+    { id: "mvp-clube-5", nome: "Indispensável", descricao: "Seja MVP do seu clube 5 vezes.", categoria: "Desempenho", icone: "🎯", metrica: "mvpClubeTotal", meta: 5 },
+    { id: "rei-america-1", nome: "Rei da América", descricao: "Ganhe o prêmio Rei da América.", categoria: "Desempenho", icone: "👑", metrica: "reiAmericaTotal", meta: 1 },
+    { id: "europa-league-1", nome: "Campeão da Europa League", descricao: "Ganhe a Europa League.", categoria: "Títulos coletivos", icone: "🏆", metrica: "europaLeagueTotal", meta: 1 },
+    { id: "sul-americana-1", nome: "Campeão da Sul-Americana", descricao: "Ganhe a Copa Sul-Americana.", categoria: "Títulos coletivos", icone: "🏆", metrica: "sulAmericanaTotal", meta: 1 },
+    { id: "supercopa-1", nome: "Campeão de Supercopa", descricao: "Conquiste uma Supercopa.", categoria: "Títulos coletivos", icone: "🏆", metrica: "supercopaTotal", meta: 1 },
+    { id: "estadual-1", nome: "Campeão regional", descricao: "Ganhe um campeonato estadual.", categoria: "Títulos coletivos", icone: "🏆", metrica: "estadualTotal", meta: 1 },
+
 ];
 
 function obterMetricasCarreira(carreira) {
@@ -1023,6 +1186,10 @@ function obterMetricasCarreira(carreira) {
     const titulosColetivos = Array.isArray(carreira.trofeusColetivos) ? carreira.trofeusColetivos.length : 0;
     const titulosIndividuais = Array.isArray(carreira.trofeusIndividuais) ? carreira.trofeusIndividuais.length : 0;
     const totalTitulos = titulosColetivos + titulosIndividuais;
+
+    const todosIndividuais = temporadas.flatMap((t) => Array.isArray(t.trofeusIndividuais) ? t.trofeusIndividuais : []);
+    const todosColetivos = temporadas.flatMap((t) => Array.isArray(t.trofeusColetivos) ? t.trofeusColetivos : []);
+    const ESTADUAIS = ["Carioca", "Paulistão", "Gauchão", "Mineiro", "Baianão", "Pernambucano", "Cearense"];
     return {
         gols: Number(carreira.gols) || 0,
         assistencias: Number(carreira.assistencias) || 0,
@@ -1039,7 +1206,18 @@ function obterMetricasCarreira(carreira) {
         golsSelecao: temporadas.reduce((n,t)=>n+(Number(t.golsSelecao)||0),0),
         maiorOver: Math.max(0, ...temporadas.map((temporada) => Number(temporada.overall) || 0)),
         premios: Number(carreira.premios) || totalTitulos,
-        pontuacao: Number(carreira.pontuacao) || calcularPontuacao(carreira)
+        pontuacao: Number(carreira.pontuacao) || calcularPontuacao(carreira),
+        puskasTotal: todosIndividuais.filter((t) => t === "Puskás").length,
+        equipeAnoTotal: todosIndividuais.filter((t) => t === "Equipe do Ano").length,
+        melhorCompTotal: todosIndividuais.filter((t) => t.startsWith("Melhor da ")).length,
+        artilheiroCompTotal: todosIndividuais.filter((t) => t.startsWith("Artilheiro da ")).length,
+        melhorJovemTotal: todosIndividuais.filter((t) => t.startsWith("Melhor Jovem da ")).length,
+        mvpClubeTotal: todosIndividuais.filter((t) => t === "MVP do Clube").length,
+        reiAmericaTotal: todosIndividuais.filter((t) => t === "Rei da América").length,
+        europaLeagueTotal: todosColetivos.filter((t) => t === "Europa League").length,
+        sulAmericanaTotal: todosColetivos.filter((t) => t === "Copa Sul-Americana").length,
+        supercopaTotal: todosColetivos.filter((t) => String(t).includes("Supercopa")).length,
+        estadualTotal: todosColetivos.filter((t) => ESTADUAIS.includes(t)).length,
     };
 }
 
@@ -1327,6 +1505,13 @@ function atualizarResumoJogador(nome, idade, ano, nacionalidade = obterCarreiraA
             : clube ? "Vencido" : "Sem contrato";
         perfilContrato.textContent = `${contrato} · Rompimentos: ${carreiraAtual.rompimentosContratoUsados}/${limiteRompimentos}`;
     }
+
+    const statusEl = document.getElementById("perfil-status-clube");
+    if (statusEl) {
+        const historicoAtual = lerHistoricoAtiva();
+        const status = calcularStatusClube(historicoAtual, clubeId);
+        statusEl.textContent = obterStatusClubeTexto(status.status);
+    }
 }
 
 function lerHistoricoAtiva() {
@@ -1536,7 +1721,8 @@ function contarHatTricks(temporadas) {
     );
 }
 
-function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao) {
+function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao, opcoes = {}) {
+
     const totais = somarTotaisHistorico(historico);
     const resumoFinal = document.getElementById("resumo-final");
     const carreiraAtual = obterCarreiraAtual();
@@ -1631,6 +1817,17 @@ function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao) {
 
     if (resumoFinal) {
         resumoFinal.hidden = false;
+    }
+
+    const clubeDespedida = obterClubeDespedida(historico);
+    const statusClube = calcularStatusClube(historico, clubeDespedida);
+    const resumoStatusClube = document.getElementById("resumo-status-clube");
+    if (resumoStatusClube) {
+        resumoStatusClube.textContent = obterStatusClubeTexto(statusClube.status);
+    }
+    const statusEl = document.getElementById("perfil-status-clube");
+    if (statusEl) {
+        statusEl.textContent = obterStatusClubeTexto(statusClube.status);
     }
 }
 
@@ -1883,6 +2080,9 @@ function simularTemporadaPorJogo(posicao, atributos, idade, jogosForaInicioTempo
     const probParticipar = Math.max(.05, Math.min(.99, ((overall - 10) / 90) * fatorIdade));
     const maxJogosClube = clubeId ? Math.round((posicao === "go" ? 45 : 50) * (cfg.geral.multiplicadorJogos || 1)) : 0;
     const fin=Number(atributos?.finalizacao)||OVERALL_PADRAO, pas=Number(atributos?.passe)||OVERALL_PADRAO, dri=Number(atributos?.drible)||OVERALL_PADRAO;
+    const carreiraAtualRef = typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : {};
+    const aposentadoSelecao = carreiraAtualRef.aposentadoriaSelecao === true;
+  
     let lambdaGol=0, lambdaAssist=0;
     if(posicao==="ata"){lambdaGol=Math.pow(fin/100,3)+Math.pow(dri/100,3)*.15;lambdaAssist=Math.pow(pas/100,2.5)*.45+Math.pow(dri/100,3)*.15;}
     else if(posicao==="me"){lambdaGol=Math.pow(fin/100,3)*.55+Math.pow(dri/100,3)*.1;lambdaAssist=Math.pow(pas/100,2.5)*.85+Math.pow(dri/100,3)*.2;}
@@ -1925,7 +2125,9 @@ function simularTemporadaPorJogo(posicao, atributos, idade, jogosForaInicioTempo
     chanceConvocacao+=Math.max(0,potencia-50)/250+(jogaEuropa?.06:0)+Math.min(.18,convocacoesAnteriores*.035);
     if(idade<18)chanceConvocacao*=.25;else if(idade>35)chanceConvocacao*=.7;
     chanceConvocacao=Math.max(0,Math.min(.95,chanceConvocacao));
-    const convocado=!!selecao&&Math.random()<chanceConvocacao&&!lesaoCarreira;
+  
+    const convocado = !aposentadoSelecao && !!selecao && Math.random() < chanceConvocacao && !lesaoCarreira;
+  
     let jogosSelecao=0,golsSelecao=0,assistenciasSelecao=0;const jogosSelecaoPorCompeticao={},golsSelecaoPorCompeticao={};
     if(convocado){
       const ano=Number(temporadasAnteriores.length?temporadasAnteriores[temporadasAnteriores.length-1].ano+1:ANO_INICIAL);
@@ -1961,7 +2163,8 @@ function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], na
 
     const trofeus = gerarTrofeusTemporada(
         dados.nome, sim.jogos, sim.gols, sim.assistencias,
-        ano, idade, temporadasAnteriores, nacionalidade, clubeId, sim.eventos, overall, posicaoDetalhe, sim.convocado
+        ano, idade, temporadasAnteriores, nacionalidade, clubeId, sim.eventos,
+        overall, posicaoDetalhe, sim.convocado, atributos
     );
 
     const clube = obterClube(clubeId);
@@ -2405,6 +2608,9 @@ async function gerar() {
         if (resumoFinal) {
             resumoFinal.hidden = true;
         }
+        if (!carreiraFinalizada) {
+            await perguntarAposentadoriaSelecao(idade);
+        }
         const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id, historico, nacionalidade, contratoEscolhido.clube);
         const historicoAtualizado = [...historico, temporada];
 
@@ -2569,6 +2775,13 @@ function simularTudo() {
             anosContratoRestantes = Math.max(0, anosContratoRestantes - 1);
             idade = Number(historico[historico.length - 1].idade) + 1;
             ano = proximoAno(historico);
+
+            // Aposentadoria automática da seleção aos X anos na simulação completa
+            if (idade >= (getConfig().geral.idadeAposentadoriaSelecao || 32)
+                && !carreiraAtual.aposentadoriaSelecao) {
+                carreiraAtual.aposentadoriaSelecao = true;
+                salvarCarreiraAtual(carreiraAtual);
+            }
         }
 
         if (historico.length > 0) {
@@ -2669,6 +2882,68 @@ function renderComparacao(carreiraA,carreiraB){
 function abrirModalComparacao(){const modal=document.getElementById('modal-comparacao'),sa=document.getElementById('comparacao-a'),sb=document.getElementById('comparacao-b');if(!modal||!sa||!sb)return;const carreiras=lerRanking();const opts=carreiras.map(c=>`<option value="${escaparHTML(c.id)}">${escaparHTML(c.nome)} · ${escaparHTML(c.posicao||'')}</option>`).join('');sa.innerHTML=opts;sb.innerHTML=opts; if(carreiras.length>1)sb.selectedIndex=1;modal.hidden=false;renderComparacao(carreiras.find(c=>String(c.id)===sa.value),carreiras.find(c=>String(c.id)===sb.value));}
 function configurarComparacao(){document.getElementById('abrir-comparacao')?.addEventListener('click',abrirModalComparacao);document.getElementById('fechar-comparacao')?.addEventListener('click',()=>{document.getElementById('modal-comparacao').hidden=true;});for(const id of ['comparacao-a','comparacao-b'])document.getElementById(id)?.addEventListener('change',()=>{const cs=lerRanking();renderComparacao(cs.find(c=>String(c.id)===document.getElementById('comparacao-a').value),cs.find(c=>String(c.id)===document.getElementById('comparacao-b').value));});document.getElementById('modal-comparacao')?.addEventListener('click',e=>{if(e.target.id==='modal-comparacao')e.currentTarget.hidden=true;});}
 
+async function aposentarVoluntariamente() {
+    if (processamentoEmAndamento) return;
+    const carreira = obterCarreiraAtual();
+    const carreiraFinalizada = lerRanking().some(
+        (c) => String(c.id) === String(carreira.id)
+    );
+    if (carreiraFinalizada) {
+        alert("Esta carreira já foi encerrada.");
+        return;
+    }
+  
+    const historico = lerHistoricoAtiva();
+    if (historico.length === 0) {
+        alert("Você precisa ter ao menos uma temporada simulada para se aposentar.");
+        return;
+    }
+    const confirmado = await confirmarAcao(
+        "Tem certeza que deseja encerrar sua carreira agora?\n\nVocê terá um jogo de despedida e sua carreira será registrada no ranking.",
+        "Aposentadoria voluntária"
+    );
+    if (!confirmado) return;
+
+    processamentoEmAndamento = true;
+    try {
+        const carreira = obterCarreiraAtual();
+        carreira.aposentadoriaVoluntaria = true;
+        salvarCarreiraAtual(carreira);
+        const ultima = historico[historico.length - 1];
+        const posicaoNome = ultima.posicao || "Jogador";
+        mostrarResumoFinal(ultima.nome, carreira.idadeLimite, Number(ultima.ano) || ANO_INICIAL,
+            historico, posicaoNome, { voluntaria: true });
+    } finally {
+        processamentoEmAndamento = false;
+    }
+}
+
+async function perguntarAposentadoriaSelecao(idade) {
+    const limite = getConfig().geral.idadeAposentadoriaSelecao || 32;
+    if (Number(idade) !== Number(limite)) return false;
+    const carreira = obterCarreiraAtual();
+    if (carreira.aposentadoriaSelecao) return false;
+    const historico = lerHistoricoAtiva();
+    const foiConvocado = historico.some((t) => t.convocado || Number(t.jogosSelecao) > 0);
+    if (!foiConvocado) return false;
+
+    const continuar = await confirmarAcao(
+        `Você completou ${idade} anos e já defendeu sua seleção.\n\nDeseja continuar defendendo a seleção nacional?\n\n(Confirmar = continuar · Cancelar = aposentar)`,
+        "Continuar na seleção nacional?"
+    );
+    if (!continuar) {
+        carreira.aposentadoriaSelecao = true;
+        salvarCarreiraAtual(carreira);
+        alert("🏁 Você anunciou sua aposentadoria da seleção nacional.");
+    }
+    return !continuar;
+}
+
+function obterClubeDespedida(historico) {
+    if (!historico || !historico.length) return "";
+    const ultima = historico[historico.length - 1];
+    return ultima.clube || "";
+}
 
 document.addEventListener("DOMContentLoaded", () => {
     configurarComparacao();
