@@ -259,6 +259,12 @@ function validarTemporada(temporada) {
     const jogos = Number.isFinite(Number(temporada.jogos)) ? Math.max(0, Math.floor(Number(temporada.jogos))) : 0;
     const gols = Number.isFinite(Number(temporada.gols)) ? Math.max(0, Math.floor(Number(temporada.gols))) : 0;
     const assistencias = Number.isFinite(Number(temporada.assistencias)) ? Math.max(0, Math.floor(Number(temporada.assistencias))) : 0;
+    const jogosClube = Math.max(0, Math.floor(Number(temporada.jogosClube ?? jogos) || 0));
+    const golsClube = Math.max(0, Math.floor(Number(temporada.golsClube ?? gols) || 0));
+    const assistenciasClube = Math.max(0, Math.floor(Number(temporada.assistenciasClube ?? assistencias) || 0));
+    const jogosSelecao = Math.max(0, Math.floor(Number(temporada.jogosSelecao) || 0));
+    const golsSelecao = Math.max(0, Math.floor(Number(temporada.golsSelecao) || 0));
+    const assistenciasSelecao = Math.max(0, Math.floor(Number(temporada.assistenciasSelecao) || 0));
     const trofeusColetivos = Array.isArray(temporada.trofeusColetivos) ? temporada.trofeusColetivos.filter((t) => typeof t === "string") : [];
     const trofeusIndividuais = Array.isArray(temporada.trofeusIndividuais) ? temporada.trofeusIndividuais.filter((t) => typeof t === "string") : [];
     const eventos = normalizarEventosTemporada(temporada.eventos);
@@ -280,9 +286,21 @@ function validarTemporada(temporada) {
         nacionalidade: SELECOES.some((s) => s.id === temporada.nacionalidade) ? temporada.nacionalidade : "",
         clube: obterClube(temporada.clube)?.id || "",
         ano,
-        jogos,
-        gols,
-        assistencias,
+        jogos: jogosClube + jogosSelecao,
+        gols: golsClube + golsSelecao,
+        assistencias: assistenciasClube + assistenciasSelecao,
+        jogosClube, golsClube, assistenciasClube,
+        jogosSelecao, golsSelecao, assistenciasSelecao,
+        convocado: !!temporada.convocado,
+        motm: Math.max(0, Math.floor(Number(temporada.motm) || 0)),
+        cartaoAmarelo: Math.max(0, Math.floor(Number(temporada.cartaoAmarelo) || 0)),
+        cartaoVermelho: Math.max(0, Math.floor(Number(temporada.cartaoVermelho) || 0)),
+        cleanSheets: Math.max(0, Math.floor(Number(temporada.cleanSheets) || 0)),
+        penaltisDefendidos: Math.max(0, Math.floor(Number(temporada.penaltisDefendidos) || 0)),
+        penaltisCometidos: Math.max(0, Math.floor(Number(temporada.penaltisCometidos) || 0)),
+        minutosJogados: Math.max(0, Math.floor(Number(temporada.minutosJogados) || jogos * 90)),
+        jogosSelecaoPorCompeticao: temporada.jogosSelecaoPorCompeticao && typeof temporada.jogosSelecaoPorCompeticao === "object" ? temporada.jogosSelecaoPorCompeticao : {},
+        golsSelecaoPorCompeticao: temporada.golsSelecaoPorCompeticao && typeof temporada.golsSelecaoPorCompeticao === "object" ? temporada.golsSelecaoPorCompeticao : {},
         atributos,
         overall,
         trofeusColetivos,
@@ -625,6 +643,7 @@ function calcularPontuacao(carreira) {
         Number(carreira.assistencias || 0) * 2 +
         Number(carreira.premios || 0) * 5 +
         Number(carreira.jogos || 0) +
+        Number(carreira.motmTotal || 0) * 4 - Number(carreira.cartoesTotais?.vermelhos || 0) * 2 +
         trofeusColetivos * 12 +
         trofeusIndividuais * 15
     );
@@ -673,7 +692,7 @@ function gerarTrofeusSelecao(nacionalidade, ano, multiplicadorTitulos) {
     return trofeus;
 }
 
-function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, temporadasAnteriores = [], nacionalidade = "", clubeId = "", eventos = [], overall = OVERALL_PADRAO, posicaoDetalhe = "") {
+function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, temporadasAnteriores = [], nacionalidade = "", clubeId = "", eventos = [], overall = OVERALL_PADRAO, posicaoDetalhe = "", convocado = false) {
     const cfg = getConfig();
     const t = cfg.titulos;
     const multColetivos = cfg.geral.multiplicadorTitulos;
@@ -711,11 +730,11 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
         trofeusColetivos.push(nomesTrofeus.copa);
     }
 
-    if (jogos >= 35 && cicloCopaDoMundo && sortearPremio(t.chanceCopaDoMundo * multColetivos)) {
+    if (convocado && jogos >= 1 && cicloCopaDoMundo && sortearPremio(t.chanceCopaDoMundo * multColetivos)) {
         trofeusColetivos.push("Copa do Mundo");
     }
 
-    if (jogos >= 25) {
+    if (convocado) {
         trofeusColetivos.push(...gerarTrofeusSelecao(nacionalidade, temporadaAtual, multColetivos));
     }
 
@@ -890,6 +909,11 @@ function renderDetalhesCarreira(carreira) {
                     <span><strong>${temporada.gols}</strong> gols</span>
                     <span><strong>${temporada.assistencias}</strong> assist.</span>
                     <span><strong>${hatTricks}</strong> hat-tricks</span>
+                    <span><strong>${Number(temporada.motm) || 0}</strong> MOTM</span>
+                </div>
+                <div class="trajetoria-stats-split">
+                    <span class="split-pill split-pill--clube">🏟️ ${temporada.jogosClube ?? temporada.jogos}j · ${temporada.golsClube ?? temporada.gols}g · ${temporada.assistenciasClube ?? temporada.assistencias}a</span>
+                    <span class="split-pill split-pill--selecao${(temporada.jogosSelecao || 0) === 0 ? " split-pill--vazio" : ""}">🌍 ${temporada.jogosSelecao || 0}j · ${temporada.golsSelecao || 0}g · ${temporada.assistenciasSelecao || 0}a</span>
                 </div>
                 <div class="trajetoria-trofeus">${trofeusHtml}</div>
                 <div class="trajetoria-eventos">${formatarEventosTemporada(temporada.eventos)}</div>
@@ -985,6 +1009,13 @@ const CONQUISTAS = [
     { id: "over-90", nome: "Craque mundial", descricao: "Alcance Over 90 na carreira.", categoria: "Over", icone: "🌟", metrica: "maiorOver", meta: 90 },
     { id: "over-95", nome: "Lenda do futebol", descricao: "Alcance Over 95 na carreira.", categoria: "Over", icone: "💎", metrica: "maiorOver", meta: 95 },
     { id: "over-99", nome: "Over máximo", descricao: "Alcance Over 99 na carreira.", categoria: "Over", icone: "👑", metrica: "maiorOver", meta: 99 },
+    { id: "caps-50", nome: "Internacional", descricao: "Faça 50 jogos pela seleção.", categoria: "Seleção", icone: "🌍", metrica: "caps", meta: 50 },
+    { id: "convocacao-5", nome: "Presença internacional", descricao: "Seja convocado em 5 temporadas seguidas.", categoria: "Seleção", icone: "🌍", metrica: "convocacoesSeguidasMax", meta: 5 },
+    { id: "clean-sheets-50", nome: "Muralha", descricao: "Consiga 50 jogos sem sofrer gols como goleiro.", categoria: "Desempenho", icone: "🧤", metrica: "cleanSheets", meta: 50 },
+    { id: "gols-selecao-10", nome: "Artilheiro internacional", descricao: "Marque 10 gols pela seleção.", categoria: "Seleção", icone: "⚽", metrica: "golsSelecao", meta: 10 },
+    { id: "motm-10", nome: "Dono da partida", descricao: "Consiga 10 prêmios de melhor em campo.", categoria: "Desempenho", icone: "⭐", metrica: "motmTotal", meta: 10 },
+    { id: "motm-50", nome: "Craque decisivo", descricao: "Consiga 50 prêmios de melhor em campo.", categoria: "Desempenho", icone: "🌟", metrica: "motmTotal", meta: 50 },
+
 ];
 
 function obterMetricasCarreira(carreira) {
@@ -1000,6 +1031,12 @@ function obterMetricasCarreira(carreira) {
         titulosIndividuais,
         temporadas: temporadas.length,
         hatTricks: contarHatTricks(temporadas),
+        motmTotal: temporadas.reduce((n,t)=>n+(Number(t.motm)||0),0),
+        cartoesTotais: { amarelos: temporadas.reduce((n,t)=>n+(Number(t.cartaoAmarelo)||0),0), vermelhos: temporadas.reduce((n,t)=>n+(Number(t.cartaoVermelho)||0),0) },
+        caps: temporadas.reduce((n,t)=>n+(Number(t.jogosSelecao)||0),0),
+        cleanSheets: temporadas.reduce((n,t)=>n+(Number(t.cleanSheets)||0),0),
+        convocacoesSeguidasMax: temporadas.reduce((r,t)=>{r.atual=(t.convocado||Number(t.jogosSelecao)>0)?r.atual+1:0;r.max=Math.max(r.max,r.atual);return r;},{atual:0,max:0}).max,
+        golsSelecao: temporadas.reduce((n,t)=>n+(Number(t.golsSelecao)||0),0),
         maiorOver: Math.max(0, ...temporadas.map((temporada) => Number(temporada.overall) || 0)),
         premios: Number(carreira.premios) || totalTitulos,
         pontuacao: Number(carreira.pontuacao) || calcularPontuacao(carreira)
@@ -1165,6 +1202,8 @@ function renderRanking() {
             const valorOrdenacao = (carreira) => {
                 if (criterio === "over") return maiorOver(carreira);
                 if (criterio === "hattricks") return contarHatTricks(carreira.temporadas || []);
+                if (criterio === "motm") return obterMetricasCarreira(carreira).motmTotal;
+                if (criterio === "caps") return obterMetricasCarreira(carreira).caps;
                 return Number(carreira[criterio]) || 0;
             };
             const valorA = valorOrdenacao(a);
@@ -1233,6 +1272,7 @@ function renderRanking() {
                   <div class="stat-card"><span class="stat-label">Hat-tricks</span><strong class="stat-value">${hatTricks}</strong></div>
                   <div class="stat-card"><span class="stat-label">Prêmios</span><strong class="stat-value stat-value--premio">${premios}</strong></div>
                   <div class="stat-card"><span class="stat-label">Maior OVR</span><strong class="stat-value">${maiorOver}</strong></div>
+                  <div class="stat-card"><span class="stat-label">MOTM</span><strong class="stat-value">${obterMetricasCarreira(carreira).motmTotal}</strong></div>
               </div>
               <div class="temporada-titulos">
                   <div class="titulos-grupo">
@@ -1268,6 +1308,7 @@ function atualizarResumoJogador(nome, idade, ano, nacionalidade = obterCarreiraA
     const perfilAno = document.getElementById("perfil-ano");
     const perfilSelecao = document.getElementById("perfil-selecao");
     const selecao = SELECOES.find((item) => item.id === nacionalidade);
+    const perfilCaps = document.getElementById("perfil-caps");
     const perfilClube = document.getElementById("perfil-clube");
     const clube = obterClube(clubeId);
     const perfilContrato = document.getElementById("perfil-contrato");
@@ -1278,6 +1319,7 @@ function atualizarResumoJogador(nome, idade, ano, nacionalidade = obterCarreiraA
     if (perfilIdade) perfilIdade.textContent = idade ?? 0;
     if (perfilAno) perfilAno.textContent = ano ?? ANO_INICIAL;
     if (perfilSelecao) perfilSelecao.textContent = selecao ? selecao.nome : "Não definida";
+    if (perfilCaps) { const h=lerHistoricoAtiva(); const t=somarTotaisHistorico(h); perfilCaps.textContent=`${t.caps} caps · ${t.golsSelecao} gols`; }
     if (perfilClube) perfilClube.textContent = clube ? clube.nome : "Ainda não escolhido";
     if (perfilContrato) {
         const contrato = carreiraAtual.anosContratoRestantes > 0
@@ -1358,13 +1400,42 @@ function renderHistorico() {
                         <span class="badge badge--over">OVR ${temporada.overall}</span>
                     </div>
                 </div>
-                <div class="temporada-stats">
-                    <div class="stat-card"><span class="stat-label">Jogos</span><strong class="stat-value">${temporada.jogos}</strong></div>
-                    <div class="stat-card"><span class="stat-label">Gols</span><strong class="stat-value stat-value--gol">${temporada.gols}</strong></div>
-                    <div class="stat-card"><span class="stat-label">Assist.</span><strong class="stat-value stat-value--assist">${temporada.assistencias}</strong></div>
-                    <div class="stat-card"><span class="stat-label">Hat-tricks</span><strong class="stat-value">${hatTricks}</strong></div>
-                    <div class="stat-card"><span class="stat-label">Prêmios</span><strong class="stat-value stat-value--premio">${premios}</strong></div>
-                </div>
+                
+                <div class="temporada-stats-blocos">
+                  <div class="temporada-stats temporada-stats--principal">
+                      <div class="stat-card stat-card--split">
+                          <span class="stat-label">Jogos</span>
+                          <strong class="stat-value">${temporada.jogos}</strong>
+                          <div class="stat-sub">
+                              <span class="stat-sub-item stat-sub-item--clube">🏟️ ${temporada.jogosClube ?? temporada.jogos}</span>
+                              <span class="stat-sub-item stat-sub-item--selecao${(temporada.jogosSelecao || 0) === 0 ? " stat-sub-item--vazio" : ""}">🌍 ${temporada.jogosSelecao || 0}</span>
+                          </div>
+                      </div>
+                      <div class="stat-card stat-card--split">
+                          <span class="stat-label">Gols</span>
+                          <strong class="stat-value stat-value--gol">${temporada.gols}</strong>
+                          <div class="stat-sub">
+                              <span class="stat-sub-item stat-sub-item--clube">🏟️ ${temporada.golsClube ?? temporada.gols}</span>
+                              <span class="stat-sub-item stat-sub-item--selecao${(temporada.golsSelecao || 0) === 0 ? " stat-sub-item--vazio" : ""}">🌍 ${temporada.golsSelecao || 0}</span>
+                          </div>
+                      </div>
+                      <div class="stat-card stat-card--split">
+                          <span class="stat-label">Assist.</span>
+                          <strong class="stat-value stat-value--assist">${temporada.assistencias}</strong>
+                          <div class="stat-sub">
+                              <span class="stat-sub-item stat-sub-item--clube">🏟️ ${temporada.assistenciasClube ?? temporada.assistencias}</span>
+                              <span class="stat-sub-item stat-sub-item--selecao${(temporada.assistenciasSelecao || 0) === 0 ? " stat-sub-item--vazio" : ""}">🌍 ${temporada.assistenciasSelecao || 0}</span>
+                          </div>
+                      </div>
+                  </div>
+                  <div class="temporada-stats temporada-stats--secundaria">
+                      <div class="stat-card"><span class="stat-label">Hat-tricks</span><strong class="stat-value">${hatTricks}</strong></div>
+                      <div class="stat-card"><span class="stat-label">MOTM</span><strong class="stat-value">${Number(temporada.motm) || 0}</strong></div>
+                      <div class="stat-card"><span class="stat-label">Cartões 🟨/🟥</span><strong class="stat-value">${Number(temporada.cartaoAmarelo) || 0} / ${Number(temporada.cartaoVermelho) || 0}</strong></div>
+                      <div class="stat-card"><span class="stat-label">Prêmios</span><strong class="stat-value stat-value--premio">${premios}</strong></div>
+                  </div>
+              </div>
+                
                 <div class="temporada-titulos">
                     <div class="titulos-grupo">
                         <span class="titulos-grupo-label">🏆 Coletivos</span>
@@ -1448,16 +1519,14 @@ function obterIdadeLimite() {
 }
 
 function somarTotaisHistorico(historico) {
-    return historico.reduce(
-        (acumulador, temporada) => {
-            acumulador.jogos += Number(temporada.jogos) || 0;
-            acumulador.gols += Number(temporada.gols) || 0;
-            acumulador.assistencias += Number(temporada.assistencias) || 0;
-            acumulador.premios += contarPremios(temporada);
-            return acumulador;
-        },
-        { jogos: 0, gols: 0, assistencias: 0, premios: 0 }
-    );
+    return historico.reduce((a, t) => {
+        a.jogos += Number(t.jogos) || 0; a.gols += Number(t.gols) || 0; a.assistencias += Number(t.assistencias) || 0;
+        a.jogosClube += Number(t.jogosClube ?? t.jogos) || 0; a.golsClube += Number(t.golsClube ?? t.gols) || 0; a.assistenciasClube += Number(t.assistenciasClube ?? t.assistencias) || 0;
+        a.jogosSelecao += Number(t.jogosSelecao) || 0; a.golsSelecao += Number(t.golsSelecao) || 0; a.assistenciasSelecao += Number(t.assistenciasSelecao) || 0;
+        a.caps += Number(t.jogosSelecao) || 0; a.motm += Number(t.motm) || 0; a.cartaoAmarelo += Number(t.cartaoAmarelo) || 0; a.cartaoVermelho += Number(t.cartaoVermelho) || 0;
+        a.cleanSheets += Number(t.cleanSheets) || 0; a.penaltisDefendidos += Number(t.penaltisDefendidos) || 0; a.penaltisCometidos += Number(t.penaltisCometidos) || 0; a.minutosJogados += Number(t.minutosJogados) || 0;
+        a.premios += contarPremios(t); return a;
+    }, { jogos:0,gols:0,assistencias:0,jogosClube:0,golsClube:0,assistenciasClube:0,jogosSelecao:0,golsSelecao:0,assistenciasSelecao:0,caps:0,motm:0,cartaoAmarelo:0,cartaoVermelho:0,cleanSheets:0,penaltisDefendidos:0,penaltisCometidos:0,minutosJogados:0,premios:0 });
 }
 
 function contarHatTricks(temporadas) {
@@ -1489,9 +1558,10 @@ function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao) {
         nacionalidade: carreiraAtual.nacionalidade,
         clube: carreiraAtual.clube,
         idadeLimite,
-        jogos: totais.jogos,
-        gols: totais.gols,
-        assistencias: totais.assistencias,
+        jogos: totais.jogos, gols: totais.gols, assistencias: totais.assistencias,
+        jogosClube: totais.jogosClube, golsClube: totais.golsClube, assistenciasClube: totais.assistenciasClube,
+        jogosSelecao: totais.jogosSelecao, golsSelecao: totais.golsSelecao, assistenciasSelecao: totais.assistenciasSelecao,
+        motmTotal: totais.motm, cartoesTotais: { amarelos: totais.cartaoAmarelo, vermelhos: totais.cartaoVermelho },
         premios: totais.premios,
         trofeusColetivos: trofeus.coletivos,
         trofeusIndividuais: trofeus.individuais,
@@ -1531,6 +1601,9 @@ function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao) {
     document.getElementById("resumo-assistencias").textContent = totais.assistencias;
     document.getElementById("resumo-hat-tricks").textContent = contarHatTricks(historico);
     document.getElementById("resumo-premios").textContent = totais.premios;
+    const setResumo=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+    setResumo("resumo-caps",totais.caps); setResumo("resumo-gols-selecao",totais.golsSelecao); setResumo("resumo-assistencias-selecao",totais.assistenciasSelecao);
+    setResumo("resumo-jogos-clube",totais.jogosClube); setResumo("resumo-motm",totais.motm); setResumo("resumo-cartoes",`${totais.cartaoAmarelo} amarelos / ${totais.cartaoVermelho} vermelhos`);
     document.getElementById("resumo-coletivos").textContent = formatarTrofeus(trofeus.coletivos);
     document.getElementById("resumo-individuais").textContent = formatarTrofeus(trofeus.individuais);
 
@@ -1804,179 +1877,68 @@ function obterModificadorPotencial(chave, posicao) {
 }
 
 // Simula a temporada jogo a jogo com base no overall e nos atributos.
-function simularTemporadaPorJogo(posicao, atributos, idade, jogosForaInicioTemporada = 0, posicaoDetalhe = "") {
-    const cfg = getConfig();
-    const overall = calcularOverall(posicao, atributos);
-
-    // Fator idade: jovem ainda não é titular absoluto, veterano perde ritmo.
-    let fatorIdade;
-    if (idade <= 19) fatorIdade = 0.82;
-    else if (idade <= 22) fatorIdade = 0.92;
-    else if (idade <= 25) fatorIdade = 1.00;
-    else if (idade <= 29) fatorIdade = 1.05;
-    else if (idade <= 32) fatorIdade = 1.00;
-    else if (idade <= 35) fatorIdade = 0.88;
-    else fatorIdade = 0.72;
-
-    // Probabilidade de entrar em campo em cada jogo.
-    // Overall 30 → ~0.22 | 50 → ~0.50 | 70 → ~0.78 | 85 → ~0.95 | 95 → ~0.99
-    const probParticipar = Math.max(0.05, Math.min(0.99, ((overall - 10) / 90) * fatorIdade));
-
-    // Nº máximo de jogos possíveis (clube + seleção).
-    const maxJogos = Math.round((posicao === "go" ? 55 : 62) * cfg.geral.multiplicadorJogos);
-
-    // Médias esperadas por jogo (lambda da Poisson).
-    const fin = Number(atributos?.finalizacao) || OVERALL_PADRAO;
-    const pas = Number(atributos?.passe)       || OVERALL_PADRAO;
-    const dri = Number(atributos?.drible)      || OVERALL_PADRAO;
-
-    let lambdaGol = 0;
-    let lambdaAssist = 0;
-
-    if (posicao === "ata") {
-        lambdaGol    = Math.pow(fin / 100, 3) * 1.00 + Math.pow(dri / 100, 3) * 0.15;
-        lambdaAssist = Math.pow(pas / 100, 2.5) * 0.45 + Math.pow(dri / 100, 3) * 0.15;
-    } else if (posicao === "me") {
-        lambdaGol    = Math.pow(fin / 100, 3) * 0.55 + Math.pow(dri / 100, 3) * 0.10;
-        lambdaAssist = Math.pow(pas / 100, 2.5) * 0.85 + Math.pow(dri / 100, 3) * 0.20;
-    } else if (posicao === "zag") {
-        lambdaGol    = Math.pow(fin / 100, 3) * 0.15;
-        lambdaAssist = Math.pow(pas / 100, 3) * 0.15;
-    } else if (posicao === "go") {
-        lambdaGol    = 0.003;
-        lambdaAssist = Math.pow(pas / 100, 4) * 0.06;
+function simularTemporadaPorJogo(posicao, atributos, idade, jogosForaInicioTemporada = 0, posicaoDetalhe = "", nacionalidade = "", clubeId = "", temporadasAnteriores = []) {
+    const cfg = getConfig(), overall = calcularOverall(posicao, atributos);
+    const fatorIdade = idade <= 19 ? .82 : idade <= 22 ? .92 : idade <= 25 ? 1 : idade <= 29 ? 1.05 : idade <= 32 ? 1 : idade <= 35 ? .88 : .72;
+    const probParticipar = Math.max(.05, Math.min(.99, ((overall - 10) / 90) * fatorIdade));
+    const maxJogosClube = clubeId ? Math.round((posicao === "go" ? 45 : 50) * (cfg.geral.multiplicadorJogos || 1)) : 0;
+    const fin=Number(atributos?.finalizacao)||OVERALL_PADRAO, pas=Number(atributos?.passe)||OVERALL_PADRAO, dri=Number(atributos?.drible)||OVERALL_PADRAO;
+    let lambdaGol=0, lambdaAssist=0;
+    if(posicao==="ata"){lambdaGol=Math.pow(fin/100,3)+Math.pow(dri/100,3)*.15;lambdaAssist=Math.pow(pas/100,2.5)*.45+Math.pow(dri/100,3)*.15;}
+    else if(posicao==="me"){lambdaGol=Math.pow(fin/100,3)*.55+Math.pow(dri/100,3)*.1;lambdaAssist=Math.pow(pas/100,2.5)*.85+Math.pow(dri/100,3)*.2;}
+    else if(posicao==="zag"){lambdaGol=Math.pow(fin/100,3)*.15;lambdaAssist=Math.pow(pas/100,3)*.15;}
+    else {lambdaGol=.003;lambdaAssist=Math.pow(pas/100,4)*.06;}
+    lambdaGol*=fatorIdade*(cfg.geral.multiplicadorGols||1); lambdaAssist*=fatorIdade*(cfg.geral.multiplicadorAssistencias||1);
+    const cfgL=cfg.lesoes||{}, escala=(idade>=33?(Number(cfgL.fatorIdoso)||1.8):idade>=29?(Number(cfgL.fatorVeterano)||1.3):idade<=24?(Number(cfgL.fatorJovem)||.8):1)*(Number.isFinite(Number(cfgL.multiplicador))?Math.max(0,Number(cfgL.multiplicador)):1);
+    const cCar=Math.max(0,(Number(cfgL.chanceCarreira)||.00003)*escala), cGr=cCar+Math.max(0,(Number(cfgL.chanceGrave)||.0003)*escala), cMo=cGr+Math.max(0,(Number(cfgL.chanceModerada)||.0015)*escala), cLe=cMo+Math.max(0,(Number(cfgL.chanceLeve)||.012)*escala);
+    let jogosClube=0,golsClube=0,assistenciasClube=0,jogosAfastado=Math.max(0,Math.floor(jogosForaInicioTemporada)||0),motm=0,cartaoAmarelo=0,cartaoVermelho=0,cleanSheets=0,penaltisDefendidos=0,penaltisCometidos=0;
+    const eventos=[]; let lesaoGrave=false,lesaoCarreira=false,jogosForaProximaTemporada=0;
+    for(let i=0;i<maxJogosClube;i++){
+      if(jogosAfastado>0){jogosAfastado--;continue;} if(Math.random()>probParticipar)continue;
+      jogosClube++; let golsJ=amostrarPoisson(lambdaGol), assJ=amostrarPoisson(lambdaAssist); golsClube+=golsJ;assistenciasClube+=assJ;const numeroJogo=jogosClube;
+      if(Math.random()<({ata:.04,me:.025,zag:.008,go:0}[posicao]||0)){golsClube+=3;golsJ+=3;eventos.push({tipo:"hat-trick",jogo:numeroJogo});}
+      if(Math.random()<({ata:.008,me:.012,zag:.003,go:.001}[posicao]||0)){assistenciasClube+=2;assJ+=2;eventos.push({tipo:"assistencia",jogo:numeroJogo});}
+      let cleanSheetNesteJogo = false;
+      if(posicao==="go"){
+        cleanSheetNesteJogo = Math.random()<.30; if(cleanSheetNesteJogo)cleanSheets++; if(Math.random()<.012){eventos.push({tipo:"defesa-ultimo-lance",jogo:numeroJogo});}
+        if(Math.random()<.012){penaltisDefendidos++;eventos.push({tipo:"penalti-defendido",jogo:numeroJogo});}
+        if(Math.random()<.003){penaltisCometidos++;eventos.push({tipo:"penalti-causado",jogo:numeroJogo});}
+      }
+      if(posicao==="zag"&&["ZCE","ZCD"].includes(posicaoDetalhe)&&Math.random()<.04)eventos.push({tipo:"interceptacao-decisiva",jogo:numeroJogo});
+      const amarelo=.08*(1+(100-(Number(atributos?.fisico)||50))/200);
+      if(Math.random()<amarelo){cartaoAmarelo++;eventos.push({tipo:"cartao-amarelo",jogo:numeroJogo});}
+      if(Math.random()<.004){cartaoVermelho++;const perdidos=1+Math.floor(Math.random()*2);eventos.push({tipo:"cartao-vermelho",jogo:numeroJogo,jogosPerdidos:perdidos});jogosAfastado=perdidos;}
+      let chanceMOTM=.015+golsJ*.14+assJ*.09;
+      if(posicao==="go"&&cleanSheetNesteJogo)chanceMOTM+=.18;
+      if(posicao==="zag"&&eventos.some(e=>e.jogo===numeroJogo&&e.tipo==="interceptacao-decisiva"))chanceMOTM+=.12;
+      if(Math.random()<Math.min(chanceMOTM,.60))motm++;
+      const lesao=Math.random();
+      if(lesao<cCar){eventos.push({tipo:"lesao-carreira",jogo:numeroJogo,idade});lesaoCarreira=true;break;}
+      if(lesao<cGr){const perdidos=maxJogosClube-i,prox=Math.floor(Math.random()*25);eventos.push({tipo:"lesao-grave",jogo:numeroJogo,jogosPerdidos:perdidos,jogosForaProximaTemporada:prox});lesaoGrave=true;jogosForaProximaTemporada=prox;break;}
+      if(lesao<cMo)jogosAfastado=8+Math.floor(Math.random()*13);else if(lesao<cLe)jogosAfastado=1+Math.floor(Math.random()*6);
     }
-
-    // Idade + multiplicadores das configurações.
-    lambdaGol    *= fatorIdade * (cfg.geral.multiplicadorGols || 1);
-    lambdaAssist *= fatorIdade * (cfg.geral.multiplicadorAssistencias || 1);
-
-    // ===== Configuração de lesões (lida da página de configurações) =====
-    const cfgLesoes = cfg.lesoes || {};
-    const multLesoes = Number.isFinite(Number(cfgLesoes.multiplicador))
-        ? Math.max(0, Number(cfgLesoes.multiplicador))
-        : 1.0;
-
-    let fatorLesao = 1.0;
-    if (idade >= 33) {
-        fatorLesao = Number.isFinite(Number(cfgLesoes.fatorIdoso))
-            ? Number(cfgLesoes.fatorIdoso) : 1.8;
-    } else if (idade >= 29) {
-        fatorLesao = Number.isFinite(Number(cfgLesoes.fatorVeterano))
-            ? Number(cfgLesoes.fatorVeterano) : 1.3;
-    } else if (idade <= 24) {
-        fatorLesao = Number.isFinite(Number(cfgLesoes.fatorJovem))
-            ? Number(cfgLesoes.fatorJovem) : 0.8;
+    // Seleção: convocação depende de overall, idade, força nacional e histórico; não substitui jogos do clube.
+    const selecao=SELECOES.find(x=>x.id===nacionalidade), potencia=Number(cfg.selecao?.potencias?.[nacionalidade])||50;
+    const jogaEuropa=!!obterClube(clubeId)?.pais && ["Inglaterra","Espanha","Alemanha","Itália","França","Portugal","Holanda"].some(p=>String(obterClube(clubeId).pais).includes(p));
+    const convocacoesAnteriores=temporadasAnteriores.filter(t=>t.convocado||Number(t.jogosSelecao)>0).length;
+    let chanceConvocacao=Math.max(0,Math.min(.95,(overall-65)/35));
+    chanceConvocacao+=Math.max(0,potencia-50)/250+(jogaEuropa?.06:0)+Math.min(.18,convocacoesAnteriores*.035);
+    if(idade<18)chanceConvocacao*=.25;else if(idade>35)chanceConvocacao*=.7;
+    chanceConvocacao=Math.max(0,Math.min(.95,chanceConvocacao));
+    const convocado=!!selecao&&Math.random()<chanceConvocacao&&!lesaoCarreira;
+    let jogosSelecao=0,golsSelecao=0,assistenciasSelecao=0;const jogosSelecaoPorCompeticao={},golsSelecaoPorCompeticao={};
+    if(convocado){
+      const ano=Number(temporadasAnteriores.length?temporadasAnteriores[temporadasAnteriores.length-1].ano+1:ANO_INICIAL);
+      const anoTorneio=(ano-2028)%4===0, maxSelecao=(8+Math.floor(Math.random()*5)+(anoTorneio?4:0));
+      for(let i=0;i<maxSelecao;i++){if(Math.random()>Math.min(.98,probParticipar+.08))continue;jogosSelecao++;
+        const competicao=anoTorneio&&i>=8?(selecao.regiao==="europa"?"Continental":"Copa"):i%3===0?"Eliminatórias":"Amistoso";
+        jogosSelecaoPorCompeticao[competicao]=(jogosSelecaoPorCompeticao[competicao]||0)+1;
+        const g=amostrarPoisson(lambdaGol*.58),a=amostrarPoisson(lambdaAssist*.62);golsSelecao+=g;assistenciasSelecao+=a;golsSelecaoPorCompeticao[competicao]=(golsSelecaoPorCompeticao[competicao]||0)+g;
+      }
     }
-    fatorLesao = Math.max(0, fatorLesao);
-
-    const escala = fatorLesao * multLesoes;
-
-    const chanceLeve     = Math.max(0, (Number.isFinite(Number(cfgLesoes.chanceLeve))     ? Number(cfgLesoes.chanceLeve)     : 0.012)   * escala);
-    const chanceModerada = Math.max(0, (Number.isFinite(Number(cfgLesoes.chanceModerada)) ? Number(cfgLesoes.chanceModerada) : 0.0015)  * escala);
-    const chanceGrave    = Math.max(0, (Number.isFinite(Number(cfgLesoes.chanceGrave))    ? Number(cfgLesoes.chanceGrave)    : 0.0003)  * escala);
-    const chanceCarreira = Math.max(0, (Number.isFinite(Number(cfgLesoes.chanceCarreira)) ? Number(cfgLesoes.chanceCarreira) : 0.00003) * escala);
-
-    // Limites cumulativos (cada jogo)
-    const limCarreira = chanceCarreira;
-    const limGrave    = limCarreira + chanceGrave;
-    const limModerada = limGrave    + chanceModerada;
-    const limLeve     = limModerada + chanceLeve;
-
-    let jogos = 0;
-    let gols = 0;
-    let assistencias = 0;
-    let jogosAfastado = Math.max(0, Math.floor(jogosForaInicioTemporada) || 0);
-    const eventos = [];
-    const chanceHatTrick = { ata: 0.04, me: 0.025, zag: 0.008, go: 0 }[posicao] || 0;
-    const chancePasseDecisivo = { ata: 0.008, me: 0.012, zag: 0.003, go: 0.001 }[posicao] || 0;
-
-    let lesaoGrave = false;
-    let lesaoCarreira = false;
-    let jogosForaProximaTemporada = 0;
-
-    for (let i = 0; i < maxJogos; i++) {
-        if (jogosAfastado > 0) {
-            jogosAfastado--;
-            continue;
-        }
-        if (Math.random() > probParticipar) continue;
-        jogos++;
-        gols        += amostrarPoisson(lambdaGol);
-        assistencias += amostrarPoisson(lambdaAssist);
-
-        const numeroJogo = jogos;
-        if (Math.random() < chanceHatTrick) {
-            gols += 3;
-            eventos.push({ tipo: "hat-trick", jogo: numeroJogo });
-        }
-        if (Math.random() < chancePasseDecisivo) {
-            assistencias += 2;
-            eventos.push({ tipo: "assistencia", jogo: numeroJogo });
-        }
-
-        if (posicao === "go") {
-            if (Math.random() < 0.012) eventos.push({ tipo: "defesa-ultimo-lance", jogo: numeroJogo });
-            if (Math.random() < 0.012) eventos.push({ tipo: "penalti-defendido", jogo: numeroJogo });
-            if (Math.random() < 0.02) eventos.push({ tipo: "falta-defendida", jogo: numeroJogo });
-            if (Math.random() < 0.01) eventos.push({ tipo: "falta-sofrida-goleiro", jogo: numeroJogo });
-            if (Math.random() < 0.003) eventos.push({ tipo: "penalti-causado", jogo: numeroJogo });
-        } else if (posicao === "zag" && ["ZCE", "ZCD"].includes(posicaoDetalhe)) {
-            if (Math.random() < 0.035) eventos.push({ tipo: "contra-ataque-desarmado", jogo: numeroJogo });
-            if (Math.random() < 0.012) eventos.push({ tipo: "penalti-causado", jogo: numeroJogo });
-            if (Math.random() < 0.07) eventos.push({ tipo: "cartao-amarelo", jogo: numeroJogo });
-            if (Math.random() < 0.04) eventos.push({ tipo: "interceptacao-decisiva", jogo: numeroJogo });
-        }
-
-        // ===== Sistema de lesões (configurável) =====
-        const sorteioLesao = Math.random();
-
-        if (sorteioLesao < limCarreira) {
-            // Lesão gravíssima — encerra a carreira
-            eventos.push({ tipo: "lesao-carreira", jogo: numeroJogo, idade: idade });
-            lesaoCarreira = true;
-            break;
-        } else if (sorteioLesao < limGrave) {
-            // Lesão grave — perde o resto da temporada + parte da próxima
-            const jogosRestantes = maxJogos - i;
-            const jogosProxima = Math.floor(Math.random() * 25); // 0–24
-            eventos.push({
-                tipo: "lesao-grave",
-                jogo: numeroJogo,
-                jogosPerdidos: jogosRestantes,
-                jogosForaProximaTemporada: jogosProxima
-            });
-            lesaoGrave = true;
-            jogosForaProximaTemporada = jogosProxima;
-            break;
-        } else if (sorteioLesao < limModerada) {
-            // Lesão moderada — 8 a 20 jogos
-            const jogosPerdidos = 8 + Math.floor(Math.random() * 13);
-            eventos.push({ tipo: "lesao-moderada", jogo: numeroJogo, jogosPerdidos });
-            jogosAfastado = jogosPerdidos;
-        } else if (sorteioLesao < limLeve) {
-            // Lesão leve — 1 a 6 jogos
-            const jogosPerdidos = 1 + Math.floor(Math.random() * 6);
-            eventos.push({ tipo: "lesao", jogo: numeroJogo, jogosPerdidos });
-            jogosAfastado = jogosPerdidos;
-        } else if (Math.random() < 0.004) {
-            // Cartão vermelho
-            const jogosPerdidos = 1 + Math.floor(Math.random() * 2);
-            eventos.push({ tipo: "cartao-vermelho", jogo: numeroJogo, jogosPerdidos });
-            jogosAfastado = jogosPerdidos;
-        }
-    }
-
-    return {
-        jogos,
-        gols,
-        assistencias,
-        overall,
-        eventos,
-        lesaoGrave,
-        lesaoCarreira,
-        jogosForaProximaTemporada
-    };
+    return {jogosClube,golsClube,assistenciasClube,jogosSelecao,golsSelecao,assistenciasSelecao,convocado,jogosSelecaoPorCompeticao,golsSelecaoPorCompeticao,
+      jogos:jogosClube+jogosSelecao,gols:golsClube+golsSelecao,assistencias:assistenciasClube+assistenciasSelecao,
+      motm,cartaoAmarelo,cartaoVermelho,cleanSheets,penaltisDefendidos,penaltisCometidos,minutosJogados:Math.round((jogosClube+jogosSelecao)*90*(.5+overall/200)),overall,eventos,lesaoGrave,lesaoCarreira,jogosForaProximaTemporada};
 }
 
 function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], nacionalidade = "", clubeId = "") {
@@ -1995,11 +1957,11 @@ function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], na
 
     const atributos = evoluirAtributos(temporadasAnteriores, categoria, idade, carreiraAtual.potencial);
     const overall = calcularOverall(categoria, atributos);
-    const sim = simularTemporadaPorJogo(categoria, atributos, idade, jogosForaInicio, posicaoDetalhe);
+    const sim = simularTemporadaPorJogo(categoria, atributos, idade, jogosForaInicio, posicaoDetalhe, nacionalidade, clubeId, temporadasAnteriores);
 
     const trofeus = gerarTrofeusTemporada(
         dados.nome, sim.jogos, sim.gols, sim.assistencias,
-        ano, idade, temporadasAnteriores, nacionalidade, clubeId, sim.eventos, overall, posicaoDetalhe
+        ano, idade, temporadasAnteriores, nacionalidade, clubeId, sim.eventos, overall, posicaoDetalhe, sim.convocado
     );
 
     const clube = obterClube(clubeId);
@@ -2012,9 +1974,12 @@ function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], na
         nacionalidade,
         clube: clube ? clube.id : "",
         ano,
-        jogos: sim.jogos,
-        gols: sim.gols,
-        assistencias: sim.assistencias,
+        jogos: sim.jogos, gols: sim.gols, assistencias: sim.assistencias,
+        jogosClube: sim.jogosClube, golsClube: sim.golsClube, assistenciasClube: sim.assistenciasClube,
+        jogosSelecao: sim.jogosSelecao, golsSelecao: sim.golsSelecao, assistenciasSelecao: sim.assistenciasSelecao, convocado: sim.convocado,
+        jogosSelecaoPorCompeticao: sim.jogosSelecaoPorCompeticao, golsSelecaoPorCompeticao: sim.golsSelecaoPorCompeticao,
+        motm: sim.motm, cartaoAmarelo: sim.cartaoAmarelo, cartaoVermelho: sim.cartaoVermelho, cleanSheets: sim.cleanSheets,
+        penaltisDefendidos: sim.penaltisDefendidos, penaltisCometidos: sim.penaltisCometidos, minutosJogados: sim.minutosJogados,
         eventos: sim.eventos,
         overall: overall,
         potencial: carreiraAtual.potencial,
@@ -2685,7 +2650,28 @@ async function limparRanking() {
     renderRanking();
 }
 
+
+function gerarGraficoComparacao(ta,tb){
+ const anos=[...new Set([...ta,...tb].map(t=>Number(t.ano)).filter(Number.isFinite))].sort((a,b)=>a-b); if(!anos.length)return '<p>Sem dados de temporadas para desenhar o gráfico.</p>';
+ const W=600,H=220,P=32,minA=anos[0],maxA=anos[anos.length-1],x=a=>P+(maxA===minA?.5:(a-minA)/(maxA-minA))*(W-2*P),y=o=>H-P-((Math.max(30,Math.min(99,Number(o)||30))-30)/69)*(H-2*P);
+ const path=ts=>ts.map(t=>`${x(Number(t.ano))},${y(t.overall)}`).join(' ');
+ return `<svg class="grafico-comparacao" viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolução do overall das duas carreiras"><line x1="${P}" y1="${H-P}" x2="${W-P}" y2="${H-P}" stroke="currentColor" opacity=".35"/><line x1="${P}" y1="${P}" x2="${P}" y2="${H-P}" stroke="currentColor" opacity=".35"/><polyline points="${path(ta)}" fill="none" stroke="#22c55e" stroke-width="3"/><polyline points="${path(tb)}" fill="none" stroke="#60a5fa" stroke-width="3"/><text x="${P}" y="${H-8}" fill="currentColor" font-size="11">${minA}</text><text x="${W-P}" y="${H-8}" text-anchor="end" fill="currentColor" font-size="11">${maxA}</text></svg><p><span style="color:#22c55e">●</span> Carreira A &nbsp; <span style="color:#60a5fa">●</span> Carreira B</p>`;
+}
+function renderComparacao(carreiraA,carreiraB){
+ const out=document.getElementById('resultado-comparacao');if(!out||!carreiraA||!carreiraB){if(out)out.innerHTML='<p>Salve pelo menos duas carreiras para comparar.</p>';return;}
+ const a=obterMetricasCarreira(carreiraA),b=obterMetricasCarreira(carreiraB),ta=obterTemporadasDaCarreira(carreiraA),tb=obterTemporadasDaCarreira(carreiraB);
+ const linhas=[['Posição',carreiraA.posicao,carreiraB.posicao,true],['Seleção',SELECOES.find(s=>s.id===carreiraA.nacionalidade)?.nome||'—',SELECOES.find(s=>s.id===carreiraB.nacionalidade)?.nome||'—',true],['Jogos',a.jogos,b.jogos],['Gols',a.gols,b.gols],['Assistências',a.assistencias,b.assistencias],['Hat-tricks',a.hatTricks,b.hatTricks],['MOTM',a.motmTotal,b.motmTotal],['Caps',a.caps,b.caps],['Gols pela seleção',a.golsSelecao,b.golsSelecao],['Títulos coletivos',a.titulosColetivos,b.titulosColetivos],['Títulos individuais',a.titulosIndividuais,b.titulosIndividuais],['Maior Over',a.maiorOver,b.maiorOver],['Temporadas',a.temporadas,b.temporadas],['Pontuação',a.pontuacao,b.pontuacao]];
+ const tabela=`<div class="tabela-comparacao"><table><thead><tr><th>Métrica</th><th>${escaparHTML(carreiraA.nome)}</th><th>${escaparHTML(carreiraB.nome)}</th></tr></thead><tbody>${linhas.map(([l,av,bv,txt])=>`<tr><th>${l}</th><td class="${!txt&&Number(av)>Number(bv)?'comparacao-vencedor':''}">${escaparHTML(av)}</td><td class="${!txt&&Number(bv)>Number(av)?'comparacao-vencedor':''}">${escaparHTML(bv)}</td></tr>`).join('')}</tbody></table></div>`;
+ const anos=[...new Set(ta.map(t=>Number(t.ano)).filter(ano=>tb.some(u=>Number(u.ano)===ano)))].sort((x,y)=>x-y);
+ const comum=anos.length?`<h3>Temporadas em comum</h3><div class="tabela-comparacao"><table><thead><tr><th>Ano</th><th>${escaparHTML(carreiraA.nome)} (gols / OVR)</th><th>${escaparHTML(carreiraB.nome)} (gols / OVR)</th></tr></thead><tbody>${anos.map(ano=>{const x=ta.find(t=>Number(t.ano)===ano),y=tb.find(t=>Number(t.ano)===ano);return `<tr><th>${ano}</th><td>${Number(x.gols)||0} / ${Number(x.overall)||0}</td><td>${Number(y.gols)||0} / ${Number(y.overall)||0}</td></tr>`}).join('')}</tbody></table></div>`:'<p>As carreiras não têm temporadas em comum.</p>';
+ out.innerHTML=`${tabela}<h3>Evolução do overall</h3>${gerarGraficoComparacao(ta,tb)}${comum}`;
+}
+function abrirModalComparacao(){const modal=document.getElementById('modal-comparacao'),sa=document.getElementById('comparacao-a'),sb=document.getElementById('comparacao-b');if(!modal||!sa||!sb)return;const carreiras=lerRanking();const opts=carreiras.map(c=>`<option value="${escaparHTML(c.id)}">${escaparHTML(c.nome)} · ${escaparHTML(c.posicao||'')}</option>`).join('');sa.innerHTML=opts;sb.innerHTML=opts; if(carreiras.length>1)sb.selectedIndex=1;modal.hidden=false;renderComparacao(carreiras.find(c=>String(c.id)===sa.value),carreiras.find(c=>String(c.id)===sb.value));}
+function configurarComparacao(){document.getElementById('abrir-comparacao')?.addEventListener('click',abrirModalComparacao);document.getElementById('fechar-comparacao')?.addEventListener('click',()=>{document.getElementById('modal-comparacao').hidden=true;});for(const id of ['comparacao-a','comparacao-b'])document.getElementById(id)?.addEventListener('change',()=>{const cs=lerRanking();renderComparacao(cs.find(c=>String(c.id)===document.getElementById('comparacao-a').value),cs.find(c=>String(c.id)===document.getElementById('comparacao-b').value));});document.getElementById('modal-comparacao')?.addEventListener('click',e=>{if(e.target.id==='modal-comparacao')e.currentTarget.hidden=true;});}
+
+
 document.addEventListener("DOMContentLoaded", () => {
+    configurarComparacao();
 
     aplicarConfiguracoes();
   
