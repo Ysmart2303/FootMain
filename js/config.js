@@ -4,7 +4,7 @@
  */
 
 const STORAGE_KEY_CONFIG = "footmain_config_v1";
-const VERSAO_APP = "1.17.0";
+const VERSAO_APP = "1.18.0";
 
 /* ---------- Definições base (as "de fábrica") ---------- */
 const POSICOES_PADRAO = {
@@ -817,6 +817,7 @@ const CONFIG_PADRAO = {
         idadeInicialPadrao: 18,
         idadeLimitePadrao: 40,
         limiteRompimentosContrato: 3,
+        chanceNaoRenovacaoInicial: 0.08,
         multiplicadorJogos: 1,
         multiplicadorGols: 1,
         multiplicadorAssistencias: 1,
