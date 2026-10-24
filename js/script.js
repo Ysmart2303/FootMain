@@ -1571,14 +1571,27 @@ function atualizarResumoJogador(nome, idade, ano, nacionalidade = obterCarreiraA
         const contrato = carreiraAtual.anosContratoRestantes > 0
             ? `${carreiraAtual.anosContratoRestantes} ${carreiraAtual.anosContratoRestantes === 1 ? "temporada" : "temporadas"} restantes`
             : clube ? "Vencido" : "Sem contrato";
-        perfilContrato.textContent = `${contrato} · Rompimentos: ${carreiraAtual.rompimentosContratoUsados}/${limiteRompimentos}`;
+        perfilContrato.textContent = contrato;
     }
-
+    
+    const perfilRompimentos = document.getElementById("perfil-rompimentos");
+    if (perfilRompimentos) {
+        perfilRompimentos.textContent = `Rompimentos: ${carreiraAtual.rompimentosContratoUsados}/${limiteRompimentos}`;
+    }
+    
     const statusEl = document.getElementById("perfil-status-clube");
     if (statusEl) {
         const historicoAtual = lerHistoricoAtiva();
         const status = calcularStatusClube(historicoAtual, clubeId);
-        statusEl.textContent = obterStatusClubeTexto(status.status);
+        if (!clubeId || status.status === "jogador") {
+            statusEl.hidden = true;
+            statusEl.textContent = "";
+            statusEl.removeAttribute("data-status");
+        } else {
+            statusEl.hidden = false;
+            statusEl.textContent = obterStatusClubeTexto(status.status);
+            statusEl.dataset.status = status.status;
+        }
     }
 
     const historicoAtual = lerHistoricoAtiva();
