@@ -54,22 +54,51 @@
     <main>
         <section id="inicio">
             <div class="player-card">
+                <!-- Cabeçalho: identidade -->
                 <div class="player-card__header">
-                    <span>Perfil do jogador</span>
-                    <strong id="perfil-nome">Jogador</strong>
+                    <span class="player-card__eyebrow">Perfil do jogador</span>
+                    <div class="player-card__identity">
+                        <strong class="player-card__name" id="perfil-nome">Jogador</strong>
+                        <div class="player-card__chips">
+                            <span class="player-chip"><strong id="perfil-idade">0</strong> anos</span>
+                            <span class="player-chip">Temporada <strong id="perfil-ano">2024</strong></span>
+                        </div>
+                    </div>
                 </div>
-                <div class="player-card__meta">
-                    <span>Idade: <strong id="perfil-idade">0</strong></span>
-                    <span>Temporada: <strong id="perfil-ano">2024</strong></span>
-                    <span>Seleção: <strong id="perfil-selecao">Não definida</strong></span>
-                    <span>Internacional: <strong id="perfil-caps">0 caps · 0 gols</strong></span>
-                    <span>Clube: <strong id="perfil-clube">Ainda não escolhido</strong></span>
-                    <span>Contrato: <strong id="perfil-contrato">Sem contrato · Rompimentos: 0/3</strong></span>
-                    <span>Status no clube: <strong id="perfil-status-clube">Jogador</strong></span>
-                    <span>Status no clube: <strong id="perfil-status-clube">Jogador</strong></span>
-                    <span>Reputação: <strong id="perfil-reputacao">0</strong></span>
-                    <span>Valor de mercado: <strong id="perfil-valor">€0</strong></span>
-                    <span>Salário anual: <strong id="perfil-salario">€0</strong></span>
+            
+                <!-- Seções: Clube, Contrato, Seleção -->
+                <div class="player-card__sections">
+                    <div class="player-card__section">
+                        <span class="player-card__section-label">🏟️ Clube</span>
+                        <strong class="player-card__section-value" id="perfil-clube">Ainda não escolhido</strong>
+                        <span class="player-card__badge" id="perfil-status-clube" hidden></span>
+                    </div>
+                    <div class="player-card__section">
+                        <span class="player-card__section-label">📋 Contrato</span>
+                        <strong class="player-card__section-value" id="perfil-contrato">Sem contrato</strong>
+                        <span class="player-card__section-detail" id="perfil-rompimentos">Rompimentos: 0/3</span>
+                    </div>
+                    <div class="player-card__section">
+                        <span class="player-card__section-label">🌍 Seleção</span>
+                        <strong class="player-card__section-value" id="perfil-selecao">Não definida</strong>
+                        <span class="player-card__section-detail" id="perfil-caps">0 caps · 0 gols</span>
+                    </div>
+                </div>
+            
+                <!-- Mercado: 3 estatísticas -->
+                <div class="player-card__market">
+                    <div class="player-card__stat">
+                        <span class="player-card__stat-label">Reputação</span>
+                        <strong class="player-card__stat-value" id="perfil-reputacao">0</strong>
+                    </div>
+                    <div class="player-card__stat">
+                        <span class="player-card__stat-label">Valor</span>
+                        <strong class="player-card__stat-value" id="perfil-valor">€0</strong>
+                    </div>
+                    <div class="player-card__stat">
+                        <span class="player-card__stat-label">Salário</span>
+                        <strong class="player-card__stat-value" id="perfil-salario">€0</strong>
+                    </div>
                 </div>
             </div>
 
