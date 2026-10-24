@@ -274,8 +274,7 @@ main {
     padding: 18px 20px;
 }
 
-.player-card__header,
-.player-card__meta {
+.player-card__header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -291,12 +290,6 @@ main {
 .player-card__header strong {
     font-size: 1.2rem;
     color: #f8fafc;
-}
-
-.player-card__meta {
-    color: #bfdbfe;
-    font-size: 0.9rem;
-    flex-wrap: wrap;
 }
 
 #inputs {
@@ -907,27 +900,7 @@ button {
         overflow-wrap: anywhere;
     }
 
-    .player-card__meta {
-        gap: 8px 14px;
-    }
-
     /* no player-card__meta, o <strong id="perfil-caps"> ganha destaque */
-    .player-card__meta strong#perfil-caps {
-        display: inline-flex;
-        padding: 2px 8px;
-        border-radius: 999px;
-        background: rgba(251, 191, 36, 0.12);
-        border: 1px solid rgba(251, 191, 36, 0.3);
-        color: #fef3c7;
-        font-weight: 800;
-        font-size: 0.82rem;
-    }
-    
-    html[data-theme="light"] .player-card__meta strong#perfil-caps {
-        background: #fef3c7;
-        border-color: #facc15;
-        color: #713f12 !important;
-    }
 
     #inputs,
     #posi {
@@ -3687,3 +3660,266 @@ html[data-theme="light"] .badge--salario { background: #dbeafe; border-color: #9
 html[data-theme="light"] .opcao-clube-salario > small { color: #475569; }
 html[data-theme="light"] .opcao-clube-salario .salario-aumento { color: #15803d; }
 html[data-theme="light"] .opcao-clube-salario .salario-reducao { color: #991b1b; }
+
+/* ==========================================
+   Player Card — redesign limpo
+   ========================================== */
+
+.player-card {
+    grid-area: perfil;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(59, 130, 246, 0.12));
+    border: 1px solid rgba(52, 211, 153, 0.28);
+    border-radius: 18px;
+}
+
+/* ---------- Header ---------- */
+.player-card__header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: stretch;
+    justify-content: flex-start;
+    margin: 0;
+}
+
+.player-card__eyebrow {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+    font-weight: 700;
+}
+
+.player-card__identity {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.player-card__name {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #f8fafc;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+    min-width: 0;
+}
+
+.player-card__chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.player-chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    color: #cbd5e1;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.player-chip strong {
+    color: #f8fafc;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Sections (Clube / Contrato / Seleção) ---------- */
+.player-card__sections {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    padding: 16px 0;
+    border-top: 1px solid rgba(148, 163, 184, 0.15);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.player-card__section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.player-card__section-label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #94a3b8;
+    font-weight: 700;
+}
+
+.player-card__section-value {
+    color: #f8fafc;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.player-card__section-detail {
+    color: #94a3b8;
+    font-size: 0.78rem;
+    font-weight: 500;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.player-card__badge {
+    align-self: flex-start;
+    margin-top: 4px;
+    padding: 3px 9px;
+    border-radius: 7px;
+    background: rgba(250, 204, 21, 0.12);
+    border: 1px solid rgba(250, 204, 21, 0.35);
+    color: #fde68a;
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.player-card__badge[hidden] { display: none; }
+
+/* Cores específicas por status */
+.player-card__badge[data-status="lenda"] {
+    background: rgba(168, 85, 247, 0.15);
+    border-color: rgba(168, 85, 247, 0.45);
+    color: #e9d5ff;
+}
+.player-card__badge[data-status="idolo"] {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.45);
+    color: #bfdbfe;
+}
+.player-card__badge[data-status="camisa-aposentada"] {
+    background: rgba(250, 204, 21, 0.18);
+    border-color: rgba(250, 204, 21, 0.55);
+    color: #fef3c7;
+}
+
+/* ---------- Market ---------- */
+.player-card__market {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.player-card__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.22);
+    min-width: 0;
+}
+
+.player-card__stat-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    font-weight: 700;
+}
+
+.player-card__stat-value {
+    color: #a7f3d0;
+    font-size: 0.98rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+/* ---------- Responsivo ---------- */
+@media (max-width: 600px) {
+    .player-card {
+        padding: 16px;
+        gap: 14px;
+    }
+
+    .player-card__name {
+        font-size: 1.35rem;
+    }
+
+    .player-card__sections {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .player-card__section {
+        padding-left: 10px;
+        border-left: 2px solid rgba(52, 211, 153, 0.35);
+    }
+
+    .player-card__market {
+        gap: 6px;
+    }
+
+    .player-card__stat {
+        padding: 8px 8px;
+    }
+
+    .player-card__stat-label {
+        font-size: 0.6rem;
+    }
+
+    .player-card__stat-value {
+        font-size: 0.88rem;
+    }
+}
+
+/* ---------- Tema claro ---------- */
+html[data-theme="light"] .player-card {
+    background: linear-gradient(135deg, #dbeafe, #eff6ff);
+    border-color: #93c5fd;
+}
+html[data-theme="light"] .player-card__eyebrow,
+html[data-theme="light"] .player-card__section-label,
+html[data-theme="light"] .player-card__section-detail,
+html[data-theme="light"] .player-card__stat-label { color: #475569; }
+
+html[data-theme="light"] .player-card__name,
+html[data-theme="light"] .player-card__section-value,
+html[data-theme="light"] .player-chip strong { color: #172554; }
+
+html[data-theme="light"] .player-chip {
+    background: #f8fbff;
+    border-color: #93c5fd;
+    color: #334155;
+}
+
+html[data-theme="light"] .player-card__badge {
+    background: #fef9c3;
+    border-color: #facc15;
+    color: #713f12;
+}
+html[data-theme="light"] .player-card__badge[data-status="lenda"] {
+    background: #ede9fe; border-color: #c4b5fd; color: #5b21b6;
+}
+html[data-theme="light"] .player-card__badge[data-status="idolo"] {
+    background: #dbeafe; border-color: #93c5fd; color: #1d4ed8;
+}
+
+html[data-theme="light"] .player-card__stat {
+    background: #dcfce7;
+    border-color: #86efac;
+}
+html[data-theme="light"] .player-card__stat-value { color: #14532d; }
