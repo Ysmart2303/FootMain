@@ -250,7 +250,17 @@ function obterTrofeusColetivosDaCarreira(carreira) {
         .map((trofeu) => normalizarNomeTrofeu(trofeu, carreira.clube));
 }
 
-function sortearClubes(quantidade, clubeExcluir = "", clubeAlvo = "") {
+function jogadorTeveBomDesempenho(temporada) {
+    if (!temporada) return false;
+    const overall = Number(temporada.overall) || 0;
+    const jogos = Number(temporada.jogosClube ?? temporada.jogos) || 0;
+    const gols = Number(temporada.golsClube ?? temporada.gols) || 0;
+    const assistencias = Number(temporada.assistenciasClube ?? temporada.assistencias) || 0;
+    const participacoes = gols + assistencias;
+    return overall >= 75 || (jogos >= 20 && participacoes / jogos >= 0.65);
+}
+
+function sortearClubes(quantidade, clubeExcluir = "", clubeAlvo = "", desempenhoBom = false) {
     const disponiveis = CLUBES.filter((clube) => clube.id !== clubeExcluir);
     for (let indice = 0; indice < quantidade; indice++) {
         const indiceAleatorio = indice + Math.floor(Math.random() * (disponiveis.length - indice));
@@ -264,7 +274,8 @@ function sortearClubes(quantidade, clubeExcluir = "", clubeAlvo = "") {
         && alvo.id !== clubeExcluir
         && !sorteados.some((clube) => clube.id === alvo.id)
         && sorteados.length > 0
-        && Math.random() < 0.5
+        && desempenhoBom
+        && Math.random() < 0.6
     ) {
         sorteados[Math.floor(Math.random() * sorteados.length)] = alvo;
     }
@@ -2333,7 +2344,9 @@ async function escolherContratoParaTemporada(clubeAtual, temporadaInicial, idade
     const limiteRompimentos = getConfig().geral.limiteRompimentosContrato;
     const rompimentosRestantes = Math.max(0, limiteRompimentos - carreiraAtual.rompimentosContratoUsados);
     const contratoAtivo = !temporadaInicial && carreiraAtual.anosContratoRestantes > 0;
-    const ofertas = sortearClubes(3, clubeAtual, carreiraAtual.clubeAlvo)
+    const historicoCarreira = obterHistoricoDaCarreira(carreiraAtual.nome, carreiraAtual.posicaoDetalhe || carreiraAtual.posicao);
+    const desempenhoBom = jogadorTeveBomDesempenho(historicoCarreira[historicoCarreira.length - 1]);
+    const ofertas = sortearClubes(3, clubeAtual, carreiraAtual.clubeAlvo, desempenhoBom)
         .map((clube) => criarOfertaContrato(clube, idade, idadeLimite));
     let opcoes;
     let mensagem;
@@ -2395,7 +2408,7 @@ function escolherClubeAlvo(clubeAlvo) {
     return exibirEscolhaClube(
         CLUBES,
         "Escolha seu clube-alvo",
-        "O clube escolhido terá mais chances de aparecer entre as opções de cada sorteio, mas a escolha não garante uma oferta.",
+        "O clube escolhido terá 60% de chance de aparecer entre as ofertas quando você estiver tendo uma boa temporada. A escolha não garante uma oferta.",
         clubeAlvo,
         true
     );
@@ -2465,7 +2478,7 @@ function sortearClubesParaCarreira(quantidade, clubeExcluir, clubeAlvo, historic
             // Preferência gradual, sem bloquear ligas menores ou surpresas.
             const distancia = (prestigio - reputacao) / 17;
             let peso = Math.exp(Math.max(-2.2, Math.min(2.2, distancia)));
-            if (clube.id === clubeAlvo) peso *= 1.8;
+            if (clube.id === clubeAlvo) peso *= jogadorTeveBomDesempenho(temporadas[temporadas.length - 1]) ? 4 : 1;
             return Math.max(0.08, peso);
         });
         const indice = sortearIndicePorPesos(pesos);
@@ -2475,6 +2488,7 @@ function sortearClubesParaCarreira(quantidade, clubeExcluir, clubeAlvo, historic
 }
 
 function sortearClubeParaTemporada(clubeAtual, temporadaInicial, clubeAlvo = "", historico = []) {
+    const alvoValido = obterClube(clubeAlvo);
     if (temporadaInicial && (!Array.isArray(historico) || historico.length === 0)) {
         const ofertasIniciais = sortearClubes(3, "", clubeAlvo);
         return ofertasIniciais[Math.floor(Math.random() * ofertasIniciais.length)].id;
@@ -2491,10 +2505,42 @@ function sortearClubeParaTemporada(clubeAtual, temporadaInicial, clubeAlvo = "",
         // Permanecer é uma opção real, mas um destino compatível pode vencer.
         let peso = Math.exp(Math.max(-2.2, Math.min(2.2, (prestigio - reputacao) / 20)));
         if (candidato.id === clubeAtual) peso *= 1.25;
-        if (candidato.id === clubeAlvo) peso *= 1.8;
+        if (candidato.id === clubeAlvo) peso *= jogadorTeveBomDesempenho(temporadas[temporadas.length - 1]) ? 3.2 : 1.15;
         return Math.max(0.1, peso);
     });
     return candidatos[sortearIndicePorPesos(pesos)].id;
+}
+
+function calcularChanceNaoRenovacao(clubeId, temporada) {
+    const config = getConfig();
+    const chanceInicial = Math.max(0, Math.min(1, Number(config.geral.chanceNaoRenovacaoInicial ?? 0.08)));
+    const clube = obterClube(clubeId);
+    const forcaClube = Number(config.clubes?.potencias?.[clubeId]) || 60;
+    const overall = Number(temporada?.overall) || 50;
+    const jogos = Number(temporada?.jogosClube ?? temporada?.jogos) || 0;
+    const participacoes = (Number(temporada?.golsClube ?? temporada?.gols) || 0)
+        + (Number(temporada?.assistenciasClube ?? temporada?.assistencias) || 0);
+    let chance = chanceInicial;
+
+    // Mau desempenho individual: maior risco em clubes exigentes.
+    if (overall < 60) chance += 0.28;
+    else if (overall < 68) chance += 0.16;
+    else if (overall < 74) chance += 0.07;
+    if (jogos >= 15 && participacoes / jogos < 0.18 && !/GOL|Goleiro/i.test(temporada?.posicaoDetalhe || temporada?.posicao || '')) chance += 0.12;
+    if (forcaClube >= 80 && overall < 75) chance += 0.08;
+
+    // Em clubes fortes, a falta de conquistas continentais pesa como objetivo não cumprido.
+    // Os nomes variam por liga, então a verificação usa termos comuns dos torneios continentais.
+    const trofeus = Array.isArray(temporada?.trofeusColetivos) ? temporada.trofeusColetivos : [];
+    const ganhouContinental = trofeus.some((nome) => /champions|continental|libertadores|europa league|conference league|sul-americana|afc champions|caf champions/i.test(String(nome)));
+    if (forcaClube >= 82 && !ganhouContinental) chance += 0.08;
+    else if (forcaClube >= 65 && !ganhouContinental) chance += 0.04;
+
+    return Math.max(0, Math.min(0.9, chance));
+}
+
+function clubeNaoRenovaContrato(clubeId, temporada) {
+    return Math.random() < calcularChanceNaoRenovacao(clubeId, temporada);
 }
 
 let processamentoEmAndamento = false;
@@ -2758,10 +2804,21 @@ function simularTudo() {
                 clubeAtual = sortearClubeParaTemporada("", true, carreiraAtual.clubeAlvo, historico);
                 anosContratoRestantes = obterDuracaoContrato(idade, idadeLimite);
             } else if (anosContratoRestantes <= 0) {
-                // Contrato venceu: sorteia entre renovar no clube atual
-                // ou aceitar uma das ofertas (sortearClubeParaTemporada já monta
-                // a lista [clubeAtual, ...3 ofertas] e respeita o clube-alvo).
-                clubeAtual = sortearClubeParaTemporada(clubeAtual, false, carreiraAtual.clubeAlvo, historico);
+                // Ao vencer o contrato, o clube pode recusar a renovação se o desempenho/objetivos foram ruins.
+                const ultimaTemporada = historico[historico.length - 1];
+                const naoRenovou = ultimaTemporada && clubeNaoRenovaContrato(clubeAtual, ultimaTemporada);
+                if (naoRenovou) {
+                    const ofertas = sortearClubesParaCarreira(3, clubeAtual, carreiraAtual.clubeAlvo, historico);
+                    const candidatos = ofertas.length ? ofertas : CLUBES.filter((clube) => clube.id !== clubeAtual);
+                    const alvo = obterClube(carreiraAtual.clubeAlvo);
+                    const alvoElegivel = alvo && alvo.id !== clubeAtual && candidatos.some((clube) => clube.id === alvo.id);
+                    clubeAtual = alvoElegivel && jogadorTeveBomDesempenho(ultimaTemporada) && Math.random() < 0.6
+                        ? alvo.id
+                        : candidatos[Math.floor(Math.random() * candidatos.length)].id;
+                } else {
+                    // Renovar continua sendo uma opção, mas não é garantido que o jogador fique.
+                    clubeAtual = sortearClubeParaTemporada(clubeAtual, false, carreiraAtual.clubeAlvo, historico);
+                }
                 anosContratoRestantes = obterDuracaoContrato(idade, idadeLimite);
             }
             const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id, historico, nacionalidade, clubeAtual);
