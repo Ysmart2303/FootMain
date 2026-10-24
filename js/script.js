@@ -283,6 +283,15 @@ function sortearClubes(quantidade, clubeExcluir = "", clubeAlvo = "", desempenho
     return sorteados;
 }
 
+function jogadorTeveMauDesempenho(temporada) {
+    if (!temporada) return false;
+    const overall = Number(temporada.overall) || 0;
+    const jogos = Number(temporada.jogosClube ?? temporada.jogos) || 0;
+    const participacoes = (Number(temporada.golsClube ?? temporada.gols) || 0)
+        + (Number(temporada.assistenciasClube ?? temporada.assistencias) || 0);
+    return overall < 65 || (jogos > 15 && participacoes / jogos < 0.15);
+}
+
 function sortearIndicePonderado(pesos) {
     const pesoTotal = pesos.reduce((total, peso) => total + peso, 0);
     let sorteio = Math.random() * pesoTotal;
@@ -390,6 +399,11 @@ function validarTemporada(temporada) {
         ? Math.max(1, Math.min(99, Math.round(overallSalvo)))
         : calcularOverall(posicaoNormalizada, atributos);
 
+    const reputacao = Math.max(0, Math.min(100, Math.floor(Number(temporada.reputacao) || 0)));
+    const valorMercado = Math.max(0, Math.floor(Number(temporada.valorMercado) || 0));
+    const salario = Math.max(0, Math.floor(Number(temporada.salario) || 0));
+    const anosContrato = Math.max(0, Math.min(5, Math.floor(Number(temporada.anosContrato) || 0)));
+
     return {
         nome,
         idade,
@@ -423,7 +437,11 @@ function validarTemporada(temporada) {
         lesaoCarreira: !!temporada.lesaoCarreira,
         jogosForaProximaTemporada: Math.max(0, Math.min(62, Math.floor(Number(temporada.jogosForaProximaTemporada) || 0))),
         data: typeof temporada.data === "string" && temporada.data ? temporada.data : new Date().toLocaleString("pt-BR"),
-        carreiraId: typeof temporada.carreiraId === "string" && temporada.carreiraId ? temporada.carreiraId : "legacy"
+        carreiraId: typeof temporada.carreiraId === "string" && temporada.carreiraId ? temporada.carreiraId : "legacy",
+        reputacao,
+        valorMercado,
+        salario,
+        anosContrato,
     };
 }
 
@@ -527,6 +545,9 @@ function obterCarreiraAtual() {
             potencial: calcularPotencialDaCarreira(carreira),
             aposentadoriaSelecao: !!carreira.aposentadoriaSelecao,
             aposentadoriaVoluntaria: !!carreira.aposentadoriaVoluntaria,
+            salarioAtual: Number.isFinite(Number(carreira.salarioAtual))
+                ? Math.max(0, Math.floor(Number(carreira.salarioAtual)))
+                : 0,
         };
     } catch (erro) {
         console.error("Erro ao ler a carreira atual:", erro);
@@ -554,7 +575,10 @@ function salvarCarreiraAtual(carreira) {
         potencial: calcularPotencialDaCarreira(carreiraAtual),
 
         aposentadoriaSelecao: !!carreiraAtual.aposentadoriaSelecao,
-        aposentadoriaVoluntaria: !!carreiraAtual.aposentadoriaVoluntaria
+        aposentadoriaVoluntaria: !!carreiraAtual.aposentadoriaVoluntaria,
+        salarioAtual: Number.isFinite(Number(carreiraAtual.salarioAtual))
+            ? Math.max(0, Math.floor(Number(carreiraAtual.salarioAtual)))
+            : 0,
     }));
 }
 
@@ -1190,6 +1214,20 @@ const CONQUISTAS = [
     { id: "supercopa-1", nome: "Campeão de Supercopa", descricao: "Conquiste uma Supercopa.", categoria: "Títulos coletivos", icone: "🏆", metrica: "supercopaTotal", meta: 1 },
     { id: "estadual-1", nome: "Campeão regional", descricao: "Ganhe um campeonato estadual.", categoria: "Títulos coletivos", icone: "🏆", metrica: "estadualTotal", meta: 1 },
 
+    { id: "reputacao-50", nome: "Reconhecido", descricao: "Alcance 50 de reputação.", categoria: "Desempenho", icone: "⭐", metrica: "maiorReputacao", meta: 50 },
+    { id: "reputacao-75", nome: "Estrela mundial", descricao: "Alcance 75 de reputação.", categoria: "Desempenho", icone: "🌟", metrica: "maiorReputacao", meta: 75 },
+    { id: "reputacao-90", nome: "Lenda global", descricao: "Alcance 90 de reputação.", categoria: "Desempenho", icone: "👑", metrica: "maiorReputacao", meta: 90 },
+    
+    { id: "valor-50m",  nome: "Jogador valioso",  descricao: "Alcance €50M de valor de mercado.",  categoria: "Desempenho", icone: "💰", metrica: "maiorValor", meta: 50000000, formato: "euro" },
+    { id: "valor-100m", nome: "Craque do mercado", descricao: "Alcance €100M de valor de mercado.", categoria: "Desempenho", icone: "💎", metrica: "maiorValor", meta: 100000000, formato: "euro" },
+    { id: "valor-200m", nome: "Fora de série",    descricao: "Alcance €200M de valor de mercado.", categoria: "Desempenho", icone: "🏆", metrica: "maiorValor", meta: 200000000, formato: "euro" },
+    
+    { id: "salario-10m", nome: "Milionário",       descricao: "Ganhe €10M por temporada.", categoria: "Desempenho", icone: "💵", metrica: "maiorSalario", meta: 10000000, formato: "euro" },
+    { id: "salario-25m", nome: "Salário de elite", descricao: "Ganhe €25M por temporada.", categoria: "Desempenho", icone: "🤑", metrica: "maiorSalario", meta: 25000000, formato: "euro" },
+    
+    { id: "ganhos-100m", nome: "Centenário financeiro", descricao: "Acumule €100M em salários.", categoria: "Desempenho", icone: "🏦", metrica: "ganhosTotais", meta: 100000000, formato: "euro" },
+    { id: "ganhos-500m", nome: "Magnata do futebol",    descricao: "Acumule €500M em salários.", categoria: "Desempenho", icone: "🏛️", metrica: "ganhosTotais", meta: 500000000, formato: "euro" },
+
 ];
 
 function obterMetricasCarreira(carreira) {
@@ -1201,6 +1239,11 @@ function obterMetricasCarreira(carreira) {
     const todosIndividuais = temporadas.flatMap((t) => Array.isArray(t.trofeusIndividuais) ? t.trofeusIndividuais : []);
     const todosColetivos = temporadas.flatMap((t) => Array.isArray(t.trofeusColetivos) ? t.trofeusColetivos : []);
     const ESTADUAIS = ["Carioca", "Paulistão", "Gauchão", "Mineiro", "Baianão", "Pernambucano", "Cearense"];
+    const reputacaoMax = Math.max(0, ...temporadas.map(t => Number(t.reputacao) || 0));
+    const valorMax = Math.max(0, ...temporadas.map(t => Number(t.valorMercado) || 0));
+    const salarioMax = Math.max(0, ...temporadas.map(t => Number(t.salario) || 0));
+    const ganhosTotais = temporadas.reduce((s, t) => s + (Number(t.salario) || 0), 0);
+  
     return {
         gols: Number(carreira.gols) || 0,
         assistencias: Number(carreira.assistencias) || 0,
@@ -1229,6 +1272,10 @@ function obterMetricasCarreira(carreira) {
         sulAmericanaTotal: todosColetivos.filter((t) => t === "Copa Sul-Americana").length,
         supercopaTotal: todosColetivos.filter((t) => String(t).includes("Supercopa")).length,
         estadualTotal: todosColetivos.filter((t) => ESTADUAIS.includes(t)).length,
+        maiorReputacao: reputacaoMax,
+        maiorValor: valorMax,
+        maiorSalario: salarioMax,
+        ganhosTotais,
     };
 }
 
@@ -1301,9 +1348,14 @@ function renderConquistas() {
                 const valor = metricas[conquista.metrica] || 0;
                 const desbloqueada = valor >= conquista.meta;
                 const progresso = Math.min(100, Math.round((valor / conquista.meta) * 100));
-                const valorExibido = conquista.metrica === "pontuacao"
-                    ? Math.floor(valor).toLocaleString("pt-BR")
-                    : valor.toLocaleString("pt-BR");
+
+                // Formatação: moeda compacta para conquistas financeiras,
+                // número inteiro formatado para as demais.
+                const fmt = (v) => conquista.formato === "euro"
+                    ? formatarValorCompacto(v)
+                    : Math.floor(v).toLocaleString("pt-BR");
+                const valorExibido = fmt(valor);
+                const metaExibida = fmt(conquista.meta);
 
                 return `<article class="conquista-card ${desbloqueada ? "desbloqueada" : "bloqueada"}">
                     <div class="conquista-icone">${desbloqueada ? conquista.icone : "🔒"}</div>
@@ -1312,7 +1364,7 @@ function renderConquistas() {
                         <strong>${escaparHTML(conquista.nome)}</strong>
                         <p>${escaparHTML(conquista.descricao)}</p>
                         <div class="conquista-progresso"><span style="width:${progresso}%"></span></div>
-                        <small>${valorExibido} / ${conquista.meta.toLocaleString("pt-BR")}${desbloqueada ? " · Desbloqueada" : ""}</small>
+                        <small>${valorExibido} / ${metaExibida}${desbloqueada ? " · Desbloqueada" : ""}</small>
                     </div>
                 </article>`;
             }).join("");
@@ -1366,7 +1418,7 @@ function renderConquistas() {
 function renderRanking() {
     const listaRanking = document.getElementById("lista-ranking");
     const filtroRanking = document.getElementById("filtro-ranking");
-
+  
     if (!listaRanking) return;
 
     const criterio = filtroRanking?.value || "pontuacao";
@@ -1417,9 +1469,12 @@ function renderRanking() {
       const medalha = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `#${index + 1}`;
       const classeTop = index === 0 ? "top-1" : index === 1 ? "top-2" : index === 2 ? "top-3" : "";
       const maiorOver = Math.max(0, ...(carreira.temporadas || []).map(t => Number(t.overall) || 0));
-      const hatTricks = contarHatTricks(carreira.temporadas || []);
+      const hatTricks = contarHatTricks(carreira.temporadas || []);      
       const selecao = SELECOES.find(s => s.id === carreira.nacionalidade);
       const clube = obterClube(carreira.clube);
+
+      const reputacaoMax = Math.max(0, ...(carreira.temporadas || []).map(t => Number(t.reputacao) || 0));
+      const ganhosTotais = (carreira.temporadas || []).reduce((s, t) => s + (Number(t.salario) || 0), 0);
   
       const renderTrofeus = (trofeus, tipo) => {
           if (!trofeus.length) {
@@ -1462,6 +1517,8 @@ function renderRanking() {
                   <div class="stat-card"><span class="stat-label">Prêmios</span><strong class="stat-value stat-value--premio">${premios}</strong></div>
                   <div class="stat-card"><span class="stat-label">Maior OVR</span><strong class="stat-value">${maiorOver}</strong></div>
                   <div class="stat-card"><span class="stat-label">MOTM</span><strong class="stat-value">${obterMetricasCarreira(carreira).motmTotal}</strong></div>
+                  <div class="stat-card"><span class="stat-label">Reputação</span><strong class="stat-value">${reputacaoMax}</strong></div>
+                  <div class="stat-card"><span class="stat-label">Ganhos</span><strong class="stat-value">${formatarValorCompacto(ganhosTotais)}</strong></div>
               </div>
               <div class="temporada-titulos">
                   <div class="titulos-grupo">
@@ -1523,6 +1580,22 @@ function atualizarResumoJogador(nome, idade, ano, nacionalidade = obterCarreiraA
         const status = calcularStatusClube(historicoAtual, clubeId);
         statusEl.textContent = obterStatusClubeTexto(status.status);
     }
+
+    const historicoAtual = lerHistoricoAtiva();
+    const ultimaTemp = historicoAtual[historicoAtual.length - 1];
+    const reputacaoAtual = ultimaTemp ? Number(ultimaTemp.reputacao) || 0 : 0;
+    const valorAtual = ultimaTemp ? Number(ultimaTemp.valorMercado) || 0 : 0;
+    const salarioAtualMostrar = carreiraAtual.salarioAtual || (ultimaTemp ? Number(ultimaTemp.salario) || 0 : 0);
+    
+    const perfilRep = document.getElementById("perfil-reputacao");
+    if (perfilRep) perfilRep.textContent = reputacaoAtual;
+    
+    const perfilValor = document.getElementById("perfil-valor");
+    if (perfilValor) perfilValor.textContent = formatarValorCompacto(valorAtual);
+    
+    const perfilSalario = document.getElementById("perfil-salario");
+    if (perfilSalario) perfilSalario.textContent = formatarValorCompacto(salarioAtualMostrar);
+  
 }
 
 function lerHistoricoAtiva() {
@@ -1594,6 +1667,8 @@ function renderHistorico() {
                         <span class="badge badge--pos">${escaparHTML(temporada.posicao)}</span>
                         <span class="badge badge--clube">${escaparHTML(clube?.nome || "Sem clube")}</span>
                         <span class="badge badge--over">OVR ${temporada.overall}</span>
+                        ${(Number(temporada.reputacao) || 0) > 0 ? `<span class="badge badge--rep">Rep ${temporada.reputacao}</span>` : ""}
+                        ${(Number(temporada.valorMercado) || 0) > 0 ? `<span class="badge badge--valor">${formatarValorCompacto(temporada.valorMercado)}</span>` : ""}
                     </div>
                 </div>
                 
@@ -1629,6 +1704,7 @@ function renderHistorico() {
                       <div class="stat-card"><span class="stat-label">MOTM</span><strong class="stat-value">${Number(temporada.motm) || 0}</strong></div>
                       <div class="stat-card"><span class="stat-label">Cartões 🟨/🟥</span><strong class="stat-value">${Number(temporada.cartaoAmarelo) || 0} / ${Number(temporada.cartaoVermelho) || 0}</strong></div>
                       <div class="stat-card"><span class="stat-label">Prêmios</span><strong class="stat-value stat-value--premio">${premios}</strong></div>
+                      <div class="stat-card"><span class="stat-label">Salário</span><strong class="stat-value">${formatarValorCompacto(temporada.salario || 0)}</strong></div>
                   </div>
               </div>
                 
@@ -1803,6 +1879,21 @@ function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao, opc
     setResumo("resumo-jogos-clube",totais.jogosClube); setResumo("resumo-motm",totais.motm); setResumo("resumo-cartoes",`${totais.cartaoAmarelo} amarelos / ${totais.cartaoVermelho} vermelhos`);
     document.getElementById("resumo-coletivos").textContent = formatarTrofeus(trofeus.coletivos);
     document.getElementById("resumo-individuais").textContent = formatarTrofeus(trofeus.individuais);
+
+    const reputacoes = historico.map(t => Number(t.reputacao) || 0).filter(Boolean);
+    const valores = historico.map(t => Number(t.valorMercado) || 0).filter(Boolean);
+    const salarios = historico.map(t => Number(t.salario) || 0).filter(Boolean);
+    const ganhosTotais = historico.reduce((s, t) => s + (Number(t.salario) || 0), 0);
+    
+    const setTexto = (id, valor) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = valor;
+    };
+    
+    setTexto("resumo-reputacao-max", reputacoes.length ? Math.max(...reputacoes) : 0);
+    setTexto("resumo-valor-max", formatarValorCompacto(valores.length ? Math.max(...valores) : 0));
+    setTexto("resumo-salario-max", formatarValorCompacto(salarios.length ? Math.max(...salarios) : 0));
+    setTexto("resumo-ganhos-totais", formatarValorCompacto(ganhosTotais));
 
     const rankingAtual = lerRanking();
     const indiceExistente = rankingAtual.findIndex(
@@ -2247,18 +2338,46 @@ function exibirEscolhaClube(opcoes, titulo, mensagem, clubeSelecionado = "", exi
         }
 
         const renderOpcoes = () => {
-            const clubesFiltrados = clubeAlvo && filtroLiga?.value
-                ? opcoes.filter((clube) => clube.liga === filtroLiga.value)
-                : opcoes;
-            if (!clubesFiltrados.some((clube) => clube.id === clubeSelecionadoAtual)) {
-                clubeSelecionadoAtual = clubesFiltrados[0]?.id || "";
-            }
-            opcoesEl.innerHTML = clubesFiltrados.map((clube) => `
-                <label class="opcao-clube${clube.desabilitado ? " opcao-clube--desabilitada" : ""}">
-                    <input type="radio" name="escolha-clube" value="${escaparHTML(clube.id)}" ${clube.id === clubeSelecionadoAtual ? "checked" : ""} ${clube.desabilitado ? "disabled" : ""}>
-                    <span><strong>${escaparHTML(clube.nome)}</strong>${clube.liga || clube.detalheContrato ? `<small>${[clube.liga, clube.detalheContrato].filter(Boolean).map(escaparHTML).join(" · ")}</small>` : ""}</span>
-                </label>
-            `).join("");
+          const clubesFiltrados = clubeAlvo && filtroLiga?.value
+              ? opcoes.filter((clube) => clube.liga === filtroLiga.value)
+              : opcoes;
+      
+          if (!clubesFiltrados.some((clube) => clube.id === clubeSelecionadoAtual)) {
+              clubeSelecionadoAtual = clubesFiltrados[0]?.id || "";
+          }
+      
+          opcoesEl.innerHTML = clubesFiltrados.map((clube) => {
+              const detalhePartes = [];
+              if (clube.liga) detalhePartes.push(clube.liga);
+              if (clube.detalheContrato) detalhePartes.push(clube.detalheContrato);
+              const detalheTexto = detalhePartes.map(escaparHTML).join(" · ");
+      
+              let salarioHtml = "";
+              if (Number(clube.salarioProposto) > 0) {
+                  let comparativo = "";
+                  if (Number(clube.salarioAnterior) > 0) {
+                      const variacao = ((clube.salarioProposto - clube.salarioAnterior) / clube.salarioAnterior) * 100;
+                      const classe = variacao > 0 ? "salario-aumento" : variacao < 0 ? "salario-reducao" : "";
+                      const sinal = variacao > 0 ? "+" : "";
+                      comparativo = `<small class="${classe}">${sinal}${variacao.toFixed(1)}% vs atual (${formatarValorEuro(clube.salarioAnterior)})</small>`;
+                  }
+                  salarioHtml = `<div class="opcao-clube-salario">
+                      <small>💰 ${formatarValorEuro(clube.salarioProposto)}/ano</small>
+                      ${comparativo}
+                  </div>`;
+              }
+      
+              return `
+                  <label class="opcao-clube${clube.desabilitado ? " opcao-clube--desabilitada" : ""}">
+                      <input type="radio" name="escolha-clube" value="${escaparHTML(clube.id)}" ${clube.id === clubeSelecionadoAtual ? "checked" : ""} ${clube.desabilitado ? "disabled" : ""}>
+                      <span>
+                          <strong>${escaparHTML(clube.nome)}</strong>
+                          ${detalheTexto ? `<small>${detalheTexto}</small>` : ""}
+                          ${salarioHtml}
+                      </span>
+                  </label>
+              `;
+          }).join("");
         };
         const aoAlterarLiga = () => {
             clubeSelecionadoAtual = opcoesEl.querySelector('input[name="escolha-clube"]:checked')?.value || clubeSelecionadoAtual;
@@ -2331,11 +2450,22 @@ function obterDuracaoContrato(idade, idadeLimite) {
     return Math.floor(Math.random() * anosDisponiveis) + 1;
 }
 
-function criarOfertaContrato(clube, idade, idadeLimite) {
+function criarOfertaContrato(clube, idade, idadeLimite, temporadaAnterior = null, historico = []) {
     const anosContrato = obterDuracaoContrato(idade, idadeLimite);
+    const overall = Number(temporadaAnterior?.overall) || 50;
+    const reputacao = temporadaAnterior
+        ? calcularReputacao({ clube: clube.id }, historico)
+        : 50;
+    const valorMercado = calcularValorMercado(overall, idade, reputacao, anosContrato);
+    const salarioProposto = calcularSalario(valorMercado, reputacao, clube.id);
+    const salarioAnterior = Number(temporadaAnterior?.salario) || 0;
+
     return {
         ...clube,
         anosContrato,
+        valorMercado,
+        salarioProposto,
+        salarioAnterior,
         detalheContrato: `Contrato por ${anosContrato} ${anosContrato === 1 ? "ano" : "anos"}`
     };
 }
@@ -2344,10 +2474,23 @@ async function escolherContratoParaTemporada(clubeAtual, temporadaInicial, idade
     const limiteRompimentos = getConfig().geral.limiteRompimentosContrato;
     const rompimentosRestantes = Math.max(0, limiteRompimentos - carreiraAtual.rompimentosContratoUsados);
     const contratoAtivo = !temporadaInicial && carreiraAtual.anosContratoRestantes > 0;
-    const historicoCarreira = obterHistoricoDaCarreira(carreiraAtual.nome, carreiraAtual.posicaoDetalhe || carreiraAtual.posicao);
-    const desempenhoBom = jogadorTeveBomDesempenho(historicoCarreira[historicoCarreira.length - 1]);
+  
+    const historicoCarreira = obterHistoricoDaCarreira(
+        carreiraAtual.nome,
+        { nome: carreiraAtual.posicao }  // ← envolve em objeto
+    ); 
+  
+    const ultimaTemporada = historicoCarreira[historicoCarreira.length - 1] || null;
+    const desempenhoBom = jogadorTeveBomDesempenho(ultimaTemporada);
+
+    // Migração: se já tem contrato mas salário nunca foi salvo, deriva da última temporada.
+    if (contratoAtivo && !carreiraAtual.salarioAtual && ultimaTemporada) {
+        carreiraAtual.salarioAtual = Number(ultimaTemporada.salario) || 0;
+    }
+
     const ofertas = sortearClubes(3, clubeAtual, carreiraAtual.clubeAlvo, desempenhoBom)
-        .map((clube) => criarOfertaContrato(clube, idade, idadeLimite));
+        .map((clube) => criarOfertaContrato(clube, idade, idadeLimite, ultimaTemporada, historicoCarreira));
+
     let opcoes;
     let mensagem;
     let clubeSelecionado = "";
@@ -2361,6 +2504,11 @@ async function escolherContratoParaTemporada(clubeAtual, temporadaInicial, idade
         const permanencia = {
             ...(clube || { id: clubeAtual, nome: "Clube atual", liga: "" }),
             anosContrato: carreiraAtual.anosContratoRestantes,
+            valorMercado: ultimaTemporada
+                ? calcularValorMercado(ultimaTemporada.overall, idade, ultimaTemporada.reputacao || 0, carreiraAtual.anosContratoRestantes)
+                : 0,
+            salarioProposto: carreiraAtual.salarioAtual || 0,
+            salarioAnterior: carreiraAtual.salarioAtual || 0,
             detalheContrato: `Contrato vigente: ${carreiraAtual.anosContratoRestantes} ${carreiraAtual.anosContratoRestantes === 1 ? "temporada" : "temporadas"} restantes`
         };
         const semRompimentos = rompimentosRestantes === 0;
@@ -2379,10 +2527,22 @@ async function escolherContratoParaTemporada(clubeAtual, temporadaInicial, idade
     } else {
         const clube = obterClube(clubeAtual);
         const renovacao = criarOfertaContrato({
-            ...(clube || { id: clubeAtual, nome: "Clube atual", liga: "" }),
-            detalheContrato: ""
-        }, idade, idadeLimite);
-        renovacao.detalheContrato = `Renovar por ${renovacao.anosContrato} ${renovacao.anosContrato === 1 ? "ano" : "anos"}`;
+            ...(clube || { id: clubeAtual, nome: "Clube atual", liga: "" })
+        }, idade, idadeLimite, ultimaTemporada, historicoCarreira);
+
+        // Aplicar redução salarial em caso de mau desempenho
+        if (ultimaTemporada && jogadorTeveMauDesempenho(ultimaTemporada) && renovacao.salarioProposto > 0) {
+            const reducao = 0.7 + Math.random() * 0.2;
+            const novoSalario = Math.round(renovacao.salarioProposto * reducao);
+            const variacao = renovacao.salarioAnterior > 0
+                ? ((novoSalario - renovacao.salarioAnterior) / renovacao.salarioAnterior) * 100
+                : 0;
+            renovacao.salarioProposto = novoSalario;
+            renovacao.detalheContrato = `Renovação com redução salarial${variacao < 0 ? ` (${variacao.toFixed(1)}%)` : ""}`;
+        } else {
+            renovacao.detalheContrato = `Renovação por ${renovacao.anosContrato} ${renovacao.anosContrato === 1 ? "ano" : "anos"}`;
+        }
+
         opcoes = [renovacao, ...ofertas];
         mensagem = `Seu contrato venceu. Você pode renovar no ${clube?.nome || "clube atual"} ou aceitar uma oferta sem gastar rompimento. Nenhum contrato passará da idade limite de ${idadeLimite} anos.`;
         clubeSelecionado = clubeAtual;
@@ -2400,7 +2560,9 @@ async function escolherContratoParaTemporada(clubeAtual, temporadaInicial, idade
     return {
         clube: ofertaEscolhida.id,
         anosContrato: ofertaEscolhida.anosContrato,
-        rompeContrato: contratoAtivo && ofertaEscolhida.id !== clubeAtual
+        rompeContrato: contratoAtivo && ofertaEscolhida.id !== clubeAtual,
+        salarioProposto: ofertaEscolhida.salarioProposto || 0,
+        valorMercado: ofertaEscolhida.valorMercado || 0
     };
 }
 
@@ -2451,6 +2613,53 @@ function sortearIndicePorPesos(pesos) {
     return Math.max(0, pesos.length - 1);
 }
 
+
+function calcularReputacao(carreira, temporadas = []) {
+    const lista = Array.isArray(temporadas) ? temporadas : [];
+    const maiorOverall = Math.max(0, ...lista.map(t => Number(t.overall) || 0));
+    const individuais = lista.flatMap(t => Array.isArray(t.trofeusIndividuais) ? t.trofeusIndividuais : []);
+    const coletivos = lista.flatMap(t => Array.isArray(t.trofeusColetivos) ? t.trofeusColetivos : []);
+    let rep = maiorOverall * 0.4 + individuais.length * 3 + coletivos.length * 1.2;
+    rep += individuais.filter(t => t === "Bola de Ouro").length * 8;
+    const clubeId = carreira?.clube || lista[lista.length - 1]?.clube;
+    const forca = Number(getConfig()?.clubes?.potencias?.[clubeId]) || 50;
+    rep += (forca - 50) * 0.2;
+    const ultima = lista[lista.length - 1];
+    if (ultima) {
+        rep += Math.min(10, ((Number(ultima.gols) || 0) + (Number(ultima.assistencias) || 0)) / 10);
+        rep += Math.min(5, (Number(ultima.motm) || 0) * 0.5);
+    }
+    return Math.max(0, Math.min(100, Math.round(rep)));
+}
+
+function calcularValorMercado(overall, idade, reputacao, anosContrato) {
+    const over = Math.max(1, Number(overall) || 1);
+    let valor = Math.pow(over / 50, 3.5) * 3000000;
+    const fatorIdade = idade <= 21 ? 1.2 : idade <= 24 ? 1.4 : idade <= 27 ? 1.5
+        : idade <= 30 ? 1 : idade <= 33 ? 0.5 : 0.15;
+    valor *= fatorIdade;
+    valor *= 0.7 + (Math.max(0, Math.min(100, Number(reputacao) || 0)) / 100) * 1.1;
+    if (Number(anosContrato) === 0) valor *= 0.5;
+    else if (Number(anosContrato) === 1) valor *= 0.75;
+    return Math.max(0, Math.round(valor / 100000) * 100000);
+}
+
+function calcularSalario(valorMercado, reputacao, clubeId) {
+    const forca = Number(getConfig()?.clubes?.potencias?.[clubeId]) || 50;
+    return Math.round(Math.max(0, Number(valorMercado) || 0) * 0.10 * (0.6 + forca / 100));
+}
+
+function formatarValorCompacto(valor) {
+    const v = Math.max(0, Number(valor) || 0);
+    if (v >= 1000000) return `${(v / 1000000).toFixed(1).replace(".", ",")}M€`;
+    if (v >= 1000) return `${Math.round(v / 1000)}k€`;
+    return `${v}€`;
+}
+
+function formatarValorEuro(valor) {
+    return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(Number(valor) || 0);
+}
+
 function sortearClubesParaCarreira(quantidade, clubeExcluir, clubeAlvo, historico) {
     const temporadas = Array.isArray(historico) ? historico : [];
     // Sem histórico, mantém o sorteio original para não favorecer clubes sem motivo.
@@ -2475,11 +2684,15 @@ function sortearClubesParaCarreira(quantidade, clubeExcluir, clubeAlvo, historic
     while (sorteados.length < Math.min(quantidade, disponiveis.length)) {
         const pesos = disponiveis.map((clube) => {
             const prestigio = obterPrestigioClube(clube);
-            // Preferência gradual, sem bloquear ligas menores ou surpresas.
+            const reputacaoJogador = calcularReputacao({ clube: temporadas[temporadas.length - 1]?.clube }, temporadas);
+            const forcaClube = Number(getConfig()?.clubes?.potencias?.[clube.id]) || 50;
+            const gap = forcaClube - reputacaoJogador;
+            const compatibilidade = gap < -10 ? 1 : gap < 10 ? 0.6 : gap < 20 ? 0.15 : 0.02;
+            // O prestígio do destino ainda importa, mas reputação limita saltos irreais.
             const distancia = (prestigio - reputacao) / 17;
-            let peso = Math.exp(Math.max(-2.2, Math.min(2.2, distancia)));
-            if (clube.id === clubeAlvo) peso *= jogadorTeveBomDesempenho(temporadas[temporadas.length - 1]) ? 4 : 1;
-            return Math.max(0.08, peso);
+            let peso = Math.exp(Math.max(-2.2, Math.min(2.2, distancia))) * compatibilidade;
+            if (clube.id === clubeAlvo) peso *= jogadorTeveBomDesempenho(temporadas[temporadas.length - 1]) ? 1.8 : 1;
+            return Math.max(0.01, peso);
         });
         const indice = sortearIndicePorPesos(pesos);
         sorteados.push(disponiveis.splice(indice, 1)[0]);
@@ -2658,8 +2871,40 @@ async function gerar() {
             await perguntarAposentadoriaSelecao(idade);
         }
         const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id, historico, nacionalidade, contratoEscolhido.clube);
+        
+        // Persistir o salário negociado
+        if (contratoEscolhido.salarioProposto !== undefined && contratoEscolhido.salarioProposto >= 0) {
+            carreiraAtual.salarioAtual = contratoEscolhido.salarioProposto;
+        }
+        
+        // Calcular reputação, valor e salário da temporada
+        const temporadasParaReputacao = [...historico, temporada];
+        temporada.reputacao = calcularReputacao({ clube: contratoEscolhido.clube }, temporadasParaReputacao);
+        temporada.anosContrato = carreiraAtual.anosContratoRestantes;
+        temporada.valorMercado = calcularValorMercado(
+            temporada.overall,
+            idade,
+            temporada.reputacao,
+            temporada.anosContrato
+        );
+        temporada.salario = carreiraAtual.salarioAtual
+            || calcularSalario(temporada.valorMercado, temporada.reputacao, contratoEscolhido.clube);
+        
+        // Salvar contrato + salário na carreira ANTES de renderizar
+        if (!salvarCarreiraAtual(carreiraAtual)) {
+            throw new Error("Não foi possível salvar o estado da carreira.");
+        }
+        
         const historicoAtualizado = [...historico, temporada];
-
+        
+        // Salvar histórico ANTES de atualizar UI (para que lerHistoricoAtiva veja a nova temporada)
+        const historicoDeOutrasCarreiras = lerHistorico().filter(
+            (temporadaSalva) => temporadaSalva.carreiraId !== carreiraIdAnterior
+                && temporadaSalva.carreiraId !== carreiraAtual.id
+        );
+        salvarHistorico([...historicoDeOutrasCarreiras, ...historicoAtualizado]);
+        
+        // Agora atualizar a UI
         document.getElementById("nome").value = nome;
         document.getElementById("idade").value = idade;
         atualizarResumoJogador(nome, idade, ano, nacionalidade, contratoEscolhido.clube);
@@ -2668,15 +2913,10 @@ async function gerar() {
         document.getElementById("assi").textContent = temporada.assistencias;
         document.getElementById("prem").textContent = contarPremios(temporada);
         atualizarTitulosResultados(temporada);
-
-        const historicoDeOutrasCarreiras = lerHistorico().filter(
-            (temporadaSalva) => temporadaSalva.carreiraId !== carreiraIdAnterior
-                && temporadaSalva.carreiraId !== carreiraAtual.id
-        );
-        salvarHistorico([...historicoDeOutrasCarreiras, ...historicoAtualizado]);
+        atualizarMercadoResultados(temporada);
+        
         renderHistorico();
         renderAtributos(temporada);
-
         // Lesão gravíssima encerra a carreira imediatamente.
         if (temporada.lesaoCarreira) {
             const posicaoNome = POSICOES_CAMPO[posicaoDetalhe]?.nome || dadosPosicao.nome;
@@ -2822,6 +3062,12 @@ function simularTudo() {
                 anosContratoRestantes = obterDuracaoContrato(idade, idadeLimite);
             }
             const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id, historico, nacionalidade, clubeAtual);
+            const temporadasParaReputacao = [...historico, temporada];
+            temporada.reputacao = calcularReputacao({ clube: clubeAtual }, temporadasParaReputacao);
+            temporada.anosContrato = anosContratoRestantes;
+            temporada.valorMercado = calcularValorMercado(temporada.overall, idade, temporada.reputacao, anosContratoRestantes);
+            temporada.salario = calcularSalario(temporada.valorMercado, temporada.reputacao, clubeAtual);
+            carreiraAtual.salarioAtual = temporada.salario;
             historico.push(temporada);
             
             // Lesão gravíssima encerra a carreira imediatamente.
@@ -2862,6 +3108,7 @@ function simularTudo() {
         const ultimaTemporadaSimulada = historico[historico.length - 1] || null;
         renderAtributos(ultimaTemporadaSimulada);
         atualizarTitulosResultados(ultimaTemporadaSimulada);
+        atualizarMercadoResultados(ultimaTemporadaSimulada);
         mostrarResumoFinal(nome, idadeLimite, ano, historico, POSICOES_CAMPO[posicaoDetalhe]?.nome || dadosPosicao.nome);
     } catch (erro) {
         console.error("[FootMain] Erro em simularTudo():", erro);
@@ -3000,6 +3247,23 @@ function obterClubeDespedida(historico) {
     if (!historico || !historico.length) return "";
     const ultima = historico[historico.length - 1];
     return ultima.clube || "";
+}
+
+function atualizarMercadoResultados(temporada) {
+    const repEl = document.getElementById("resultado-reputacao");
+    const valorEl = document.getElementById("resultado-valor");
+    const salarioEl = document.getElementById("resultado-salario");
+    if (!repEl || !valorEl || !salarioEl) return;
+
+    if (!temporada) {
+        repEl.textContent = "-";
+        valorEl.textContent = "-";
+        salarioEl.textContent = "-";
+        return;
+    }
+    repEl.textContent = Number(temporada.reputacao) || 0;
+    valorEl.textContent = formatarValorCompacto(temporada.valorMercado || 0);
+    salarioEl.textContent = formatarValorCompacto(temporada.salario || 0);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -3176,4 +3440,5 @@ document.addEventListener("DOMContentLoaded", () => {
     const ultimaTemporadaInicial = historicoInicialAtributos[historicoInicialAtributos.length - 1] || null;
     renderAtributos(ultimaTemporadaInicial);
     atualizarTitulosResultados(ultimaTemporadaInicial);
+    atualizarMercadoResultados(ultimaTemporadaInicial);
 });
