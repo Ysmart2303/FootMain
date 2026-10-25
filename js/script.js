@@ -1051,6 +1051,78 @@ function obterTemporadasDaCarreira(carreira) {
         .sort((a, b) => a.ano - b.ano);
 }
 
+
+const ICONES_TROFEUS_VISUAIS = {
+    "Champions League": "🏆", "Libertadores": "🏆", "Copa do Mundo": "🌍",
+    "Bola de Ouro": "🌟", "Golden Boy": "👑", "Chuteira de Ouro": "⚽",
+    "Luva de Ouro": "🧤", "Defender of the Year": "🛡️",
+    "GoalKeeper of the year": "🧤", "Premier League": "🥇", "La Liga": "🥇",
+    "Serie A": "🥇", "Bundesliga": "🥇", "Ligue 1": "🥇", "Brasileirão": "🥇"
+};
+
+function obterIconeTrofeu(nome) {
+    if (ICONES_TROFEUS_VISUAIS[nome]) return ICONES_TROFEUS_VISUAIS[nome];
+    if (/mundial|world cup|intercontinental/i.test(nome)) return "🌍";
+    if (/champions|libertadores|continental|europa league|conference league|sul-americana/i.test(nome)) return "🏆";
+    if (/goleiro|luva|goalkeeper/i.test(nome)) return "🧤";
+    if (/defender|defensor/i.test(nome)) return "🛡️";
+    if (/ouro|golden|bola de ouro|jovem/i.test(nome)) return "🌟";
+    return "🏅";
+}
+
+function renderSalaTrofeus(temporadas) {
+    const lista = temporadas.flatMap(t => [
+        ...mapearTrofeusTemporada(t, "trofeusColetivos"),
+        ...mapearTrofeusTemporada(t, "trofeusIndividuais")
+    ]);
+    const contagem = lista.reduce((acc, nome) => {
+        acc[nome] = (acc[nome] || 0) + 1;
+        return acc;
+    }, {});
+    if (!Object.keys(contagem).length) return '<p class="visual-vazio">Ainda não há troféus registrados nesta carreira.</p>';
+    return `<div class="sala-trofeus">${Object.entries(contagem)
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR"))
+        .map(([nome, qtd]) => `<div class="sala-trofeu-item" title="${escaparHTML(nome)}">
+            <span class="sala-trofeu-icone" aria-hidden="true">${obterIconeTrofeu(nome)}</span>
+            <span class="sala-trofeu-nome">${escaparHTML(nome)}</span>
+            ${qtd > 1 ? `<span class="sala-trofeu-badge">${qtd}x</span>` : ""}
+        </div>`).join("")}</div>`;
+}
+
+function gerarGraficoEvolucao(temporadas) {
+    const pontos = temporadas.filter(t => Number.isFinite(Number(t.ano)) && Number.isFinite(Number(t.overall)))
+        .slice().sort((a, b) => Number(a.ano) - Number(b.ano));
+    if (!pontos.length) return '<p class="visual-vazio">Não há dados de overall por temporada para desenhar o gráfico.</p>';
+    const W = 600, H = 220, P = 36;
+    const minA = Number(pontos[0].ano), maxA = Number(pontos[pontos.length - 1].ano);
+    const x = ano => P + ((Number(ano) - minA) / (maxA - minA || 1)) * (W - 2 * P);
+    const y = ovr => H - P - ((Math.max(30, Math.min(99, Number(ovr) || 30)) - 30) / 69) * (H - 2 * P);
+    const coords = pontos.map(t => `${x(t.ano)},${y(t.overall)}`);
+    const path = coords.join(" ");
+    const area = `M${x(pontos[0].ano)},${H-P} L${coords.join(" L")} L${x(pontos[pontos.length-1].ano)},${H-P} Z`;
+    return `<div class="grafico-evolucao-wrap"><svg viewBox="0 0 ${W} ${H}" class="grafico-evolucao" role="img" aria-label="Evolução do overall por temporada">
+        <defs><linearGradient id="grad-evolucao-carreira" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#22c55e" stop-opacity=".35"/><stop offset="100%" stop-color="#22c55e" stop-opacity="0"/></linearGradient></defs>
+        ${[30,50,70,90].map(v=>`<line x1="${P}" y1="${y(v)}" x2="${W-P}" y2="${y(v)}" stroke="currentColor" opacity=".12"/><text x="${P-7}" y="${y(v)+4}" text-anchor="end" fill="currentColor" opacity=".7" font-size="10">${v}</text>`).join("")}
+        <path d="${area}" fill="url(#grad-evolucao-carreira)"/>
+        <polyline points="${path}" fill="none" stroke="#22c55e" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+        ${pontos.map(t=>`<circle cx="${x(t.ano)}" cy="${y(t.overall)}" r="3.5" fill="#22c55e"><title>${escaparHTML(t.ano)} · OVR ${Number(t.overall)} · ${Number(t.gols)||0} gols</title></circle>`).join("")}
+        <line x1="${P}" y1="${H-P}" x2="${W-P}" y2="${H-P}" stroke="currentColor" opacity=".3"/>
+        <text x="${P}" y="${H-10}" fill="currentColor" font-size="11">${minA}</text><text x="${W-P}" y="${H-10}" text-anchor="end" fill="currentColor" font-size="11">${maxA}</text>
+    </svg></div>`;
+}
+
+function renderMapaCalorTemporadas(temporadas) {
+    if (!temporadas.length) return '<p class="visual-vazio">Sem temporadas para exibir.</p>';
+    const max = Math.max(1, ...temporadas.map(t => (Number(t.gols)||0) + (Number(t.assistencias)||0)));
+    return `<div class="heatmap-temporadas" role="list" aria-label="Mapa de calor de gols e assistências">${temporadas.map(t => {
+        const gols = Number(t.gols)||0, ast = Number(t.assistencias)||0, total = gols + ast;
+        const intensidade = Math.round(12 + (total/max)*68);
+        return `<div class="heatmap-celula" role="listitem" style="--heat:${intensidade}%" title="${escaparHTML(t.ano)}: ${gols} gols, ${ast} assistências">
+            <strong>${escaparHTML(t.ano)}</strong><span>${gols} G</span><span>${ast} A</span>
+        </div>`;
+    }).join("")}</div><p class="heatmap-legenda">Cada célula mostra gols (G) e assistências (A); quanto mais intensa, maior a produção ofensiva.</p>`;
+}
+
 function renderDetalhesCarreira(carreira) {
     const temporadas = obterTemporadasDaCarreira(carreira);
     const totalTemporadas = temporadas.length;
@@ -1137,6 +1209,12 @@ function renderDetalhesCarreira(carreira) {
                         : ""}
                 </div>
             </div>
+            <h4 class="trajetoria-titulo-lista">Evolução do overall</h4>
+            ${gerarGraficoEvolucao(temporadas)}
+            <h4 class="trajetoria-titulo-lista">Sala de troféus</h4>
+            ${renderSalaTrofeus(temporadas)}
+            <h4 class="trajetoria-titulo-lista">Mapa de gols e assistências</h4>
+            ${renderMapaCalorTemporadas(temporadas)}
             <h4 class="trajetoria-titulo-lista">Temporada por temporada</h4>
             <div class="trajetoria-lista">${listaTemporadas}</div>
         </div>
