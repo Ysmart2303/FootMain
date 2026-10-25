@@ -64,7 +64,24 @@ const SCHEMA_CONFIG = [
             { caminho: "lesoes.fatorVeterano",  label: "Fator por idade — veterano (29–32 anos)",  tipo: "range", min: 0, max: 3,      passo: 0.1 },
             { caminho: "lesoes.fatorIdoso",     label: "Fator por idade — veterano (33+ anos)",    tipo: "range", min: 0, max: 3,      passo: 0.1 }
         ]
-    }
+    },
+
+    {
+        id: "cartoes",
+        titulo: "Cartões",
+        icone: "🟨",
+        descricao: "Chance de cartão por jogo. Os fatores por posição ajustam a frequência. Amarelos acumulados geram suspensão; 2 amarelos no mesmo jogo geram vermelho.",
+        campos: [
+            { caminho: "cartoes.chanceAmareloBase",           label: "Cartão amarelo (por jogo)",         tipo: "range",  min: 0, max: 0.30, passo: 0.005,  formato: "percentual" },
+            { caminho: "cartoes.chanceVermelhoBase",          label: "Cartão vermelho direto (por jogo)", tipo: "range",  min: 0, max: 0.05, passo: 0.0005, formato: "percentual" },
+            { caminho: "cartoes.chanceDoisAmarelosMesmoJogo", label: "2º amarelo no mesmo jogo",          tipo: "range",  min: 0, max: 0.5,  passo: 0.005,  formato: "percentual" },
+            { caminho: "cartoes.limiteAmarelosSuspensao",     label: "Amarelos acumulados até suspensão", tipo: "number", min: 1, max: 20,   passo: 1 },
+            { caminho: "cartoes.fatorAtacante",               label: "Fator — atacante",                  tipo: "range",  min: 0, max: 3,    passo: 0.05 },
+            { caminho: "cartoes.fatorMeia",                   label: "Fator — meio-campista",             tipo: "range",  min: 0, max: 3,    passo: 0.05 },
+            { caminho: "cartoes.fatorZagueiro",               label: "Fator — zagueiro/lateral",          tipo: "range",  min: 0, max: 3,    passo: 0.05 },
+            { caminho: "cartoes.fatorGoleiro",                label: "Fator — goleiro",                   tipo: "range",  min: 0, max: 3,    passo: 0.05 }
+        ]
+    },
 ];
 
 const LIGAS_CLUBES = [...new Set(CLUBES.map((clube) => clube.liga))];
