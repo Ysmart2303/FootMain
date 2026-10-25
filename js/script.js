@@ -455,17 +455,22 @@ function normalizarEventosTemporada(eventos) {
         "lesao-grave", "lesao-carreira", "cartao-vermelho",
         "defesa-ultimo-lance", "penalti-defendido", "falta-defendida",
         "falta-sofrida-goleiro", "penalti-causado", "contra-ataque-desarmado",
-        "cartao-amarelo", "interceptacao-decisiva", "suspensao-amarelos"
+        "cartao-amarelo", "interceptacao-decisiva", "suspensao-amarelos",
+        "troca-treinador", "conflito-treinador", "idolo-torcida", "capitao-time",
+        "aposentadoria-selecao", "pedido-transferencia", "rumor-transferencia",
+        "convocacao-surpresa", "pedido-aumento", "aposentadoria-voluntaria"
     ]);
 
     return eventos
         .filter((evento) => evento && tiposValidos.has(evento.tipo))
         .map((evento) => ({
             tipo: evento.tipo,
-            jogo: Math.max(1, Math.min(1000, Math.floor(Number(evento.jogo) || 1))),
+            jogo: Number(evento.jogo) === 0 ? 0 : Math.max(1, Math.min(1000, Math.floor(Number(evento.jogo) || 1))),
             jogosPerdidos: Math.max(1, Math.min(1000, Math.floor(Number(evento.jogosPerdidos) || 1))),
             jogosForaProximaTemporada: Math.max(0, Math.min(62, Math.floor(Number(evento.jogosForaProximaTemporada) || 0))),
-            idade: Math.max(0, Math.min(99, Math.floor(Number(evento.idade) || 0)))
+            idade: Math.max(0, Math.min(99, Math.floor(Number(evento.idade) || 0))),
+            clube: typeof evento.clube === "string" ? evento.clube : "",
+            motivo: typeof evento.motivo === "string" ? evento.motivo.slice(0, 120) : ""
         }));
 }
 
@@ -1842,6 +1847,16 @@ function formatarEventosTemporada(eventos) {
         "cartao-amarelo": (evento) => `🟨 Cartão amarelo no jogo ${evento.jogo}`,
         "interceptacao-decisiva": (evento) => `🛡️ Interceptação decisiva no jogo ${evento.jogo}`,
         "suspensao-amarelos": (evento) => `🟨 Acúmulo de amarelos no jogo ${evento.jogo}: suspenso por ${evento.jogosPerdidos} ${evento.jogosPerdidos === 1 ? "jogo" : "jogos"}`,
+        "troca-treinador": () => "🔄 Novo treinador chegou ao clube",
+        "conflito-treinador": (evento) => `⚔️ Conflito com o treinador: afastado por ${evento.jogosPerdidos} jogos`,
+        "idolo-torcida": () => "❤️ Você virou ídolo da torcida",
+        "capitao-time": () => "©️ Você foi escolhido capitão do time",
+        "aposentadoria-selecao": () => "🌍 Você se aposentou da seleção",
+        "pedido-transferencia": () => "📣 Você pediu para ser negociado",
+        "rumor-transferencia": (evento) => `📰 Rumores de transferência${evento.clube ? ` envolvendo ${evento.clube}` : ""}`,
+        "convocacao-surpresa": () => "🌍 Convocação surpresa para a seleção",
+        "pedido-aumento": () => "💶 Você pediu um aumento salarial",
+        "aposentadoria-voluntaria": () => "🏁 Você anunciou sua aposentadoria voluntária"
     };
 
     return `<div class="eventos-tags">${eventosValidos
@@ -2271,11 +2286,15 @@ function obterModificadorPotencial(chave, posicao) {
 function simularTemporadaPorJogo(posicao, atributos, idade, jogosForaInicioTemporada = 0, posicaoDetalhe = "", nacionalidade = "", clubeId = "", temporadasAnteriores = []) {
     const cfg = getConfig(), overall = calcularOverall(posicao, atributos);
     const fatorIdade = idade <= 19 ? .82 : idade <= 22 ? .92 : idade <= 25 ? 1 : idade <= 29 ? 1.05 : idade <= 32 ? 1 : idade <= 35 ? .88 : .72;
-    const probParticipar = Math.max(.05, Math.min(.99, ((overall - 10) / 90) * fatorIdade));
+    const historicoEventos = temporadasAnteriores.flatMap(t => Array.isArray(t.eventos) ? t.eventos : []);
+    const ultimaTemporada = temporadasAnteriores[temporadasAnteriores.length - 1];
+    const houveTrocaTreinador = (ultimaTemporada?.eventos || []).some(e => e.tipo === "troca-treinador");
+    const eCapitao = historicoEventos.some(e => e.tipo === "capitao-time" && e.clube === clubeId);
+    const probParticipar = Math.max(.05, Math.min(.99, ((overall - 10) / 90) * fatorIdade * (houveTrocaTreinador ? .94 : 1) * (eCapitao ? 1.025 : 1)));
     const maxJogosClube = clubeId ? Math.round((posicao === "go" ? 45 : 50) * (cfg.geral.multiplicadorJogos || 1)) : 0;
     const fin=Number(atributos?.finalizacao)||OVERALL_PADRAO, pas=Number(atributos?.passe)||OVERALL_PADRAO, dri=Number(atributos?.drible)||OVERALL_PADRAO;
     const carreiraAtualRef = typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : {};
-    const aposentadoSelecao = carreiraAtualRef.aposentadoriaSelecao === true;
+    const aposentadoSelecao = carreiraAtualRef.aposentadoriaSelecao === true || temporadasAnteriores.some(t => (t.eventos || []).some(e => e.tipo === "aposentadoria-selecao"));
 
     let lambdaGol=0, lambdaAssist=0;
     if(posicao==="ata"){lambdaGol=Math.pow(fin/100,3)+Math.pow(dri/100,3)*.15;lambdaAssist=Math.pow(pas/100,2.5)*.45+Math.pow(dri/100,3)*.15;}
@@ -2304,9 +2323,32 @@ function simularTemporadaPorJogo(posicao, atributos, idade, jogosForaInicioTempo
     let jogosClube=0,golsClube=0,assistenciasClube=0,jogosAfastado=Math.max(0,Math.floor(jogosForaInicioTemporada)||0),motm=0,cartaoAmarelo=0,cartaoVermelho=0,cleanSheets=0,penaltisDefendidos=0,penaltisCometidos=0;
     let amarelosDesdeUltimaSuspensao = 0;   // NOVO
     const eventos=[]; let lesaoGrave=false,lesaoCarreira=false,jogosForaProximaTemporada=0;
+    // Eventos narrativos fora de campo: cada um é registrado uma vez por temporada.
+    if (clubeId && Math.random() < .05) eventos.push({ tipo: "troca-treinador", jogo: 0, clube: clubeId });
+    if (clubeId && temporadasAnteriores.filter(t => t.clube === clubeId).length >= 4 &&
+        !historicoEventos.some(e => e.tipo === "idolo-torcida" && e.clube === clubeId) && Math.random() < .15) {
+        eventos.push({ tipo: "idolo-torcida", jogo: 0, clube: clubeId });
+    }
+    if (clubeId && temporadasAnteriores.filter(t => t.clube === clubeId).length >= 2 &&
+        overall > 80 && !historicoEventos.some(e => e.tipo === "capitao-time" && e.clube === clubeId) && Math.random() < .10) {
+        eventos.push({ tipo: "capitao-time", jogo: 0, clube: clubeId });
+    }
+    if (clubeId && overall > 75 && Math.random() < .035) eventos.push({ tipo: "pedido-aumento", jogo: 0, clube: clubeId });
+    if (clubeId && temporadasAnteriores.length >= 1 && Math.random() < .045) eventos.push({ tipo: "rumor-transferencia", jogo: 0, clube: clubeId });
+    if (clubeId && temporadasAnteriores.filter(t => t.clube === clubeId).length >= 2 && overall < 68 && Math.random() < .015) {
+        eventos.push({ tipo: "pedido-transferencia", jogo: 0, clube: clubeId });
+    }
+
     for(let i=0;i<maxJogosClube;i++){
       if(jogosAfastado>0){jogosAfastado--;continue;} if(Math.random()>probParticipar)continue;
-      jogosClube++; let golsJ=amostrarPoisson(lambdaGol), assJ=amostrarPoisson(lambdaAssist); golsClube+=golsJ;assistenciasClube+=assJ;const numeroJogo=jogosClube;
+      jogosClube++; let golsJ=amostrarPoisson(lambdaGol), assJ=amostrarPoisson(lambdaAssist); const numeroJogo=jogosClube;
+      // Um conflito pode afastar o jogador e reduzir sua participação nos jogos seguintes.
+      if (posicao === "ata" && overall > 75 && Math.random() < .02) {
+          const perdidos = 2 + Math.floor(Math.random() * 4);
+          eventos.push({ tipo: "conflito-treinador", jogo: numeroJogo, jogosPerdidos: perdidos, clube: clubeId });
+          jogosAfastado = Math.max(jogosAfastado, perdidos);
+      }
+      golsClube+=golsJ;assistenciasClube+=assJ;
       if(Math.random()<({ata:.04,me:.025,zag:.008,go:0}[posicao]||0)){golsClube+=3;golsJ+=3;eventos.push({tipo:"hat-trick",jogo:numeroJogo});}
       if(Math.random()<({ata:.008,me:.012,zag:.003,go:.001}[posicao]||0)){assistenciasClube+=2;assJ+=2;eventos.push({tipo:"assistencia",jogo:numeroJogo});}
       let cleanSheetNesteJogo = false;
@@ -2374,8 +2416,12 @@ function simularTemporadaPorJogo(posicao, atributos, idade, jogosForaInicioTempo
     if(idade<18)chanceConvocacao*=.25;else if(idade>35)chanceConvocacao*=.7;
     chanceConvocacao=Math.max(0,Math.min(.95,chanceConvocacao));
 
-    const convocado = !aposentadoSelecao && !!selecao && Math.random() < chanceConvocacao && !lesaoCarreira;
-
+    let convocado = !aposentadoSelecao && !!selecao && Math.random() < chanceConvocacao && !lesaoCarreira;
+    if (!convocado && !aposentadoSelecao && !!selecao && !lesaoCarreira && idade <= 30 && overall >= 72 && Math.random() < .025) {
+        convocado = true;
+        eventos.push({ tipo: "convocacao-surpresa", jogo: 0 });
+    }
+    // A aposentadoria da seleção persiste no histórico, não apenas na temporada atual.
     let jogosSelecao=0,golsSelecao=0,assistenciasSelecao=0;const jogosSelecaoPorCompeticao={},golsSelecaoPorCompeticao={};
     if(convocado){
       const ano=Number(temporadasAnteriores.length?temporadasAnteriores[temporadasAnteriores.length-1].ano+1:ANO_INICIAL);
@@ -3360,6 +3406,9 @@ async function aposentarVoluntariamente() {
         carreira.aposentadoriaVoluntaria = true;
         salvarCarreiraAtual(carreira);
         const ultima = historico[historico.length - 1];
+        ultima.eventos = Array.isArray(ultima.eventos) ? ultima.eventos : [];
+        ultima.eventos.push({ tipo: "aposentadoria-voluntaria", jogo: 0 });
+        salvarHistorico(historico);
         const posicaoNome = ultima.posicao || "Jogador";
         mostrarResumoFinal(ultima.nome, carreira.idadeLimite, Number(ultima.ano) || ANO_INICIAL,
             historico, posicaoNome, { voluntaria: true });
@@ -3384,6 +3433,14 @@ async function perguntarAposentadoriaSelecao(idade) {
     if (!continuar) {
         carreira.aposentadoriaSelecao = true;
         salvarCarreiraAtual(carreira);
+        const ultima = historico[historico.length - 1];
+        if (ultima) {
+            ultima.eventos = Array.isArray(ultima.eventos) ? ultima.eventos : [];
+            if (!ultima.eventos.some(e => e.tipo === "aposentadoria-selecao")) {
+                ultima.eventos.push({ tipo: "aposentadoria-selecao", jogo: 0 });
+                salvarHistorico(historico);
+            }
+        }
         alert("🏁 Você anunciou sua aposentadoria da seleção nacional.");
     }
     return !continuar;
