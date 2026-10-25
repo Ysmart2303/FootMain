@@ -455,7 +455,7 @@ function normalizarEventosTemporada(eventos) {
         "lesao-grave", "lesao-carreira", "cartao-vermelho",
         "defesa-ultimo-lance", "penalti-defendido", "falta-defendida",
         "falta-sofrida-goleiro", "penalti-causado", "contra-ataque-desarmado",
-        "cartao-amarelo", "interceptacao-decisiva"
+        "cartao-amarelo", "interceptacao-decisiva", "suspensao-amarelos"
     ]);
 
     return eventos
@@ -1762,7 +1762,8 @@ function formatarEventosTemporada(eventos) {
         "penalti-causado": (evento) => `⚠️ Cometeu pênalti no jogo ${evento.jogo}`,
         "contra-ataque-desarmado": (evento) => `🛡️ Desarmou um contra-ataque decisivo e garantiu a vitória no jogo ${evento.jogo}`,
         "cartao-amarelo": (evento) => `🟨 Cartão amarelo no jogo ${evento.jogo}`,
-        "interceptacao-decisiva": (evento) => `🛡️ Interceptação decisiva no jogo ${evento.jogo}`
+        "interceptacao-decisiva": (evento) => `🛡️ Interceptação decisiva no jogo ${evento.jogo}`,
+        "suspensao-amarelos": (evento) => `🟨 Acúmulo de amarelos no jogo ${evento.jogo}: suspenso por ${evento.jogosPerdidos} ${evento.jogosPerdidos === 1 ? "jogo" : "jogos"}`,
     };
 
     return `<div class="eventos-tags">${eventosValidos
@@ -2197,7 +2198,7 @@ function simularTemporadaPorJogo(posicao, atributos, idade, jogosForaInicioTempo
     const fin=Number(atributos?.finalizacao)||OVERALL_PADRAO, pas=Number(atributos?.passe)||OVERALL_PADRAO, dri=Number(atributos?.drible)||OVERALL_PADRAO;
     const carreiraAtualRef = typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : {};
     const aposentadoSelecao = carreiraAtualRef.aposentadoriaSelecao === true;
-  
+
     let lambdaGol=0, lambdaAssist=0;
     if(posicao==="ata"){lambdaGol=Math.pow(fin/100,3)+Math.pow(dri/100,3)*.15;lambdaAssist=Math.pow(pas/100,2.5)*.45+Math.pow(dri/100,3)*.15;}
     else if(posicao==="me"){lambdaGol=Math.pow(fin/100,3)*.55+Math.pow(dri/100,3)*.1;lambdaAssist=Math.pow(pas/100,2.5)*.85+Math.pow(dri/100,3)*.2;}
@@ -2205,8 +2206,25 @@ function simularTemporadaPorJogo(posicao, atributos, idade, jogosForaInicioTempo
     else {lambdaGol=.003;lambdaAssist=Math.pow(pas/100,4)*.06;}
     lambdaGol*=fatorIdade*(cfg.geral.multiplicadorGols||1); lambdaAssist*=fatorIdade*(cfg.geral.multiplicadorAssistencias||1);
     const cfgL=cfg.lesoes||{}, escala=(idade>=33?(Number(cfgL.fatorIdoso)||1.8):idade>=29?(Number(cfgL.fatorVeterano)||1.3):idade<=24?(Number(cfgL.fatorJovem)||.8):1)*(Number.isFinite(Number(cfgL.multiplicador))?Math.max(0,Number(cfgL.multiplicador)):1);
+
+    // ====== Configuração de cartões ======
+    const cfgC = cfg.cartoes || {};
+    const chanceAmareloBase   = Math.max(0, Number(cfgC.chanceAmareloBase)   || 0.08);
+    const chanceVermelhoBase  = Math.max(0, Number(cfgC.chanceVermelhoBase)  || 0.004);
+    const chanceDoisAmarelosMesmoJogo = Math.max(0, Math.min(1, Number(cfgC.chanceDoisAmarelosMesmoJogo ?? 0.02)));
+    const limiteAmarelosSuspensao = Math.max(1, Math.floor(Number(cfgC.limiteAmarelosSuspensao) || 5));
+    const fatorCartaoPosicao = {
+        ata: Number(cfgC.fatorAtacante) || 0.35,
+        me:  Number(cfgC.fatorMeia)     || 0.9,
+        zag: Number(cfgC.fatorZagueiro) || 1.2,
+        go:  Number(cfgC.fatorGoleiro)  || 0.15
+    }[posicao] || 1;
+    const fatorFisicoCartao = 1 + (100 - (Number(atributos?.fisico) || 50)) / 200;
+    const chanceCartaoAmarelo = chanceAmareloBase * fatorCartaoPosicao * fatorFisicoCartao;
+
     const cCar=Math.max(0,(Number(cfgL.chanceCarreira)||.00003)*escala), cGr=cCar+Math.max(0,(Number(cfgL.chanceGrave)||.0003)*escala), cMo=cGr+Math.max(0,(Number(cfgL.chanceModerada)||.0015)*escala), cLe=cMo+Math.max(0,(Number(cfgL.chanceLeve)||.012)*escala);
     let jogosClube=0,golsClube=0,assistenciasClube=0,jogosAfastado=Math.max(0,Math.floor(jogosForaInicioTemporada)||0),motm=0,cartaoAmarelo=0,cartaoVermelho=0,cleanSheets=0,penaltisDefendidos=0,penaltisCometidos=0;
+    let amarelosDesdeUltimaSuspensao = 0;   // NOVO
     const eventos=[]; let lesaoGrave=false,lesaoCarreira=false,jogosForaProximaTemporada=0;
     for(let i=0;i<maxJogosClube;i++){
       if(jogosAfastado>0){jogosAfastado--;continue;} if(Math.random()>probParticipar)continue;
@@ -2220,9 +2238,45 @@ function simularTemporadaPorJogo(posicao, atributos, idade, jogosForaInicioTempo
         if(Math.random()<.003){penaltisCometidos++;eventos.push({tipo:"penalti-causado",jogo:numeroJogo});}
       }
       if(posicao==="zag"&&["ZCE","ZCD"].includes(posicaoDetalhe)&&Math.random()<.04)eventos.push({tipo:"interceptacao-decisiva",jogo:numeroJogo});
-      const amarelo=.08*(1+(100-(Number(atributos?.fisico)||50))/200);
-      if(Math.random()<amarelo){cartaoAmarelo++;eventos.push({tipo:"cartao-amarelo",jogo:numeroJogo});}
-      if(Math.random()<.004){cartaoVermelho++;const perdidos=1+Math.floor(Math.random()*2);eventos.push({tipo:"cartao-vermelho",jogo:numeroJogo,jogosPerdidos:perdidos});jogosAfastado=perdidos;}
+
+      // ====== CARTÕES (nova lógica) ======
+      let expulsoNesteJogo = false;
+
+      // 1) Amarelo (e eventual 2º amarelo no MESMO jogo → vermelho)
+      if (Math.random() < chanceCartaoAmarelo) {
+          cartaoAmarelo++;
+          amarelosDesdeUltimaSuspensao++;
+          eventos.push({ tipo: "cartao-amarelo", jogo: numeroJogo });
+
+          if (Math.random() < chanceDoisAmarelosMesmoJogo) {
+              cartaoAmarelo++;
+              amarelosDesdeUltimaSuspensao++;
+              eventos.push({ tipo: "cartao-amarelo", jogo: numeroJogo });
+              cartaoVermelho++;
+              eventos.push({ tipo: "cartao-vermelho", jogo: numeroJogo, jogosPerdidos: 1 });
+              jogosAfastado = Math.max(jogosAfastado, 1);
+              amarelosDesdeUltimaSuspensao = 0;
+              expulsoNesteJogo = true;
+          }
+      }
+
+      // 2) Vermelho direto
+      if (!expulsoNesteJogo && Math.random() < chanceVermelhoBase) {
+          cartaoVermelho++;
+          const perdidos = 1 + Math.floor(Math.random() * 2);
+          eventos.push({ tipo: "cartao-vermelho", jogo: numeroJogo, jogosPerdidos: perdidos });
+          jogosAfastado = Math.max(jogosAfastado, perdidos);
+          amarelosDesdeUltimaSuspensao = 0;
+          expulsoNesteJogo = true;
+      }
+
+      // 3) Acúmulo de amarelos → 1 jogo de suspensão
+      if (!expulsoNesteJogo && amarelosDesdeUltimaSuspensao >= limiteAmarelosSuspensao) {
+          jogosAfastado = Math.max(jogosAfastado, 1);
+          eventos.push({ tipo: "suspensao-amarelos", jogo: numeroJogo, jogosPerdidos: 1 });
+          amarelosDesdeUltimaSuspensao = 0;
+      }
+
       let chanceMOTM=.015+golsJ*.14+assJ*.09;
       if(posicao==="go"&&cleanSheetNesteJogo)chanceMOTM+=.18;
       if(posicao==="zag"&&eventos.some(e=>e.jogo===numeroJogo&&e.tipo==="interceptacao-decisiva"))chanceMOTM+=.12;
@@ -2230,7 +2284,8 @@ function simularTemporadaPorJogo(posicao, atributos, idade, jogosForaInicioTempo
       const lesao=Math.random();
       if(lesao<cCar){eventos.push({tipo:"lesao-carreira",jogo:numeroJogo,idade});lesaoCarreira=true;break;}
       if(lesao<cGr){const perdidos=maxJogosClube-i,prox=Math.floor(Math.random()*25);eventos.push({tipo:"lesao-grave",jogo:numeroJogo,jogosPerdidos:perdidos,jogosForaProximaTemporada:prox});lesaoGrave=true;jogosForaProximaTemporada=prox;break;}
-      if(lesao<cMo)jogosAfastado=8+Math.floor(Math.random()*13);else if(lesao<cLe)jogosAfastado=1+Math.floor(Math.random()*6);
+      if(lesao<cMo)jogosAfastado=Math.max(jogosAfastado, 8+Math.floor(Math.random()*13));
+      else if(lesao<cLe)jogosAfastado=Math.max(jogosAfastado, 1+Math.floor(Math.random()*6));
     }
     // Seleção: convocação depende de overall, idade, força nacional e histórico; não substitui jogos do clube.
     const selecao=SELECOES.find(x=>x.id===nacionalidade), potencia=Number(cfg.selecao?.potencias?.[nacionalidade])||50;
@@ -2240,9 +2295,9 @@ function simularTemporadaPorJogo(posicao, atributos, idade, jogosForaInicioTempo
     chanceConvocacao+=Math.max(0,potencia-50)/250+(jogaEuropa?.06:0)+Math.min(.18,convocacoesAnteriores*.035);
     if(idade<18)chanceConvocacao*=.25;else if(idade>35)chanceConvocacao*=.7;
     chanceConvocacao=Math.max(0,Math.min(.95,chanceConvocacao));
-  
+
     const convocado = !aposentadoSelecao && !!selecao && Math.random() < chanceConvocacao && !lesaoCarreira;
-  
+
     let jogosSelecao=0,golsSelecao=0,assistenciasSelecao=0;const jogosSelecaoPorCompeticao={},golsSelecaoPorCompeticao={};
     if(convocado){
       const ano=Number(temporadasAnteriores.length?temporadasAnteriores[temporadasAnteriores.length-1].ano+1:ANO_INICIAL);
