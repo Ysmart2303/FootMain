@@ -669,6 +669,12 @@ button:hover {
     color: #fde68a;
 }
 
+.evento-tag.suspensao-amarelos {
+    border-color: rgba(251, 191, 36, 0.4);
+    background: rgba(245, 158, 11, 0.14);
+    color: #fde68a;
+}
+
 .evento-tag.lesao,
 .evento-tag.cartao-vermelho,
 .evento-tag.penalti-causado {
@@ -699,6 +705,7 @@ button:hover {
 html[data-theme="light"] .evento-tag.lesao-moderada { color: #9a3412 !important; }
 html[data-theme="light"] .evento-tag.lesao-grave    { color: #9f1239 !important; }
 html[data-theme="light"] .evento-tag.lesao-carreira { color: #7f1d1d !important; }
+html[data-theme="light"] .evento-tag.suspensao-amarelos { color: #92400e !important; }
 
 .evento-tag.sem-eventos {
     color: #cbd5e1;
