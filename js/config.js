@@ -4,7 +4,7 @@
  */
 
 const STORAGE_KEY_CONFIG = "footmain_config_v1";
-const VERSAO_APP = "1.19.1";
+const VERSAO_APP = "1.19.2";
 
 /* ---------- Definições base (as "de fábrica") ---------- */
 const POSICOES_PADRAO = {
@@ -871,6 +871,17 @@ const CONFIG_PADRAO = {
         fatorVeterano: 1.3,      // 29–32 anos
         fatorIdoso: 1.8          // 33+ anos
     },
+
+    cartoes: {
+        chanceAmareloBase: 0.08,             // base por jogo
+        chanceVermelhoBase: 0.004,           // base por jogo (vermelho direto)
+        chanceDoisAmarelosMesmoJogo: 0.02,   // se já levou amarelo, chance do 2º amarelo no mesmo jogo
+        limiteAmarelosSuspensao: 5,          // amarelos acumulados até 1 jogo de suspensão
+        fatorAtacante: 0.35,
+        fatorMeia: 0.9,
+        fatorZagueiro: 1.2,
+        fatorGoleiro: 0.15
+    },
   
     selecao: {
         potencias: {
@@ -1026,6 +1037,26 @@ function carregarConfig() {
                 ? valor
                 : CONFIG_PADRAO.lesoes[chave];
         });
+
+        // Sanitize cartões
+        if (!config.cartoes || typeof config.cartoes !== "object") {
+            config.cartoes = clonarConfig(CONFIG_PADRAO.cartoes);
+        }
+        Object.keys(CONFIG_PADRAO.cartoes).forEach((chave) => {
+            const valor = Number(config.cartoes[chave]);
+            config.cartoes[chave] = Number.isFinite(valor) && valor >= 0
+                ? valor
+                : CONFIG_PADRAO.cartoes[chave];
+        });
+      
+        // Sanitize cartões (continuação)
+        config.cartoes.limiteAmarelosSuspensao = Math.max(1, Math.min(20,
+            Math.floor(Number(config.cartoes.limiteAmarelosSuspensao) || 5)
+        ));
+        config.cartoes.chanceDoisAmarelosMesmoJogo = Math.max(0, Math.min(1,
+            Number(config.cartoes.chanceDoisAmarelosMesmoJogo) || 0
+        ));
+
 
         return config;
     } catch (erro) {
