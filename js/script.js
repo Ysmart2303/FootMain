@@ -1084,14 +1084,41 @@ function renderSalaTrofeus(temporadas) {
         acc[nome] = (acc[nome] || 0) + 1;
         return acc;
     }, {});
-    if (!Object.keys(contagem).length) return '<p class="visual-vazio">Ainda não há troféus registrados nesta carreira.</p>';
-    return `<div class="sala-trofeus">${Object.entries(contagem)
+    if (!Object.keys(contagem).length) {
+        return '<p class="visual-vazio">Ainda não há troféus registrados nesta carreira.</p>';
+    }
+
+    const trofeus = Object.entries(contagem)
         .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR"))
-        .map(([nome, qtd]) => `<div class="sala-trofeu-item" title="${escaparHTML(nome)}">
-            <span class="sala-trofeu-icone" aria-hidden="true">${obterIconeTrofeu(nome)}</span>
-            <span class="sala-trofeu-nome">${escaparHTML(nome)}</span>
-            ${qtd > 1 ? `<span class="sala-trofeu-badge">${qtd}x</span>` : ""}
-        </div>`).join("")}</div>`;
+        .map(([nome, qtd]) => ({ nome, qtd }));
+
+    // Troféus "grandes" ganham um brilho dourado extra na estante.
+    const ehDestaque = (nome) => /champions|libertadores|mundial|mundo|intercontinental|bola de ouro|europa league|sul-americana|conference|golden boy/i.test(nome);
+
+    // Distribui em prateleiras de até 5 troféus.
+    const porPrateleira = 5;
+    const prateleiras = [];
+    for (let i = 0; i < trofeus.length; i += porPrateleira) {
+        prateleiras.push(trofeus.slice(i, i + porPrateleira));
+    }
+
+    return `<div class="sala-trofeus-estante">
+        ${prateleiras.map(prateleira => `
+            <div class="estante-prateleira">
+                <div class="estante-trofeus">
+                    ${prateleira.map(({ nome, qtd }) => `
+                        <div class="trofeu-item${ehDestaque(nome) ? " trofeu-item--destaque" : ""}" 
+                            title="${escaparHTML(nome)}">
+                            ${qtd > 1 ? `<span class="trofeu-badge">${qtd}x</span>` : ""}
+                            <span class="trofeu-icone" aria-hidden="true">${obterIconeTrofeu(nome)}</span>
+                            <div class="trofeu-placa">${escaparHTML(nome)}</div>
+                        </div>
+                    `).join("")}
+                </div>
+                <div class="estante-tabua"></div>
+            </div>
+        `).join("")}
+    </div>`;
 }
 
 function gerarGraficoEvolucao(temporadas) {
