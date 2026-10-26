@@ -3934,21 +3934,13 @@ html[data-theme="light"] .player-card__stat-value { color: #14532d; }
 /* Visualizações da trajetória da carreira */
 .grafico-evolucao-wrap { width: 100%; overflow-x: auto; margin: 8px 0 18px; }
 .grafico-evolucao { display: block; width: 100%; min-width: 280px; max-height: 260px; }
-.sala-trofeus { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 12px; margin: 12px 0 20px; }
-.sala-trofeu-item { display: flex; min-width: 0; flex-direction: column; align-items: center; justify-content: center; gap: 7px; padding: 15px 10px; border-radius: 12px; background: linear-gradient(135deg, rgba(250,204,21,.12), rgba(34,197,94,.09)); border: 1px solid rgba(250,204,21,.32); text-align: center; position: relative; min-height: 104px; }
-.sala-trofeu-icone { font-size: 2.15rem; line-height: 1.1; filter: drop-shadow(0 2px 3px rgba(250,204,21,.2)); }
-.sala-trofeu-nome { font-size: .74rem; font-weight: 750; color: var(--text-primary, #fef3c7); line-height: 1.3; overflow-wrap: anywhere; }
-.sala-trofeu-badge { position: absolute; top: 6px; right: 6px; padding: 2px 7px; border-radius: 999px; background: #facc15; color: #0f172a; font-size: .68rem; font-weight: 900; }
 .visual-vazio, .heatmap-legenda { font-size: .82rem; opacity: .75; }
 .heatmap-temporadas { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; margin: 12px 0 6px; }
 .heatmap-celula { display: flex; flex-direction: column; gap: 3px; padding: 9px 7px; border: 1px solid rgba(34,197,94,.25); border-radius: 8px; background: color-mix(in srgb, #22c55e var(--heat), transparent); font-size: .76rem; }
 .heatmap-celula strong { font-size: .8rem; }
 .heatmap-celula span { opacity: .88; }
 .heatmap-legenda { margin-top: 7px; }
-html[data-theme="light"] .sala-trofeu-nome { color: #713f12; }
 @media (max-width: 480px) {
-  .sala-trofeus { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
-  .sala-trofeu-item { padding: 12px 7px; min-height: 94px; }
   .heatmap-temporadas { grid-template-columns: repeat(auto-fill, minmax(65px, 1fr)); gap: 6px; }
 }
 
@@ -3982,4 +3974,257 @@ html[data-theme="light"] .sala-trofeu-nome { color: #713f12; }
     border-color: rgba(192, 132, 252, 0.45);
     background: rgba(168, 85, 247, 0.14);
     color: #e9d5ff;
+}
+
+/* ============================================
+   Sala de troféus — estante realista
+   ============================================ */
+.sala-trofeus-estante {
+    margin: 12px 0 20px;
+    padding: 24px 14px 6px;
+    border-radius: 10px;
+    background:
+        radial-gradient(ellipse at top, rgba(250, 204, 21, 0.12), transparent 60%),
+        linear-gradient(180deg, #2a1810 0%, #1a0f08 45%, #2a1810 100%);
+    border: 2px solid #4a2810;
+    border-top: 5px solid #6b4423;
+    border-bottom: 5px solid #4a2810;
+    box-shadow:
+        inset 0 0 60px rgba(0, 0, 0, 0.7),
+        inset 0 2px 0 rgba(255, 220, 150, 0.15),
+        0 8px 24px rgba(0, 0, 0, 0.4);
+    position: relative;
+    overflow: hidden;
+}
+
+.estante-prateleira {
+    position: relative;
+    margin-bottom: 6px;
+}
+.estante-prateleira:last-child { margin-bottom: 0; }
+
+.estante-trofeus {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 0 6px 6px;
+    min-height: 110px;
+}
+
+.estante-tabua {
+    height: 14px;
+    background:
+        linear-gradient(180deg, rgba(255, 220, 150, 0.18) 0%, transparent 25%),
+        linear-gradient(180deg, #6b4423 0%, #4a2810 45%, #2a1810 100%);
+    border-radius: 2px;
+    box-shadow:
+        0 5px 10px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(255, 220, 150, 0.25),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+    position: relative;
+    z-index: 2;
+}
+.estante-tabua::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    bottom: -3px;
+    height: 3px;
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 0 0 3px 3px;
+    filter: blur(1px);
+}
+
+.trofeu-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 120px;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+    transition: transform 0.25s ease;
+    cursor: default;
+}
+.trofeu-item:hover { transform: translateY(-4px); }
+
+.trofeu-icone {
+    font-size: 2.6rem;
+    line-height: 1;
+    filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.4));
+    transition: filter 0.25s ease, transform 0.25s ease;
+    margin-bottom: 4px;
+}
+.trofeu-item:hover .trofeu-icone {
+    filter: drop-shadow(0 0 14px rgba(250, 204, 21, 0.85));
+    transform: scale(1.08);
+}
+
+.trofeu-item--destaque .trofeu-icone {
+    filter:
+        drop-shadow(0 0 8px rgba(250, 204, 21, 0.55))
+        drop-shadow(0 3px 5px rgba(0, 0, 0, 0.5));
+}
+.trofeu-item--destaque:hover .trofeu-icone {
+    filter:
+        drop-shadow(0 0 18px rgba(250, 204, 21, 0.95))
+        drop-shadow(0 0 4px rgba(255, 240, 150, 0.8));
+}
+
+.trofeu-placa {
+    font-size: 0.6rem;
+    color: #fef3c7;
+    text-align: center;
+    padding: 3px 6px;
+    background: linear-gradient(180deg, #3d2311 0%, #1a0f08 100%);
+    border: 1px solid #6b4423;
+    border-radius: 2px;
+    line-height: 1.15;
+    max-width: 100%;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 220, 150, 0.12),
+        0 2px 3px rgba(0, 0, 0, 0.4);
+    position: relative;
+    z-index: 1;
+}
+
+.trofeu-badge {
+    position: absolute;
+    top: -4px;
+    right: -2px;
+    background: linear-gradient(180deg, #facc15, #d97706);
+    color: #1a0f08;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    font-weight: 900;
+    padding: 2px 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    border: 1px solid #fef08a;
+    z-index: 3;
+    min-width: 22px;
+    text-align: center;
+    line-height: 1;
+}
+
+/* Tema claro */
+html[data-theme="light"] .sala-trofeus-estante {
+    background:
+        radial-gradient(ellipse at top, rgba(250, 204, 21, 0.25), transparent 60%),
+        linear-gradient(180deg, #d4a574 0%, #b8895a 45%, #d4a574 100%);
+    border-color: #8b5a2b;
+    border-top-color: #a67c52;
+    box-shadow:
+        inset 0 0 40px rgba(139, 90, 43, 0.3),
+        inset 0 2px 0 rgba(255, 255, 255, 0.3),
+        0 8px 24px rgba(139, 90, 43, 0.25);
+}
+html[data-theme="light"] .estante-tabua {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, transparent 25%),
+        linear-gradient(180deg, #a67c52 0%, #7a5230 45%, #5d3d23 100%);
+    box-shadow:
+        0 5px 10px rgba(80, 50, 20, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+}
+html[data-theme="light"] .trofeu-placa {
+    background: linear-gradient(180deg, #5d3d23, #3a2415);
+    border-color: #8b5a2b;
+    color: #fef9c3;
+}
+html[data-theme="light"] .trofeu-badge {
+    background: linear-gradient(180deg, #f59e0b, #b45309);
+    color: #fff;
+    border-color: #fef3c7;
+}
+
+@media (max-width: 600px) {
+    .sala-trofeus-estante { padding: 16px 8px 4px; }
+    .estante-trofeus { gap: 4px; padding: 0 2px 4px; min-height: 95px; }
+    .estante-tabua { height: 12px; }
+    .trofeu-icone { font-size: 2rem; margin-bottom: 3px; }
+    .trofeu-placa { font-size: 0.54rem; padding: 2px 4px; }
+    .trofeu-badge { font-size: 0.58rem; padding: 1px 5px; min-width: 18px; }
+}
+
+@media (max-width: 400px) {
+    .trofeu-icone { font-size: 1.7rem; }
+    .trofeu-placa { font-size: 0.5rem; -webkit-line-clamp: 1; }
+}
+
+.trofeu-item { cursor: pointer; }
+.trofeu-item:focus-visible {
+    outline: 2px solid #facc15;
+    outline-offset: 4px;
+    border-radius: 6px;
+}
+
+.trofeu-item--expandido .trofeu-icone {
+    filter:
+        drop-shadow(0 0 14px rgba(250, 204, 21, 0.9))
+        drop-shadow(0 3px 5px rgba(0, 0, 0, 0.5));
+    transform: scale(1.08);
+}
+
+.trofeu-popup {
+    position: fixed;
+    z-index: 9999;
+    max-width: 260px;
+    padding: 9px 13px;
+    background: linear-gradient(180deg, #4a2810 0%, #2a1810 100%);
+    color: #fef3c7;
+    border: 1px solid #a67c52;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    text-align: center;
+    box-shadow:
+        0 10px 24px rgba(0, 0, 0, 0.75),
+        0 0 0 1px rgba(250, 204, 21, 0.15),
+        inset 0 1px 0 rgba(255, 220, 150, 0.2);
+    pointer-events: none;
+    animation: trofeu-popup-in 0.16s ease-out;
+}
+
+.trofeu-popup::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border: 7px solid transparent;
+    border-top-color: #a67c52;
+    margin-top: -1px;
+}
+
+@keyframes trofeu-popup-in {
+    from { opacity: 0; transform: translateY(4px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+html[data-theme="light"] .trofeu-popup {
+    background: linear-gradient(180deg, #5d3d23, #3a2415);
+    border-color: #8b5a2b;
+    color: #fef9c3;
+}
+html[data-theme="light"] .trofeu-popup::after {
+    border-top-color: #8b5a2b;
+}
+
+@media (max-width: 600px) {
+    .trofeu-popup {
+        max-width: 200px;
+        font-size: 0.74rem;
+        padding: 8px 11px;
+    }
 }
