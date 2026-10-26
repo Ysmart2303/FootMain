@@ -144,3 +144,82 @@
     window.configurarSeletoresEmModal = setup;
     document.addEventListener("DOMContentLoaded", setup);
 })();
+
+
+/* ============================================================
+   Balão flutuante com o nome completo do troféu.
+   ============================================================ */
+(() => {
+    let popup = null;
+    let itemAtivo = null;
+
+    function fechar() {
+        if (popup) { popup.remove(); popup = null; }
+        if (itemAtivo) {
+            itemAtivo.classList.remove("trofeu-item--expandido");
+            itemAtivo.setAttribute("aria-expanded", "false");
+            itemAtivo = null;
+        }
+    }
+
+    function posicionar(item) {
+        if (!popup || !item) return;
+        const rect = item.getBoundingClientRect();
+        const pr = popup.getBoundingClientRect();
+        let left = rect.left + rect.width / 2 - pr.width / 2;
+        let top = rect.top - pr.height - 14;
+        left = Math.max(8, Math.min(left, window.innerWidth - pr.width - 8));
+        // Se não couber em cima, joga pra baixo do troféu
+        if (top < 8) top = rect.bottom + 14;
+        popup.style.left = left + "px";
+        popup.style.top = top + "px";
+    }
+
+    function abrir(item) {
+        fechar();
+        const plaque = item.querySelector(".trofeu-placa");
+        if (!plaque) return;
+        popup = document.createElement("div");
+        popup.className = "trofeu-popup";
+        popup.setAttribute("role", "tooltip");
+        popup.textContent = plaque.textContent.trim();
+        document.body.appendChild(popup);
+
+        item.classList.add("trofeu-item--expandido");
+        item.setAttribute("aria-expanded", "true");
+        itemAtivo = item;
+        posicionar(item);
+    }
+
+    document.addEventListener("click", (evento) => {
+        const item = evento.target.closest(".trofeu-item");
+        if (!item) { fechar(); return; }
+        if (item === itemAtivo) { fechar(); return; }
+        abrir(item);
+    });
+
+    document.addEventListener("keydown", (evento) => {
+        if (evento.key === "Escape") { fechar(); return; }
+        if (evento.key !== "Enter" && evento.key !== " ") return;
+        const item = evento.target.closest(".trofeu-item");
+        if (!item) return;
+        evento.preventDefault();
+        if (item === itemAtivo) fechar(); else abrir(item);
+    });
+
+    let rafScroll = false;
+    const reposicionar = () => {
+        if (rafScroll) return;
+        rafScroll = true;
+        requestAnimationFrame(() => {
+            rafScroll = false;
+            if (!popup || !itemAtivo) return;
+            // Se o troféu saiu da tela, fecha
+            const r = itemAtivo.getBoundingClientRect();
+            if (r.bottom < 0 || r.top > window.innerHeight) { fechar(); return; }
+            posicionar(itemAtivo);
+        });
+    };
+    window.addEventListener("scroll", reposicionar, true);
+    window.addEventListener("resize", reposicionar);
+})();
