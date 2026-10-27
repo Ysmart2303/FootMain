@@ -1740,6 +1740,9 @@ function lerHistoricoAtiva() {
     });
 }
 
+let paginaHistoricoAtual = 0;
+const TEMPORADAS_POR_PAGINA = 25;
+
 function renderHistorico() {
     const lista = document.getElementById("lista-temporadas");
     const filtroHistorico = document.getElementById("filtro-historico");
@@ -1748,8 +1751,19 @@ function renderHistorico() {
 
     if (!lista) return;
 
+    let paginacao = document.getElementById("paginacao-temporadas");
+    if (!paginacao) {
+        paginacao = document.createElement("div");
+        paginacao.id = "paginacao-temporadas";
+        paginacao.className = "paginacao-temporadas";
+        paginacao.setAttribute("aria-label", "Paginação do histórico de temporadas");
+        lista.insertAdjacentElement("afterend", paginacao);
+    }
+
     if (historico.length === 0) {
         lista.innerHTML = '<li class="temporada-vazia">Nenhuma temporada salva ainda.</li>';
+        paginacao.innerHTML = "";
+        paginaHistoricoAtual = 0;
         return;
     }
 
@@ -1771,7 +1785,17 @@ function renderHistorico() {
         ? trofeus.map(t => `<span class="titulo-tag titulo-tag--${tipo}">${escaparHTML(t)}</span>`).join("")
         : '<span class="titulo-tag titulo-tag--vazio">Nenhum</span>';
 
-    lista.innerHTML = temporadas.map((temporada) => {
+    // Para históricos longos, renderiza apenas a página visível para evitar
+    // reconstruir dezenas/centenas de cards e formatar eventos desnecessariamente.
+    const usarPaginacao = temporadas.length > 50;
+    const totalPaginas = usarPaginacao ? Math.ceil(temporadas.length / TEMPORADAS_POR_PAGINA) : 1;
+    paginaHistoricoAtual = Math.max(0, Math.min(paginaHistoricoAtual, totalPaginas - 1));
+    const inicio = usarPaginacao ? paginaHistoricoAtual * TEMPORADAS_POR_PAGINA : 0;
+    const temporadasVisiveis = usarPaginacao
+        ? temporadas.slice(inicio, inicio + TEMPORADAS_POR_PAGINA)
+        : temporadas;
+
+    lista.innerHTML = temporadasVisiveis.map((temporada) => {
         const trofeusColetivos = mapearTrofeusTemporada(temporada, "trofeusColetivos");
         const trofeusIndividuais = mapearTrofeusTemporada(temporada, "trofeusIndividuais");
         const premios = contarPremios(temporada);
@@ -1852,6 +1876,22 @@ function renderHistorico() {
             </li>
         `;
     }).join("");
+
+    if (usarPaginacao) {
+        paginacao.innerHTML = `
+            <button type="button" data-pagina-historico="anterior" ${paginaHistoricoAtual === 0 ? "disabled" : ""} aria-label="Página anterior">Anterior</button>
+            <span aria-live="polite">Página ${paginaHistoricoAtual + 1} de ${totalPaginas} · ${temporadas.length} temporadas</span>
+            <button type="button" data-pagina-historico="proxima" ${paginaHistoricoAtual >= totalPaginas - 1 ? "disabled" : ""} aria-label="Próxima página">Próxima</button>`;
+        paginacao.querySelectorAll("button[data-pagina-historico]").forEach((botao) => {
+            botao.addEventListener("click", () => {
+                paginaHistoricoAtual += botao.dataset.paginaHistorico === "proxima" ? 1 : -1;
+                renderHistorico();
+                lista.scrollIntoView({ behavior: "smooth", block: "start" });
+            });
+        });
+    } else {
+        paginacao.innerHTML = "";
+    }
 }
 
 function formatarEventosTemporada(eventos) {
@@ -3006,6 +3046,24 @@ function clubeNaoRenovaContrato(clubeId, temporada) {
 
 let processamentoEmAndamento = false;
 
+function mostrarNotificacaoFootMain(mensagem, tipo = "info") {
+    let elemento = document.getElementById("notificacao-footmain");
+    if (!elemento) {
+        elemento = document.createElement("div");
+        elemento.id = "notificacao-footmain";
+        elemento.className = "notificacao-config notificacao-footmain";
+        elemento.setAttribute("role", "status");
+        elemento.setAttribute("aria-live", "polite");
+        elemento.hidden = true;
+        document.body.append(elemento);
+    }
+    elemento.textContent = mensagem;
+    elemento.dataset.tipo = tipo;
+    elemento.hidden = false;
+    clearTimeout(mostrarNotificacaoFootMain._timer);
+    mostrarNotificacaoFootMain._timer = setTimeout(() => { elemento.hidden = true; }, 6000);
+}
+
 async function gerar() {
     if (processamentoEmAndamento) {
         return;
@@ -3180,7 +3238,8 @@ async function gerar() {
       
     } catch (erro) {
         console.error("[FootMain] Erro em gerar():", erro);
-        alert("Ocorreu um erro ao gerar a temporada. Veja o console (F12) para detalhes.");
+        const detalhe = erro instanceof Error && erro.message ? `: ${erro.message}` : "";
+        mostrarNotificacaoFootMain(`Não foi possível gerar a temporada${detalhe}`, "erro");
     } finally {
         processamentoEmAndamento = false;
     }
@@ -3590,7 +3649,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (filtroHistorico) {
-        filtroHistorico.addEventListener("change", renderHistorico);
+        filtroHistorico.addEventListener("change", () => {
+            paginaHistoricoAtual = 0;
+            renderHistorico();
+        });
     }
 
     if (filtroRanking) {
