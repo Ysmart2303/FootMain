@@ -208,14 +208,19 @@
                         <p><b>Individuais:</b> <span id="titulos-individuais-resultados">Nenhum</span></p>
                     </div>
                 </div>
-
+                
                 <div id="mercado-resultados" class="mercado-resultados">
                     <div><span>Reputação</span><strong id="resultado-reputacao">-</strong></div>
                     <div><span>Valor de mercado</span><strong id="resultado-valor">-</strong></div>
                     <div><span>Salário anual</span><strong id="resultado-salario">-</strong></div>
                 </div>
+                <div class="acoes-simulacao">
+                    <button onclick="gerar()" id="gerar">Gerar temporada</button>
+                    <button onclick="simularTudo()" id="simularTudo" type="button">Simular carreira</button>
+                    <button onclick="aposentarVoluntariamente()" id="aposentar" type="button" class="btn-aposentar" title="Encerrar a carreira antes da idade limite">🏁 Aposentar-se</button>
+                </div>
             </div>
-
+            
             <div id="resumo-final" class="resumo-final" hidden>
                 <h3>Carreira encerrada</h3>
                 <p><strong id="resumo-nome">Jogador</strong></p>
@@ -262,11 +267,6 @@
                 </div>
             </div>
 
-            <div class="acoes-simulacao">
-                <button onclick="gerar()" id="gerar">Gerar temporada</button>
-                <button onclick="simularTudo()" id="simularTudo" type="button">Simular carreira completa</button>
-                <button onclick="aposentarVoluntariamente()" id="aposentar" type="button" class="btn-aposentar" title="Encerrar a carreira antes da idade limite">🏁 Aposentar-se</button>
-            </div>
           
             <section id="atributos-jogador" class="atributos-painel">
                 <div class="atributos-titulo"><div><h3>Atributos do jogador</h3><p>Os atributos evoluem durante a juventude e caem com o avanço da idade.</p></div><span class="atributos-status">Evolução da carreira</span></div>
