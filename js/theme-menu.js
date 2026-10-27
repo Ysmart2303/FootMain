@@ -65,7 +65,9 @@
         }
 
         if (event.key === "Tab") {
-            const focusableElements = menu.querySelectorAll("button:not([disabled])");
+            const focusableElements = menu.querySelectorAll(
+                'button:not([disabled]), a[href], summary, input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            );
             const firstElement = focusableElements[0];
             const lastElement = focusableElements[focusableElements.length - 1];
 

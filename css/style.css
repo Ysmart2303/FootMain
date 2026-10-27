@@ -136,6 +136,8 @@ header p {
     inset: 0 auto 0 0;
     z-index: 1002;
     width: min(320px, 86vw);
+    max-height: 100vh;
+    overflow-y: auto;
     padding: 24px;
     background: #0f172a;
     color: #e2e8f0;
@@ -185,6 +187,39 @@ header p {
 .theme-picker p {
     color: #94a3b8;
     font-size: 0.9rem;
+}
+
+.update-history {
+    margin-top: 28px;
+    border-top: 1px solid rgba(148, 163, 184, 0.25);
+    padding-top: 18px;
+}
+
+.update-history summary {
+    cursor: pointer;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.update-history__intro,
+.update-history__note {
+    margin-top: 12px;
+    color: #94a3b8;
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.update-history__list {
+    display: grid;
+    gap: 10px;
+    margin: 14px 0;
+    padding-left: 20px;
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.update-history__list strong {
+    color: #facc15;
 }
 
 .theme-options {
@@ -2472,9 +2507,15 @@ html[data-theme="light"] .theme-options button[aria-pressed="true"] {
 }
 
 html[data-theme="light"] .theme-picker p,
+html[data-theme="light"] .update-history__intro,
+html[data-theme="light"] .update-history__note,
 html[data-theme="light"] footer,
 html[data-theme="light"] footer a {
     color: #1e3a5f;
+}
+
+html[data-theme="light"] .update-history__list strong {
+    color: #92400e;
 }
 
 /* Campo interativo 4-3-3 */
