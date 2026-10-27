@@ -81,7 +81,7 @@
                     <div class="player-card__section">
                         <span class="player-card__section-label">🌍 Seleção</span>
                         <strong class="player-card__section-value" id="perfil-selecao">Não definida</strong>
-                        <span class="player-card__section-detail" id="perfil-caps">0 caps · 0 gols</span>
+                        <span class="player-card__section-detail" id="perfil-caps">0 jogos · 0 gols</span>
                     </div>
                 </div>
             
@@ -214,11 +214,11 @@
                     <div><span>Valor de mercado</span><strong id="resultado-valor">-</strong></div>
                     <div><span>Salário anual</span><strong id="resultado-salario">-</strong></div>
                 </div>
-                <div class="acoes-simulacao">
-                    <button onclick="gerar()" id="gerar">Gerar temporada</button>
-                    <button onclick="simularTudo()" id="simularTudo" type="button">Simular carreira</button>
-                    <button onclick="aposentarVoluntariamente()" id="aposentar" type="button" class="btn-aposentar" title="Encerrar a carreira antes da idade limite">🏁 Aposentar-se</button>
-                </div>
+            </div>
+            <div class="acoes-simulacao">
+                <button onclick="gerar()" id="gerar">Gerar temporada</button>
+                <button onclick="simularTudo()" id="simularTudo" type="button">Simular carreira</button>
+                <button onclick="aposentarVoluntariamente()" id="aposentar" type="button" class="btn-aposentar" title="Encerrar a carreira antes da idade limite">🏁 Aposentar-se</button>
             </div>
             
             <div id="resumo-final" class="resumo-final" hidden>
@@ -243,7 +243,7 @@
                 </div>
                 <div class="resumo-selecao-detalhes">
                     <h4>Carreira pela seleção</h4>
-                    <p>Caps: <strong id="resumo-caps">0</strong> · Gols: <strong id="resumo-gols-selecao">0</strong> · Assistências: <strong id="resumo-assistencias-selecao">0</strong></p>
+                    <p>Jogos: <strong id="resumo-caps">0</strong> · Gols: <strong id="resumo-gols-selecao">0</strong> · Assistências: <strong id="resumo-assistencias-selecao">0</strong></p>
                     <p>Clube: <strong id="resumo-jogos-clube">0</strong> jogos · MOTM: <strong id="resumo-motm">0</strong> · Cartões: <strong id="resumo-cartoes">0 amarelos / 0 vermelhos</strong></p>
                 </div>
                 <div class="resumo-mercado">
@@ -291,7 +291,7 @@
                             <option value="assistencias">Assistências</option>
                             <option value="hattricks">Hat-tricks</option>
                             <option value="motm">MOTM</option>
-                            <option value="caps">Caps pela seleção</option>
+                            <option value="caps">Jogos pela seleção</option>
                             <option value="premios">Prêmios</option>
                             <option value="overall">Over</option>
                         </select>
@@ -317,7 +317,7 @@
                             <option value="assistencias">Assistências</option>
                             <option value="hattricks">Hat-tricks</option>
                             <option value="motm">MOTM</option>
-                            <option value="caps">Caps pela seleção</option>
+                            <option value="caps">Jogos pela seleção</option>
                             <option value="premios">Prêmios</option>
                             <option value="over">Maior Over</option>
                         </select>

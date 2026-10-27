@@ -1677,7 +1677,7 @@ function atualizarResumoJogador(nome, idade, ano, nacionalidade = obterCarreiraA
     if (perfilIdade) perfilIdade.textContent = idade ?? 0;
     if (perfilAno) perfilAno.textContent = ano ?? ANO_INICIAL;
     if (perfilSelecao) perfilSelecao.textContent = selecao ? selecao.nome : "Não definida";
-    if (perfilCaps) { const h=lerHistoricoAtiva(); const t=somarTotaisHistorico(h); perfilCaps.textContent=`${t.caps} caps · ${t.golsSelecao} gols`; }
+    if (perfilCaps) { const h=lerHistoricoAtiva(); const t=somarTotaisHistorico(h); perfilCaps.textContent=`${t.caps} jogos · ${t.golsSelecao} gols`; }
     if (perfilClube) perfilClube.textContent = clube ? clube.nome : "Ainda não escolhido";
     if (perfilContrato) {
         const contrato = carreiraAtual.anosContratoRestantes > 0
@@ -2053,6 +2053,10 @@ function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao, opc
 
     atualizarNotificacaoConquista(carreira, true);
 
+    const resultados = document.getElementById("resultados");
+    if (resultados) {
+        resultados.hidden = true;
+    }
     if (resumoFinal) {
         resumoFinal.hidden = false;
     }
@@ -2323,7 +2327,9 @@ function simularTemporadaPorJogo(posicao, atributos, idade, jogosForaInicioTempo
     const maxJogosClube = clubeId ? Math.round((posicao === "go" ? 45 : 50) * (cfg.geral.multiplicadorJogos || 1)) : 0;
     const fin=Number(atributos?.finalizacao)||OVERALL_PADRAO, pas=Number(atributos?.passe)||OVERALL_PADRAO, dri=Number(atributos?.drible)||OVERALL_PADRAO;
     const carreiraAtualRef = typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : {};
-    const aposentadoSelecao = carreiraAtualRef.aposentadoriaSelecao === true || temporadasAnteriores.some(t => (t.eventos || []).some(e => e.tipo === "aposentadoria-selecao"));
+    const idadeAposentadoriaSelecao = Number(cfg.geral.idadeAposentadoriaSelecao) || 32;
+    const aposentadoSelecao = temporadasAnteriores.some(t => (t.eventos || []).some(e => e.tipo === "aposentadoria-selecao"))
+        || (carreiraAtualRef.aposentadoriaSelecao === true && idade >= idadeAposentadoriaSelecao);
 
     let lambdaGol=0, lambdaAssist=0;
     if(posicao==="ata"){lambdaGol=Math.pow(fin/100,3)+Math.pow(dri/100,3)*.15;lambdaAssist=Math.pow(pas/100,2.5)*.45+Math.pow(dri/100,3)*.15;}
@@ -3028,6 +3034,8 @@ async function gerar() {
             carreiraAtual.clube = "";
             carreiraAtual.anosContratoRestantes = 0;
             carreiraAtual.rompimentosContratoUsados = 0;
+            carreiraAtual.aposentadoriaSelecao = false;
+            carreiraAtual.aposentadoriaVoluntaria = false;
             delete carreiraAtual.potencial;
         }
         carreiraAtual.nome = nome;
@@ -3088,6 +3096,10 @@ async function gerar() {
         }
         if (resumoFinal) {
             resumoFinal.hidden = true;
+        }
+        const resultados = document.getElementById("resultados");
+        if (resultados) {
+            resultados.hidden = false;
         }
         if (!carreiraFinalizada) {
             await perguntarAposentadoriaSelecao(idade);
@@ -3184,8 +3196,6 @@ function simularTudo() {
         const posicaoSelecionada = document.querySelector('input[name="posicao"]:checked');
         const resumoFinal = document.getElementById("resumo-final");
 
-        if (resumoFinal) resumoFinal.hidden = true;
-
         if (!posicaoSelecionada) {
             alert("Selecione uma posição antes de simular a carreira completa.");
             return;
@@ -3206,6 +3216,8 @@ function simularTudo() {
             return;
         }
 
+        if (resumoFinal) resumoFinal.hidden = true;
+
         const carreiraAtual = obterCarreiraAtual();
         carreiraAtual.nome = nome;
         carreiraAtual.posicao = POSICOES_CAMPO[posicaoDetalhe]?.nome || dadosPosicao.nome;
@@ -3223,6 +3235,8 @@ function simularTudo() {
             carreiraAtual.clube = "";
             carreiraAtual.anosContratoRestantes = 0;
             carreiraAtual.rompimentosContratoUsados = 0;
+            carreiraAtual.aposentadoriaSelecao = false;
+            carreiraAtual.aposentadoriaVoluntaria = false;
             delete carreiraAtual.potencial;
         }
 
@@ -3364,6 +3378,10 @@ async function limparHistorico() {
     document.getElementById("idade-limite").value = IDADE_LIMITE_PADRAO;
     const nacionalidadeInput = document.getElementById("nacionalidade");
     if (nacionalidadeInput) nacionalidadeInput.value = "";
+    const resumoFinal = document.getElementById("resumo-final");
+    if (resumoFinal) resumoFinal.hidden = true;
+    const resultados = document.getElementById("resultados");
+    if (resultados) resultados.hidden = false;
     atualizarResumoJogador("Jogador", 0, ANO_INICIAL);
     renderHistorico();
 }
@@ -3399,7 +3417,7 @@ function gerarGraficoComparacao(ta,tb){
 function renderComparacao(carreiraA,carreiraB){
  const out=document.getElementById('resultado-comparacao');if(!out||!carreiraA||!carreiraB){if(out)out.innerHTML='<p>Salve pelo menos duas carreiras para comparar.</p>';return;}
  const a=obterMetricasCarreira(carreiraA),b=obterMetricasCarreira(carreiraB),ta=obterTemporadasDaCarreira(carreiraA),tb=obterTemporadasDaCarreira(carreiraB);
- const linhas=[['Posição',carreiraA.posicao,carreiraB.posicao,true],['Seleção',SELECOES.find(s=>s.id===carreiraA.nacionalidade)?.nome||'—',SELECOES.find(s=>s.id===carreiraB.nacionalidade)?.nome||'—',true],['Jogos',a.jogos,b.jogos],['Gols',a.gols,b.gols],['Assistências',a.assistencias,b.assistencias],['Hat-tricks',a.hatTricks,b.hatTricks],['MOTM',a.motmTotal,b.motmTotal],['Caps',a.caps,b.caps],['Gols pela seleção',a.golsSelecao,b.golsSelecao],['Títulos coletivos',a.titulosColetivos,b.titulosColetivos],['Títulos individuais',a.titulosIndividuais,b.titulosIndividuais],['Maior Over',a.maiorOver,b.maiorOver],['Temporadas',a.temporadas,b.temporadas],['Pontuação',a.pontuacao,b.pontuacao]];
+ const linhas=[['Posição',carreiraA.posicao,carreiraB.posicao,true],['Seleção',SELECOES.find(s=>s.id===carreiraA.nacionalidade)?.nome||'—',SELECOES.find(s=>s.id===carreiraB.nacionalidade)?.nome||'—',true],['Jogos',a.jogos,b.jogos],['Gols',a.gols,b.gols],['Assistências',a.assistencias,b.assistencias],['Hat-tricks',a.hatTricks,b.hatTricks],['MOTM',a.motmTotal,b.motmTotal],['Jogos pela seleção',a.caps,b.caps],['Gols pela seleção',a.golsSelecao,b.golsSelecao],['Títulos coletivos',a.titulosColetivos,b.titulosColetivos],['Títulos individuais',a.titulosIndividuais,b.titulosIndividuais],['Maior Over',a.maiorOver,b.maiorOver],['Temporadas',a.temporadas,b.temporadas],['Pontuação',a.pontuacao,b.pontuacao]];
  const tabela=`<div class="tabela-comparacao"><table><thead><tr><th>Métrica</th><th>${escaparHTML(carreiraA.nome)}</th><th>${escaparHTML(carreiraB.nome)}</th></tr></thead><tbody>${linhas.map(([l,av,bv,txt])=>`<tr><th>${l}</th><td class="${!txt&&Number(av)>Number(bv)?'comparacao-vencedor':''}">${escaparHTML(av)}</td><td class="${!txt&&Number(bv)>Number(av)?'comparacao-vencedor':''}">${escaparHTML(bv)}</td></tr>`).join('')}</tbody></table></div>`;
  const anos=[...new Set(ta.map(t=>Number(t.ano)).filter(ano=>tb.some(u=>Number(u.ano)===ano)))].sort((x,y)=>x-y);
  const comum=anos.length?`<h3>Temporadas em comum</h3><div class="tabela-comparacao"><table><thead><tr><th>Ano</th><th>${escaparHTML(carreiraA.nome)} (gols / OVR)</th><th>${escaparHTML(carreiraB.nome)} (gols / OVR)</th></tr></thead><tbody>${anos.map(ano=>{const x=ta.find(t=>Number(t.ano)===ano),y=tb.find(t=>Number(t.ano)===ano);return `<tr><th>${ano}</th><td>${Number(x.gols)||0} / ${Number(x.overall)||0}</td><td>${Number(y.gols)||0} / ${Number(y.overall)||0}</td></tr>`}).join('')}</tbody></table></div>`:'<p>As carreiras não têm temporadas em comum.</p>';

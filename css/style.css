@@ -405,6 +405,11 @@ main {
     border-radius: 16px;
 }
 
+#resultados[hidden],
+.resumo-final[hidden] {
+    display: none;
+}
+
 #nomes,
 #dados {
     display: flex;
@@ -2205,7 +2210,7 @@ html[data-theme="light"] .trajetoria-vazio {
 }
 
 /* Sistema de atributos e evolução do jogador */
-#inicio { grid-template-areas: "perfil perfil" "inputs posicao" "resultados resultados" "atributos atributos" "acoes acoes" "resumo resumo"; grid-template-rows: min-content repeat(3, min-content); }
+#inicio { grid-template-areas: "perfil perfil" "inputs posicao" "resultados resultados" "acoes acoes" "atributos atributos" "resumo resumo"; grid-template-rows: min-content repeat(3, min-content); }
 .atributos-painel { grid-area: atributos; min-width: 0; padding: 20px; border: 1px solid rgba(148,163,184,.22); border-radius: 16px; background: linear-gradient(145deg,rgba(15,23,42,.95),rgba(20,35,54,.85)); }
 .atributos-titulo { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:18px; }
 .atributos-titulo h3 { font-size:1.15rem; margin-bottom:6px; color:#f8fafc; }
