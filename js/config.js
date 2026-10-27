@@ -4,7 +4,7 @@
  */
 
 const STORAGE_KEY_CONFIG = "footmain_config_v1";
-const VERSAO_APP = "1.19.5";
+const VERSAO_APP = "1.19.6";
 
 /* ---------- Definições base (as "de fábrica") ---------- */
 const POSICOES_PADRAO = {
@@ -57,8 +57,9 @@ function categoriaPosicao(valor) {
     const porNomeCampo = Object.entries(POSICOES_CAMPO).find(([, dados]) => dados.nome.toLowerCase() === texto.toLowerCase());
     if (porNomeCampo) return porNomeCampo[1].categoria;
     const legado = texto.toLowerCase();
-    if (posicoes?.[legado]) return legado;
-    const encontrada = Object.entries(posicoes || {}).find(([, dados]) => dados.nome.toLowerCase() === legado);
+    const mapaPosicoesLegado = typeof posicoes !== "undefined" ? posicoes : {};
+    if (mapaPosicoesLegado[legado]) return legado;
+    const encontrada = Object.entries(mapaPosicoesLegado).find(([, dados]) => dados.nome.toLowerCase() === legado);
     return encontrada ? encontrada[0] : null;
 }
 
