@@ -4395,3 +4395,15 @@ html[data-theme="light"] .titulos-resultados b {
 html[data-theme="light"] .mercado-resultados {
     border-top-color: #cbd5e1;
 }
+/* Campos básicos do formulário: mantém label e controle agrupados no grid. */
+#inputs .input-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+#inputs .input-field input {
+    width: 100%;
+    min-width: 0;
+}
