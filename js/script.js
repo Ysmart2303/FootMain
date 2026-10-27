@@ -1758,6 +1758,7 @@ function renderHistorico() {
         : historico.slice().sort((a, b) => {
               const valorOrdenacao = (temporada) => {
                   if (criterio === "premios") return contarPremios(temporada);
+                  if (criterio === "over") return Number(temporada.overall) || 0;
                   if (criterio === "hattricks") return contarHatTricks([temporada]);
                   return Number(temporada[criterio]) || 0;
               };
@@ -2684,7 +2685,8 @@ function criarOfertaContrato(clube, idade, idadeLimite, temporadaAnterior = null
         ? calcularReputacao({ clube: clube.id }, historico)
         : 50;
     const valorMercado = calcularValorMercado(overall, idade, reputacao, anosContrato);
-    const salarioProposto = calcularSalario(valorMercado, reputacao, clube.id);
+    const salarioCalculado = calcularSalario(valorMercado, reputacao, clube.id);
+    const salarioProposto = Math.max(50000, salarioCalculado);
     const salarioAnterior = Number(temporadaAnterior?.salario) || 0;
 
     return {
@@ -2715,7 +2717,10 @@ async function escolherContratoParaTemporada(clubeAtual, temporadaInicial, idade
         carreiraAtual.salarioAtual = Number(ultimaTemporada.salario) || 0;
     }
 
-    const ofertas = sortearClubes(3, clubeAtual, carreiraAtual.clubeAlvo, desempenhoBom)
+    const clubesOfertados = temporadaInicial
+        ? sortearClubesParaCarreira(3, "", carreiraAtual.clubeAlvo, [])
+        : sortearClubes(3, clubeAtual, carreiraAtual.clubeAlvo, desempenhoBom);
+    const ofertas = clubesOfertados
         .map((clube) => criarOfertaContrato(clube, idade, idadeLimite, ultimaTemporada, historicoCarreira));
 
     let opcoes;
@@ -2890,8 +2895,23 @@ function formatarValorEuro(valor) {
 
 function sortearClubesParaCarreira(quantidade, clubeExcluir, clubeAlvo, historico) {
     const temporadas = Array.isArray(historico) ? historico : [];
-    // Sem histórico, mantém o sorteio original para não favorecer clubes sem motivo.
-    if (temporadas.length === 0) return sortearClubes(quantidade, clubeExcluir, clubeAlvo);
+    // Na primeira temporada, a reputação começa em zero: favorece clubes menores,
+    // mas mantém uma chance baixa de surgir uma oferta de clube grande.
+    if (temporadas.length === 0) {
+        const disponiveis = CLUBES.filter((clube) => clube.id !== clubeExcluir);
+        const sorteados = [];
+        while (sorteados.length < Math.min(quantidade, disponiveis.length)) {
+            const pesos = disponiveis.map((clube) => {
+                const prestigio = obterPrestigioClube(clube);
+                const forca = Number(getConfig()?.clubes?.potencias?.[clube.id]) || prestigio || 50;
+                let peso = Math.exp(-Math.max(0, forca - 35) / 18);
+                if (clube.id === clubeAlvo) peso *= 1.8;
+                return Math.max(0.015, peso);
+            });
+            sorteados.push(disponiveis.splice(sortearIndicePorPesos(pesos), 1)[0]);
+        }
+        return sorteados;
+    }
     const clubesAnteriores = temporadas.map((temporada) => obterClube(temporada.clube)).filter(Boolean);
     const prestigiosAnteriores = clubesAnteriores.map(obterPrestigioClube);
     const maiorPrestigio = Math.max(0, ...prestigiosAnteriores);
@@ -2931,7 +2951,7 @@ function sortearClubesParaCarreira(quantidade, clubeExcluir, clubeAlvo, historic
 function sortearClubeParaTemporada(clubeAtual, temporadaInicial, clubeAlvo = "", historico = []) {
     const alvoValido = obterClube(clubeAlvo);
     if (temporadaInicial && (!Array.isArray(historico) || historico.length === 0)) {
-        const ofertasIniciais = sortearClubes(3, "", clubeAlvo);
+        const ofertasIniciais = sortearClubesParaCarreira(3, "", clubeAlvo, []);
         return ofertasIniciais[Math.floor(Math.random() * ofertasIniciais.length)].id;
     }
     const ofertas = sortearClubesParaCarreira(3, temporadaInicial ? "" : clubeAtual, clubeAlvo, historico);
