@@ -428,54 +428,9 @@ main {
     height: 18px;
 }
 
-#resultados {
-    width: min(100%, 520px);
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px 30px;
-    justify-content: center;
-    background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9));
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    padding: 20px;
-    border-radius: 16px;
-}
-
 #resultados[hidden],
 .resumo-final[hidden] {
     display: none;
-}
-
-#nomes,
-#dados {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    min-width: 120px;
-}
-
-#nomes p,
-#dados p {
-    font-weight: 600;
-    color: #e2e8f0;
-}
-
-.titulos-resultados {
-    flex: 0 0 100%;
-    border-top: 1px solid rgba(148, 163, 184, 0.25);
-    padding-top: 14px;
-    color: #e2e8f0;
-    overflow-wrap: anywhere;
-}
-
-.titulos-resultados strong {
-    display: block;
-    margin-bottom: 8px;
-    color: #facc15;
-}
-
-.titulos-resultados p {
-    margin: 6px 0;
-    line-height: 1.45;
 }
 
 .resumo-final {
@@ -954,18 +909,6 @@ button {
         padding: 16px 12px;
     }
 
-    #resultados {
-        gap: 16px;
-        justify-content: space-around;
-        padding: 16px 10px;
-    }
-
-    #nomes,
-    #dados {
-        min-width: 0;
-        gap: 12px;
-    }
-
     .acoes-simulacao {
         gap: 8px;
     }
@@ -1043,12 +986,6 @@ button {
 
     .acoes-simulacao button {
         width: 100%;
-    }
-
-    #resultados {
-        gap: 10px;
-        padding: 14px 8px;
-        font-size: 0.92rem;
     }
 
     .resumo-grid {
@@ -4273,4 +4210,188 @@ html[data-theme="light"] .trofeu-popup::after {
         font-size: 0.74rem;
         padding: 8px 11px;
     }
+}
+
+/* ---------- Resultados da temporada ---------- */
+#resultados {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 14px;
+    padding: 22px;
+    background:
+        radial-gradient(ellipse at top right, rgba(16, 185, 129, 0.12), transparent 42%),
+        linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(17, 34, 48, 0.96));
+    border: 1px solid rgba(52, 211, 153, 0.28);
+    border-radius: 18px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 12px 28px rgba(2, 8, 23, 0.22);
+}
+
+.resultados-cabecalho,
+.titulos-resultados,
+.mercado-resultados {
+    grid-column: 1 / -1;
+}
+
+.resultados-cabecalho {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.resultados-cabecalho > span {
+    color: #6ee7b7;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.resultados-cabecalho h2 {
+    color: #f8fafc;
+    font-size: 1.2rem;
+    line-height: 1.3;
+}
+
+.resultado-estatistica {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+    min-height: 94px;
+    padding: 14px;
+    background: linear-gradient(145deg, rgba(30, 41, 59, 0.84), rgba(15, 23, 42, 0.72));
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-bottom: 2px solid rgba(52, 211, 153, 0.55);
+    border-radius: 12px;
+}
+
+.resultado-estatistica span {
+    color: #a7b5c8;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.resultado-estatistica strong {
+    color: #f8fafc;
+    font-size: clamp(1.45rem, 3vw, 1.9rem);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.titulos-resultados {
+    padding-top: 16px;
+    border-top: 1px solid rgba(148, 163, 184, 0.2);
+    color: #dbe5ef;
+    overflow-wrap: anywhere;
+}
+
+.titulos-resultados strong {
+    margin-bottom: 10px;
+    color: #fde68a;
+    font-size: 0.95rem;
+}
+
+.titulos-resultados p {
+    margin: 7px 0 0;
+    line-height: 1.5;
+}
+
+.titulos-resultados b {
+    color: #a7f3d0;
+}
+
+.mercado-resultados {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0;
+    padding-top: 16px;
+    border-top: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.mercado-resultados h3 {
+    grid-column: 1 / -1;
+    color: #dbeafe;
+    font-size: 0.85rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.mercado-resultados > div {
+    padding: 11px 12px;
+    background: rgba(16, 185, 129, 0.09);
+    border-color: rgba(52, 211, 153, 0.2);
+    border-radius: 10px;
+}
+
+@media (max-width: 600px) {
+    #resultados {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        padding: 18px 14px;
+    }
+
+    .resultados-cabecalho {
+        margin-bottom: 2px;
+    }
+
+    .resultado-estatistica {
+        min-height: 82px;
+        padding: 12px;
+    }
+
+    .mercado-resultados {
+        grid-template-columns: 1fr;
+    }
+}
+
+html[data-theme="light"] #resultados {
+    background:
+        radial-gradient(ellipse at top right, rgba(34, 197, 94, 0.1), transparent 42%),
+        linear-gradient(145deg, #f8fbff, #eff6ff);
+    border-color: #86c9a4;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+html[data-theme="light"] .resultados-cabecalho > span {
+    color: #15803d;
+}
+
+html[data-theme="light"] .resultados-cabecalho h2,
+html[data-theme="light"] .mercado-resultados h3 {
+    color: #172554;
+}
+
+html[data-theme="light"] .resultado-estatistica {
+    background: linear-gradient(145deg, #ffffff, #f0fdf4);
+    border-color: #d1e7d8;
+    border-bottom-color: #4ade80;
+}
+
+html[data-theme="light"] .resultado-estatistica span {
+    color: #64748b;
+}
+
+html[data-theme="light"] .resultado-estatistica strong {
+    color: #14532d;
+}
+
+html[data-theme="light"] .titulos-resultados {
+    color: #334155;
+    border-top-color: #cbd5e1;
+}
+
+html[data-theme="light"] .titulos-resultados strong {
+    color: #854d0e;
+}
+
+html[data-theme="light"] .titulos-resultados b {
+    color: #166534;
+}
+
+html[data-theme="light"] .mercado-resultados {
+    border-top-color: #cbd5e1;
 }
