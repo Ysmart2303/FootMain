@@ -54,6 +54,8 @@
                 <summary>Histórico de atualização</summary>
                 <p class="update-history__intro">Principais mudanças registradas entre as versões 1.2.1 e 1.19.8:</p>
                 <ol class="update-history__list">
+                    <lu><strong>v1.19.9,8</strong> — Correção de problemas de UX.</lu>
+                    <lu><strong>v1.19.9,75</strong> — Nova Paleta de cores.</lu>
                     <lu><strong>v1.19.9,5</strong> — Mudança da os li do histórico de atualizações para lu.</lu>
                     <lu><strong>v1.19.9</strong> — Adição do Histórico de atualizações.</lu>
                     <lu><strong>v1.19.8</strong> — Substituição de “caps” por “jogos” nas estatísticas da seleção.</lu>
@@ -140,12 +142,18 @@
             </div>
 
             <div id="inputs">
-                <label for="nome">Nome:</label>
-                <input placeholder="Ex: Marcos" id="nome">
-                <label for="idade">Idade atual</label>
-                <input type="number" placeholder="Ex: 18" id="idade" min="0" value="18">
-                <label for="idade-limite">Idade limite</label>
-                <input type="number" id="idade-limite" min="1" value="40">
+                <div class="input-field">
+                    <label for="nome">Nome:</label>
+                    <input placeholder="Ex: Marcos" id="nome">
+                </div>
+                <div class="input-field">
+                    <label for="idade">Idade atual</label>
+                    <input type="number" placeholder="Ex: 18" id="idade" min="0" value="18">
+                </div>
+                <div class="input-field">
+                    <label for="idade-limite">Idade limite</label>
+                    <input type="number" id="idade-limite" min="1" value="40">
+                </div>
                 <div class="input-field input-field--full">
                     <label for="filtro-regiao-nacionalidade">Filtrar nacionalidade por região</label>
                     <select id="filtro-regiao-nacionalidade">
@@ -338,7 +346,7 @@
                             <option value="motm">MOTM</option>
                             <option value="caps">Jogos pela seleção</option>
                             <option value="premios">Prêmios</option>
-                            <option value="overall">Over</option>
+                            <option value="over">Over</option>
                         </select>
                     </div>
                     <button id="limparHistorico" type="button">Limpar histórico</button>
@@ -416,7 +424,7 @@
                     <p class="conquistas-intro">Acompanhe os objetivos desbloqueados por cada carreira e os maiores feitos registrados no FootMain.</p>
                     <div class="conquistas-resumo">
                         <div><span>Desbloqueadas</span><strong id="conquistas-desbloqueadas">0</strong></div>
-                        <div><span>Total disponível</span><strong id="conquistas-total">30</strong></div>
+                        <div><span>Total disponível</span><strong id="conquistas-total" data-total-dinamico>—</strong></div>
                         <div><span>Conclusão</span><strong id="conquistas-percentual">0%</strong></div>
                     </div>
                     <div class="filtro-ranking filtro-conquistas">
