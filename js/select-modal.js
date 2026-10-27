@@ -42,6 +42,22 @@
         });
 
         search.addEventListener("input", renderOptions);
+        optionsList.addEventListener("keydown", (evento) => {
+            const options = [...optionsList.querySelectorAll('[role="option"]')];
+            if (!options.length) return;
+            const atual = options.indexOf(document.activeElement);
+            if (evento.key === "ArrowDown" || evento.key === "ArrowUp") {
+                evento.preventDefault();
+                const delta = evento.key === "ArrowDown" ? 1 : -1;
+                options[(atual + delta + options.length) % options.length].focus();
+            } else if (evento.key === "Enter" || evento.key === " ") {
+                const option = options[atual >= 0 ? atual : 0];
+                if (option) {
+                    evento.preventDefault();
+                    option.click();
+                }
+            }
+        });
         document.addEventListener("keydown", (evento) => {
             if (!modal.hidden && evento.key === "Escape") closeModal();
         });
@@ -72,12 +88,12 @@
 
         optionsList.innerHTML = options.length
             ? options.map((option) => `
-                <button type="button" class="opcao-clube opcao-select-modal${option.value === activeSelect.value ? " opcao-select-modal--selecionada" : ""}"
-                        role="option" aria-selected="${option.value === activeSelect.value}"
+                <div class="opcao-clube opcao-select-modal${option.value === activeSelect.value ? " opcao-select-modal--selecionada" : ""}"
+                        role="option" tabindex="-1" aria-selected="${option.value === activeSelect.value}"
                         data-select-option="${escaparAtributo(option.value)}">
                     <span class="opcao-select-modal-marcador" aria-hidden="true">${option.value === activeSelect.value ? "✓" : ""}</span>
                     <span><strong>${escaparHTML(option.textContent.trim())}</strong></span>
-                </button>
+                </div>
             `).join("")
             : '<p class="select-modal-vazio">Nenhuma opção encontrada.</p>';
     }
@@ -135,6 +151,8 @@
             button.innerHTML = '<span class="select-modal-trigger-text"></span><span aria-hidden="true">▾</span>';
             select.classList.add("select-modal-source");
             select.insertAdjacentElement("afterend", button);
+            // Só ocultar o select nativo depois que o gatilho do modal existir.
+            select.classList.add("select-modal-ready");
             updateButton(select);
             select.addEventListener("change", () => updateButton(select));
             button.addEventListener("click", () => openModal(select, button));
