@@ -1807,7 +1807,7 @@ html[data-theme="light"] .trajetoria-vazio {
     text-align: left;
 }
 
-.select-modal-source {
+.select-modal-source.select-modal-ready {
     display: none !important;
 }
 
@@ -4406,4 +4406,39 @@ html[data-theme="light"] .mercado-resultados {
 #inputs .input-field input {
     width: 100%;
     min-width: 0;
+}
+
+
+/* Paginação do histórico de temporadas */
+.paginacao-temporadas {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 16px 0;
+}
+.paginacao-temporadas:empty { display: none; }
+.paginacao-temporadas span { color: var(--texto-secundario, #cbd5e1); text-align: center; }
+.paginacao-temporadas button {
+    border: 1px solid rgba(148, 163, 184, .4);
+    border-radius: 8px;
+    padding: 8px 12px;
+    background: var(--superficie, #1e293b);
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+.paginacao-temporadas button:disabled { opacity: .45; cursor: not-allowed; }
+.notificacao-footmain {
+    position: fixed;
+    z-index: 10000;
+    right: 16px;
+    bottom: 16px;
+    width: min(440px, calc(100vw - 32px));
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .28);
+}
+.opcao-select-modal:focus-visible {
+    outline: 2px solid #4ade80;
+    outline-offset: 2px;
 }
