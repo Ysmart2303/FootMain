@@ -1542,6 +1542,8 @@ function renderRanking() {
             const correspondeSelecao = !selecaoSelecionada || carreira.nacionalidade === selecaoSelecionada;
             if (!correspondeSelecao) return false;
             if (posicaoSelecionada === "todas") return true;
+            // Compatibilidade com carreiras antigas: normalizarPosicaoDetalhada usa CA
+            // como fallback quando a posição salva é inválida ou desconhecida.
             const detalhe = normalizarPosicaoDetalhada(carreira.posicaoDetalhe || carreira.posicao);
             const categoria = categoriaPosicao(detalhe);
             return POSICOES_CAMPO[posicaoSelecionada]
@@ -2824,6 +2826,7 @@ function obterPrestigioClube(clube) {
 
 function sortearIndicePorPesos(pesos) {
     const total = pesos.reduce((soma, peso) => soma + peso, 0);
+    if (total <= 0) return 0;
     let sorteio = Math.random() * total;
     for (let i = 0; i < pesos.length; i++) {
         sorteio -= pesos[i];
@@ -3357,7 +3360,7 @@ async function limparHistorico() {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(STORAGE_KEY_CARREIRA_ATUAL);
     document.getElementById("nome").value = "";
-    document.getElementById("idade").value = "0";
+    document.getElementById("idade").value = String(getConfig().geral.idadeInicialPadrao ?? 18);
     document.getElementById("idade-limite").value = IDADE_LIMITE_PADRAO;
     const nacionalidadeInput = document.getElementById("nacionalidade");
     if (nacionalidadeInput) nacionalidadeInput.value = "";
@@ -3402,7 +3405,7 @@ function renderComparacao(carreiraA,carreiraB){
  const comum=anos.length?`<h3>Temporadas em comum</h3><div class="tabela-comparacao"><table><thead><tr><th>Ano</th><th>${escaparHTML(carreiraA.nome)} (gols / OVR)</th><th>${escaparHTML(carreiraB.nome)} (gols / OVR)</th></tr></thead><tbody>${anos.map(ano=>{const x=ta.find(t=>Number(t.ano)===ano),y=tb.find(t=>Number(t.ano)===ano);return `<tr><th>${ano}</th><td>${Number(x.gols)||0} / ${Number(x.overall)||0}</td><td>${Number(y.gols)||0} / ${Number(y.overall)||0}</td></tr>`}).join('')}</tbody></table></div>`:'<p>As carreiras não têm temporadas em comum.</p>';
  out.innerHTML=`${tabela}<h3>Evolução do overall</h3>${gerarGraficoComparacao(ta,tb)}${comum}`;
 }
-function abrirModalComparacao(){const modal=document.getElementById('modal-comparacao'),sa=document.getElementById('comparacao-a'),sb=document.getElementById('comparacao-b');if(!modal||!sa||!sb)return;const carreiras=lerRanking();const opts=carreiras.map(c=>`<option value="${escaparHTML(c.id)}">${escaparHTML(c.nome)} · ${escaparHTML(c.posicao||'')}</option>`).join('');sa.innerHTML=opts;sb.innerHTML=opts; if(carreiras.length>1)sb.selectedIndex=1;modal.hidden=false;renderComparacao(carreiras.find(c=>String(c.id)===sa.value),carreiras.find(c=>String(c.id)===sb.value));}
+function abrirModalComparacao(){const modal=document.getElementById('modal-comparacao'),sa=document.getElementById('comparacao-a'),sb=document.getElementById('comparacao-b');if(!modal||!sa||!sb)return;const carreiras=lerRanking();if(carreiras.length<2){alert("Você precisa ter pelo menos duas carreiras no ranking para comparar.");return;}const opts=carreiras.map(c=>`<option value="${escaparHTML(c.id)}">${escaparHTML(c.nome)} · ${escaparHTML(c.posicao||'')}</option>`).join('');sa.innerHTML=opts;sb.innerHTML=opts; if(carreiras.length>1)sb.selectedIndex=1;modal.hidden=false;renderComparacao(carreiras.find(c=>String(c.id)===sa.value),carreiras.find(c=>String(c.id)===sb.value));}
 function configurarComparacao(){document.getElementById('abrir-comparacao')?.addEventListener('click',abrirModalComparacao);document.getElementById('fechar-comparacao')?.addEventListener('click',()=>{document.getElementById('modal-comparacao').hidden=true;});for(const id of ['comparacao-a','comparacao-b'])document.getElementById(id)?.addEventListener('change',()=>{const cs=lerRanking();renderComparacao(cs.find(c=>String(c.id)===document.getElementById('comparacao-a').value),cs.find(c=>String(c.id)===document.getElementById('comparacao-b').value));});document.getElementById('modal-comparacao')?.addEventListener('click',e=>{if(e.target.id==='modal-comparacao')e.currentTarget.hidden=true;});}
 
 async function aposentarVoluntariamente() {
@@ -3435,7 +3438,8 @@ async function aposentarVoluntariamente() {
         const ultima = historico[historico.length - 1];
         ultima.eventos = Array.isArray(ultima.eventos) ? ultima.eventos : [];
         ultima.eventos.push({ tipo: "aposentadoria-voluntaria", jogo: 0 });
-        salvarHistorico(historico);
+        const outras = lerHistorico().filter(t => t.carreiraId !== carreira.id);
+        salvarHistorico([...outras, ...historico]);
         const posicaoNome = ultima.posicao || "Jogador";
         mostrarResumoFinal(ultima.nome, carreira.idadeLimite, Number(ultima.ano) || ANO_INICIAL,
             historico, posicaoNome, { voluntaria: true });
@@ -3465,7 +3469,8 @@ async function perguntarAposentadoriaSelecao(idade) {
             ultima.eventos = Array.isArray(ultima.eventos) ? ultima.eventos : [];
             if (!ultima.eventos.some(e => e.tipo === "aposentadoria-selecao")) {
                 ultima.eventos.push({ tipo: "aposentadoria-selecao", jogo: 0 });
-                salvarHistorico(historico);
+                const outras = lerHistorico().filter(t => t.carreiraId !== carreira.id);
+                salvarHistorico([...outras, ...historico]);
             }
         }
         alert("🏁 Você anunciou sua aposentadoria da seleção nacional.");
@@ -3639,6 +3644,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     const nome = foraDaRegiao ? `${selecao.nome} (seleção atual)` : selecao.nome;
                     return `<option value="${selecao.id}">${escaparHTML(nome)}</option>`;
                 }).join("");
+            // Reaplica a seleção atual após reconstruir as opções.
+            nacionalidadeInput.value = selecaoAtual?.id || "";
         };
         atualizarOpcoesNacionalidade();
         nacionalidadeInput.value = carreiraAtual.nacionalidade;
