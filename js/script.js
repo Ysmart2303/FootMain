@@ -215,6 +215,15 @@ function ehTituloContinental(trofeu) {
         || trofeu === "CAF Champions League";
 }
 
+function ehTituloCompeticaoContinental(trofeu) {
+    return ehTituloContinental(trofeu)
+        || trofeu === "Europa League"
+        || trofeu === "Conference League"
+        || trofeu === "Copa Sul-Americana"
+        || trofeu === "AFC Champions League 2"
+        || trofeu === "CAF Confederation Cup";
+}
+
 function normalizarNomeTrofeu(trofeu, clubeId) {
     if (typeof trofeu !== "string") return trofeu;
 
@@ -855,10 +864,11 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
     const cicloCopaDoMundo = (temporadaAtual - ANO_INICIAL) % ciclo === 0;
     const anoInicioMundial = Number(t.anoInicioMundialClubes) || 2029;
     const anoCopaDoMundoDeClubes = temporadaAtual >= anoInicioMundial && (temporadaAtual - anoInicioMundial) % ciclo === 0;
+    const competicao = determinarCompeticaoContinental(clubeId);
 
     // ====== Competição continental principal (já existente) ======
-    if (jogos >= 35 && sortearPremio(t.chanceCopaContinental * multColetivos * fatorClube)) {
-        trofeusColetivos.push(nomesTrofeus.continental);
+    if (competicao.principal && jogos >= 35 && sortearPremio(t.chanceCopaContinental * multColetivos * fatorClube)) {
+        trofeusColetivos.push(competicao.principal);
     }
     if (jogos >= 30 && sortearPremio(t.chanceLigaNacional * multColetivos * fatorClube)) {
         trofeusColetivos.push(nomesTrofeus.liga);
@@ -868,7 +878,6 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
     }
 
     // ====== Competições secundárias (novas) ======
-    const competicao = determinarCompeticaoContinental(clubeId);
     if (competicao.secundaria && jogos >= 30) {
         const chance = competicao.secundaria === "Europa League"
             ? (t.chanceEuropaLeague || 0.20)
@@ -914,12 +923,11 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
     if (tempAnterior) {
         const ganhouLigaAnt = (tempAnterior.trofeusColetivos || []).includes(nomesTrofeus.liga);
         const ganhouCopaAnt = (tempAnterior.trofeusColetivos || []).includes(nomesTrofeus.copa);
-        const ganhouContAnt = (tempAnterior.trofeusColetivos || []).includes(nomesTrofeus.continental);
-        const ganhouSecAnt = competicao.secundaria && (tempAnterior.trofeusColetivos || []).includes(competicao.secundaria);
+        const ganhouContAnt = (tempAnterior.trofeusColetivos || []).some(ehTituloCompeticaoContinental);
         if (ganhouLigaAnt && ganhouCopaAnt && sortearPremio((t.chanceSupercopaNacional || 0.28) * multColetivos)) {
             trofeusColetivos.push("Supercopa Nacional");
         }
-        if (ganhouContAnt && ganhouSecAnt && sortearPremio((t.chanceSupercopaContinental || 0.30) * multColetivos)) {
+        if (ganhouContAnt && sortearPremio((t.chanceSupercopaContinental || 0.30) * multColetivos)) {
             trofeusColetivos.push("Supercopa Continental");
         }
     }
@@ -999,9 +1007,7 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
 
     // Melhor / Artilheiro / Melhor Jovem de cada competição continental conquistada
     for (const titulo of trofeusColetivos) {
-        const ehContinental = ehTituloContinental(titulo) || titulo === "Europa League" ||
-            titulo === "Copa Sul-Americana" || titulo === "Conference League";
-        if (!ehContinental) continue;
+        if (!ehTituloCompeticaoContinental(titulo)) continue;
 
         if (sortearPremio((t.chanceMelhorJogadorCompeticao || 0.15) * multIndividuais)) {
             trofeusIndividuais.push(`Melhor da ${titulo}`);
