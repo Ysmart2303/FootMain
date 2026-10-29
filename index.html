@@ -140,142 +140,152 @@
                         <span class="player-card__stat-label">Salário</span>
                         <strong class="player-card__stat-value" id="perfil-salario">€0</strong>
                     </div>
+                    <div class="player-card__stat">
+                        <span class="player-card__stat-label">Saldo</span>
+                        <strong class="player-card__stat-value" id="perfil-saldo">€0</strong>
+                    </div>
                 </div>
             </div>
 
-            <div id="inputs">
-                <div class="input-field">
-                    <label for="nome">Nome:</label>
-                    <input placeholder="Ex: Marcos" id="nome">
+            <section id="modo-jogo-a-jogo" class="modo-jogo-a-jogo">
+                <div class="modo-jogo-cabecalho">
+                    <span class="beta-tag">MODO PRINCIPAL</span>
+                    <h2>Crie seu jogador e comece a carreira</h2>
+                    <p>Defina o perfil e escolha como avançar: jogue partida por partida com decisões durante os lances, simule o restante da temporada ou acompanhe a carreira completa.</p>
                 </div>
-                <div class="input-field">
-                    <label for="idade">Idade atual</label>
-                    <input type="number" placeholder="Ex: 18" id="idade" min="0" value="18">
+                <div id="inputs">
+                    <div class="input-field">
+                        <label for="nome">Nome:</label>
+                        <input placeholder="Ex: Marcos" id="nome">
+                    </div>
+                    <div class="input-field">
+                        <label for="idade">Idade atual</label>
+                        <input type="number" placeholder="Ex: 18" id="idade" min="16" value="18">
+                    </div>
+                    <div class="input-field">
+                        <label for="idade-limite">Idade limite</label>
+                        <input type="number" id="idade-limite" min="1" value="40">
+                    </div>
+                    <div class="input-field input-field--full">
+                        <label for="filtro-regiao-nacionalidade">Filtrar nacionalidade por região</label>
+                        <select id="filtro-regiao-nacionalidade">
+                            <option value="">Todas as regiões</option>
+                        </select>
+                    </div>
+                    <div class="input-field input-field--full">
+                        <label for="nacionalidade">Nacionalidade</label>
+                        <select id="nacionalidade">
+                            <option value="">Selecione uma seleção</option>
+                        </select>
+                    </div>
+                    <div class="input-field input-field--full">
+                        <label for="clube-alvo">Clube-alvo</label>
+                        <button id="clube-alvo" class="clube-alvo-btn" type="button">Escolher clube-alvo</button>
+                    </div>
                 </div>
-                <div class="input-field">
-                    <label for="idade-limite">Idade limite</label>
-                    <input type="number" id="idade-limite" min="1" value="40">
+                <div id="posi">
+                    <h3>Escolha sua posição</h3>
+                    <p class="campo-instrucao">Toque em uma das 11 posições do esquema 4-3-3.</p>
+                    <div class="campo-futebol" role="group" aria-label="Campo de futebol, formação 4-3-3">
+                        <div class="linha-campo linha-atacantes">
+                            <label class="jogador-campo jogador-pe" title="Ponta esquerda"><input type="radio" name="posicao" id="PE" value="PE"><span>PE</span></label>
+                            <label class="jogador-campo jogador-ca" title="Centroavante"><input type="radio" name="posicao" id="CA" value="CA"><span>CA</span></label>
+                            <label class="jogador-campo jogador-pd" title="Ponta direita"><input type="radio" name="posicao" id="PD" value="PD"><span>PD</span></label>
+                        </div>
+                        <div class="linha-campo linha-meio">
+                            <label class="jogador-campo" title="Meio-campista esquerdo"><input type="radio" name="posicao" id="ME" value="ME"><span>ME</span></label>
+                            <label class="jogador-campo" title="Meio-campista central"><input type="radio" name="posicao" id="MC" value="MC"><span>MC</span></label>
+                            <label class="jogador-campo" title="Meio-campista direito"><input type="radio" name="posicao" id="MD" value="MD"><span>MD</span></label>
+                        </div>
+                        <div class="linha-campo linha-defesa">
+                            <label class="jogador-campo" title="Lateral esquerdo"><input type="radio" name="posicao" id="LE" value="LE"><span>LE</span></label>
+                            <label class="jogador-campo" title="Zagueiro esquerdo"><input type="radio" name="posicao" id="ZCE" value="ZCE"><span>ZCE</span></label>
+                            <label class="jogador-campo" title="Zagueiro direito"><input type="radio" name="posicao" id="ZCD" value="ZCD"><span>ZCD</span></label>
+                            <label class="jogador-campo" title="Lateral direito"><input type="radio" name="posicao" id="LD" value="LD"><span>LD</span></label>
+                        </div>
+                        <div class="linha-campo linha-goleiro">
+                            <label class="jogador-campo" title="Goleiro"><input type="radio" name="posicao" id="GOL" value="GOL"><span>GOL</span></label>
+                        </div>
+                    </div>
+                    <p id="posicao-selecionada" class="posicao-selecionada" aria-live="polite" aria-atomic="true">Nenhuma posição selecionada</p>
                 </div>
-                <div class="input-field input-field--full">
-                    <label for="filtro-regiao-nacionalidade">Filtrar nacionalidade por região</label>
-                    <select id="filtro-regiao-nacionalidade">
-                        <option value="">Todas as regiões</option>
-                    </select>
+                <div class="jja-botoes">
+                    <button type="button" id="jja-iniciar">Iniciar carreira</button>
+                    <button type="button" id="jja-jogar" disabled>Jogar jogo a jogo</button>
+                    <button type="button" id="jja-simular-restantes" disabled>Simular restante da temporada</button>
+                    <button type="button" id="jja-simular-carreira" disabled>Simular fim de carreira</button>
+                    <button type="button" id="jja-aposentar" class="btn-aposentar" hidden>Aposentar jogador</button>
                 </div>
-                <div class="input-field input-field--full">
-                    <label for="nacionalidade">Nacionalidade</label>
-                    <select id="nacionalidade">
-                        <option value="">Selecione uma seleção</option>
-                    </select>
-                </div>
-                <div class="input-field input-field--full">
-                    <label for="clube-alvo">Clube-alvo</label>
-                    <button id="clube-alvo" class="clube-alvo-btn" type="button">Escolher clube-alvo</button>
-                </div>
-            </div>
+                <div id="jja-status" class="jja-status" role="status" aria-live="polite" hidden></div>
+                <div id="jja-proximo" class="jja-proximo"></div>
+                <div class="jja-painel"><h3>Última partida</h3><div id="jja-ultima">Nenhuma partida disputada.</div></div>
+                <details class="jja-recolhivel jja-classificacao">
+                    <summary>Classificação da liga</summary>
+                    <div id="jja-tabela">Inicie uma temporada para ver a tabela.</div>
+                </details>
+                <details class="jja-recolhivel jja-calendario-painel">
+                    <summary>Calendário completo</summary>
+                    <div id="jja-calendario">As partidas aparecerão aqui.</div>
+                </details>
+                <details class="jja-recolhivel jja-desempenho-painel" open>
+                    <summary>Desempenho na temporada</summary>
+                    <div id="resultados">
+                        <div class="resultados-cabecalho">
+                            <span>Desempenho</span>
+                            <h2>Estatísticas da temporada</h2>
+                        </div>
+                        <div class="resultado-estatistica">
+                            <span>Jogos</span>
+                            <strong id="jogos">0</strong>
+                        </div>
+                        <div class="resultado-estatistica">
+                            <span>Gols</span>
+                            <strong id="gols">0</strong>
+                        </div>
+                        <div class="resultado-estatistica">
+                            <span>Assistências</span>
+                            <strong id="assi">0</strong>
+                        </div>
+                        <div class="resultado-estatistica">
+                            <span>Prêmios</span>
+                            <strong id="prem">0</strong>
+                        </div>
+                        <div class="resultado-estatistica">
+                            <span>MOTM</span>
+                            <strong id="jja-motm">0</strong>
+                        </div>
+                        <div class="resultado-estatistica">
+                            <span>Cartões amarelos</span>
+                            <strong id="jja-amarelos">0</strong>
+                        </div>
+                        <div class="resultado-estatistica">
+                            <span>Cartões vermelhos</span>
+                            <strong id="jja-vermelhos">0</strong>
+                        </div>
+                        <div class="resultado-estatistica">
+                            <span>Hat-tricks</span>
+                            <strong id="jja-hattricks">0</strong>
+                        </div>
+                        <div class="resultado-detalhes">
+                            <div id="titulos-resultados" class="titulos-resultados">
+                                <div>
+                                    <strong id="ano-titulos-resultados">Títulos da temporada</strong>
+                                    <p><b>Coletivos:</b> <span id="titulos-coletivos-resultados">Nenhum</span></p>
+                                    <p><b>Individuais:</b> <span id="titulos-individuais-resultados">Nenhum</span></p>
+                                </div>
+                            </div>
+                            <div id="mercado-resultados" class="mercado-resultados">
+                                <h3>Mercado do jogador</h3>
+                                <div><span>Reputação</span><strong id="resultado-reputacao">-</strong></div>
+                                <div><span>Valor de mercado</span><strong id="resultado-valor">-</strong></div>
+                                <div><span>Salário anual</span><strong id="resultado-salario">-</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+                <p class="jja-aviso">O calendário inclui as competições para as quais o clube se classificou, torneios compatíveis com títulos anteriores e partidas da seleção quando houver convocação. Contratos, salário, reputação e prêmios são atualizados ao fim de cada temporada.</p>
+            </section>
 
-            <div id="posi">
-                <h3>Escolha sua posição</h3>
-                <p class="campo-instrucao">Toque em uma das 11 posições do esquema 4-3-3.</p>
-                <div class="campo-futebol" role="group" aria-label="Campo de futebol, formação 4-3-3">
-                    <div class="linha-campo linha-atacantes">
-                        <label class="jogador-campo jogador-pe" title="Ponta esquerda">
-                            <input type="radio" name="posicao" id="PE" value="PE">
-                            <span>PE</span>
-                        </label>
-                        <label class="jogador-campo jogador-ca" title="Centroavante">
-                            <input type="radio" name="posicao" id="CA" value="CA">
-                            <span>CA</span>
-                        </label>
-                        <label class="jogador-campo jogador-pd" title="Ponta direita">
-                            <input type="radio" name="posicao" id="PD" value="PD">
-                            <span>PD</span>
-                        </label>
-                    </div>
-                    <div class="linha-campo linha-meio">
-                        <label class="jogador-campo" title="Meio-campista esquerdo">
-                            <input type="radio" name="posicao" id="ME" value="ME">
-                            <span>ME</span>
-                        </label>
-                        <label class="jogador-campo" title="Meio-campista central">
-                            <input type="radio" name="posicao" id="MC" value="MC">
-                            <span>MC</span>
-                        </label>
-                        <label class="jogador-campo" title="Meio-campista direito">
-                            <input type="radio" name="posicao" id="MD" value="MD">
-                            <span>MD</span>
-                        </label>
-                    </div>
-                    <div class="linha-campo linha-defesa">
-                        <label class="jogador-campo" title="Lateral esquerdo">
-                            <input type="radio" name="posicao" id="LE" value="LE">
-                            <span>LE</span>
-                        </label>
-                        <label class="jogador-campo" title="Zagueiro esquerdo">
-                            <input type="radio" name="posicao" id="ZCE" value="ZCE">
-                            <span>ZCE</span>
-                        </label>
-                        <label class="jogador-campo" title="Zagueiro direito">
-                            <input type="radio" name="posicao" id="ZCD" value="ZCD">
-                            <span>ZCD</span>
-                        </label>
-                        <label class="jogador-campo" title="Lateral direito">
-                            <input type="radio" name="posicao" id="LD" value="LD">
-                            <span>LD</span>
-                        </label>
-                    </div>
-                    <div class="linha-campo linha-goleiro">
-                        <label class="jogador-campo" title="Goleiro">
-                            <input type="radio" name="posicao" id="GOL" value="GOL">
-                            <span>GOL</span>
-                        </label>
-                    </div>
-                </div>
-                <p id="posicao-selecionada" class="posicao-selecionada" aria-live="polite" aria-atomic="true">Nenhuma posição selecionada</p>
-            </div>
-
-            <div id="resultados">
-                <div class="resultados-cabecalho">
-                    <span>Desempenho</span>
-                    <h2>Estatísticas da temporada</h2>
-                </div>
-                <div class="resultado-estatistica">
-                    <span>Jogos</span>
-                    <strong id="jogos">0</strong>
-                </div>
-                <div class="resultado-estatistica">
-                    <span>Gols</span>
-                    <strong id="gols">0</strong>
-                </div>
-                <div class="resultado-estatistica">
-                    <span>Assistências</span>
-                    <strong id="assi">0</strong>
-                </div>
-                <div class="resultado-estatistica">
-                    <span>Prêmios</span>
-                    <strong id="prem">0</strong>
-                </div>
-                <div id="titulos-resultados" class="titulos-resultados">
-                    <div>
-                        <strong id="ano-titulos-resultados">Títulos da temporada</strong>
-                        <p><b>Coletivos:</b> <span id="titulos-coletivos-resultados">Nenhum</span></p>
-                        <p><b>Individuais:</b> <span id="titulos-individuais-resultados">Nenhum</span></p>
-                    </div>
-                </div>
-                
-                <div id="mercado-resultados" class="mercado-resultados">
-                    <h3>Mercado do jogador</h3>
-                    <div><span>Reputação</span><strong id="resultado-reputacao">-</strong></div>
-                    <div><span>Valor de mercado</span><strong id="resultado-valor">-</strong></div>
-                    <div><span>Salário anual</span><strong id="resultado-salario">-</strong></div>
-                </div>
-            </div>
-            <div class="acoes-simulacao">
-                <button onclick="gerar()" id="gerar">Gerar temporada</button>
-                <button onclick="simularTudo()" id="simularTudo" type="button">Simular carreira</button>
-                <button onclick="aposentarVoluntariamente()" id="aposentar" type="button" class="btn-aposentar" title="Encerrar a carreira antes da idade limite">🏁 Aposentar-se</button>
-            </div>
-            
             <div id="resumo-final" class="resumo-final" hidden>
                 <h3>Carreira encerrada</h3>
                 <p><strong id="resumo-nome">Jogador</strong></p>
@@ -471,6 +481,21 @@
             <span class="versao-app" data-versao-app>v—</span>
         </footer>
       
+    <div id="jja-modal-decisao" class="modal-overlay jja-modal-decisao" hidden>
+        <div class="jja-decisao-caixa" role="dialog" aria-modal="true" aria-labelledby="jja-decisao-titulo" aria-describedby="jja-decisao-contexto" tabindex="-1">
+            <span class="jja-decisao-progresso" id="jja-decisao-progresso"></span>
+            <span class="jja-decisao-icone" aria-hidden="true">⚽</span>
+            <h3 id="jja-decisao-titulo">Decisão da partida</h3>
+            <p id="jja-decisao-contexto"></p>
+            <p class="jja-decisao-aviso">Depois da primeira escolha, não será possível desistir ou voltar.</p>
+            <div id="jja-decisao-opcoes" class="jja-decisao-opcoes"></div>
+            <p id="jja-decisao-feedback" class="jja-decisao-feedback" aria-live="polite"></p>
+            <div class="jja-decisao-acoes">
+                <button type="button" id="jja-decisao-voltar" class="jja-decisao-voltar">Desistir antes da primeira escolha</button>
+                <button type="button" id="jja-decisao-continuar" class="jja-decisao-continuar" hidden>Próximo lance</button>
+            </div>
+        </div>
+    </div>
     <div id="modal-confirmacao" class="modal-overlay" hidden>
         <div class="modal-caixa" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
             <div class="modal-icone">⚠️</div>
@@ -493,5 +518,6 @@
 <script src="js/config.js"></script>
 <script src="js/select-modal.js" defer></script>
 <script src="js/script.js" defer></script>
+<script src="js/jogo-a-jogo.js" defer></script>
 </body>
 </html>
