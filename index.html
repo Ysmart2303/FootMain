@@ -270,12 +270,60 @@
                     <div><span>Salário anual</span><strong id="resultado-salario">-</strong></div>
                 </div>
             </div>
-            <div class="acoes-simulacao">
-                <button onclick="gerar()" id="gerar">Gerar temporada</button>
-                <button onclick="simularTudo()" id="simularTudo" type="button">Simular carreira</button>
-                <button onclick="aposentarVoluntariamente()" id="aposentar" type="button" class="btn-aposentar" title="Encerrar a carreira antes da idade limite">🏁 Aposentar-se</button>
-            </div>
-            
+            <section id="modo-jogo-a-jogo" class="modo-jogo-a-jogo">
+                <div class="modo-jogo-cabecalho">
+                    <span class="beta-tag">MODO PRINCIPAL</span>
+                    <h2>Carreira jogo a jogo</h2>
+                    <p>Este é o modo principal do FootMain. As partidas são disputadas uma a uma; ao concluir a temporada, suas estatísticas entram no Histórico oficial e a próxima temporada continua a mesma carreira.</p>
+                </div>
+                <div class="jja-config">
+                    <div class="jja-campo">
+                        <label for="jja-clube">Clube preferido (não garantido)</label>
+                        <select id="jja-clube"><option value="">Selecione um clube</option></select>
+                    </div>
+                    <div class="jja-campo">
+                        <label for="jja-overall">Overall inicial</label>
+                        <input id="jja-overall" type="number" min="40" max="99" value="70">
+                    </div>
+                    <div class="jja-campo">
+                        <label for="jja-ano">Ano da temporada</label>
+                        <input id="jja-ano" type="number" min="2020" max="2100" value="2026">
+                    </div>
+                </div>
+                <div class="jja-botoes">
+                    <button type="button" id="jja-iniciar">Iniciar temporada / próxima temporada</button>
+                    <button type="button" id="jja-jogar" disabled>Jogar próxima partida</button>
+                    <button type="button" id="jja-simular-restantes" disabled>Simular jogos restantes</button>
+                </div>
+                <div id="jja-status" class="jja-status" role="status" aria-live="polite">Configure o clube e inicie uma temporada de teste.</div>
+                <div id="jja-proximo" class="jja-proximo"></div>
+                <div id="jja-resumo" class="jja-resumo"></div>
+                <div class="jja-painel"><h3>Última partida</h3><div id="jja-ultima">Nenhuma partida disputada.</div></div>
+                <details class="jja-recolhivel jja-classificacao">
+                    <summary>Classificação da liga</summary>
+                    <div id="jja-tabela">Inicie uma temporada para ver a tabela.</div>
+                </details>
+                <details class="jja-recolhivel jja-calendario-painel">
+                    <summary>Calendário completo</summary>
+                    <div id="jja-calendario">As partidas aparecerão aqui.</div>
+                </details>
+                <details class="jja-recolhivel jja-trofeus-painel" open>
+                    <summary>Títulos e prêmios da temporada</summary>
+                    <div id="jja-trofeus">Os títulos e prêmios aparecerão conforme a temporada avançar.</div>
+                </details>
+                <p class="jja-aviso">A liga nacional é disputada jogo a jogo. As propostas de contrato aparecem no início da carreira e nas janelas de transferência/renovação. Copas e partidas pela seleção ainda não fazem parte do calendário jogo a jogo.</p>
+            </section>
+
+            <details class="simulacao-classica">
+                <summary>Simulação clássica (alternativa)</summary>
+                <p>Use estas opções se quiser continuar com a simulação instantânea antiga. Ela permanece disponível, mas não avança o calendário jogo a jogo.</p>
+                <div class="acoes-simulacao">
+                    <button onclick="gerar()" id="gerar">Gerar temporada (clássico)</button>
+                    <button onclick="simularTudo()" id="simularTudo" type="button">Simular carreira completa (clássico)</button>
+                    <button onclick="aposentarVoluntariamente()" id="aposentar" type="button" class="btn-aposentar" title="Encerrar a carreira antes da idade limite">Aposentar-se</button>
+                </div>
+            </details>
+
             <div id="resumo-final" class="resumo-final" hidden>
                 <h3>Carreira encerrada</h3>
                 <p><strong id="resumo-nome">Jogador</strong></p>
@@ -493,5 +541,6 @@
 <script src="js/config.js"></script>
 <script src="js/select-modal.js" defer></script>
 <script src="js/script.js" defer></script>
+<script src="js/jogo-a-jogo.js" defer></script>
 </body>
 </html>
