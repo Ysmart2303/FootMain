@@ -241,7 +241,8 @@ header p {
 }
 
 main {
-    width: min(100%, 900px);
+    width: 100%;
+    max-width: 1600px;
     margin: 28px auto 0;
     display: flex;
     flex-direction: column;
@@ -3807,7 +3808,7 @@ html[data-theme="light"] .opcao-clube-salario .salario-reducao { color: #991b1b;
 /* ---------- Market ---------- */
 .player-card__market {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
 }
 
@@ -4228,9 +4229,18 @@ html[data-theme="light"] .trofeu-popup::after {
 }
 
 .resultados-cabecalho,
-.titulos-resultados,
-.mercado-resultados {
+.resultado-detalhes {
     grid-column: 1 / -1;
+}
+
+.resultado-detalhes {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid rgba(52, 211, 153, 0.28);
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.3);
 }
 
 .resultados-cabecalho {
@@ -4283,21 +4293,30 @@ html[data-theme="light"] .trofeu-popup::after {
 }
 
 .titulos-resultados {
-    padding-top: 16px;
-    border-top: 1px solid rgba(148, 163, 184, 0.2);
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid rgba(52, 211, 153, 0.2);
+    border-radius: 10px;
+    background: rgba(16, 185, 129, 0.08);
     color: #dbe5ef;
     overflow-wrap: anywhere;
 }
 
 .titulos-resultados strong {
+    display: block;
+    min-width: 0;
     margin-bottom: 10px;
     color: #fde68a;
     font-size: 0.95rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
 }
 
 .titulos-resultados p {
+    min-width: 0;
     margin: 7px 0 0;
     line-height: 1.5;
+    overflow-wrap: anywhere;
 }
 
 .titulos-resultados b {
@@ -4305,22 +4324,28 @@ html[data-theme="light"] .trofeu-popup::after {
 }
 
 .mercado-resultados {
+    min-width: 0;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
     margin: 0;
-    padding-top: 16px;
-    border-top: 1px solid rgba(148, 163, 184, 0.2);
+    padding: 12px;
+    border: 1px solid rgba(52, 211, 153, 0.2);
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.22);
 }
 
 .mercado-resultados h3 {
+    min-width: 0;
     grid-column: 1 / -1;
     color: #dcfce7;
     font-size: 0.85rem;
     letter-spacing: 0.04em;
     text-transform: uppercase;
+    overflow-wrap: anywhere;
 }
 
 .mercado-resultados > div {
+    min-width: 0;
     padding: 11px 12px;
     background: rgba(16, 185, 129, 0.09);
     border-color: rgba(52, 211, 153, 0.2);
@@ -4381,7 +4406,8 @@ html[data-theme="light"] .resultado-estatistica strong {
 
 html[data-theme="light"] .titulos-resultados {
     color: #334155;
-    border-top-color: #cbd5e1;
+    border-color: #b7cfbb;
+    background: #f7faf6;
 }
 
 html[data-theme="light"] .titulos-resultados strong {
@@ -4393,7 +4419,17 @@ html[data-theme="light"] .titulos-resultados b {
 }
 
 html[data-theme="light"] .mercado-resultados {
-    border-top-color: #cbd5e1;
+    border-color: #b7cfbb;
+    background: #eaf2e8;
+}
+
+html[data-theme="light"] .resultado-detalhes {
+    border-color: #b7cfbb;
+    background: #eaf2e8;
+}
+
+html[data-theme="light"] .mercado-resultados > div {
+    border-color: #b7cfbb;
 }
 /* Campos básicos do formulário: mantém label e controle agrupados no grid. */
 #inputs .input-field {
@@ -4441,4 +4477,484 @@ html[data-theme="light"] .mercado-resultados {
 .opcao-select-modal:focus-visible {
     outline: 2px solid #4ade80;
     outline-offset: 2px;
+}
+
+/* Carreira principal jogo a jogo */
+.modo-jogo-a-jogo {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr);
+    gap: 0 20px;
+    align-items: start;
+    width: 100%;
+    min-width: 0;
+    margin: 28px 0;
+    padding: clamp(16px, 3vw, 28px);
+    border: 1px solid rgba(34, 197, 94, .38);
+    border-radius: 20px;
+    background: linear-gradient(145deg, rgba(15, 23, 42, .98), rgba(6, 30, 24, .96));
+    box-shadow: 0 16px 42px rgba(0, 0, 0, .2);
+    color: #e2e8f0;
+}
+.modo-jogo-cabecalho,
+.modo-jogo-a-jogo > :nth-child(n + 4) {
+    grid-column: 1 / -1;
+}
+.modo-jogo-a-jogo #inputs,
+.modo-jogo-a-jogo #posi {
+    grid-area: auto;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    margin: 0;
+}
+@media (min-width: 601px) {
+    #inicio > .player-card,
+    #inicio > #inputs,
+    #inicio > #posi {
+        width: 100%;
+        max-width: none;
+    }
+}
+.modo-jogo-cabecalho { margin-bottom: 20px; }
+.modo-jogo-cabecalho h2 { margin: 10px 0 8px; font-size: clamp(1.45rem, 4vw, 2rem); }
+.modo-jogo-cabecalho p, .jja-aviso { color: #aab8ca; line-height: 1.55; }
+.beta-tag { display: inline-block; padding: 5px 9px; border: 1px solid #22c55e; border-radius: 999px; color: #86efac; font-size: .72rem; font-weight: 800; letter-spacing: .08em; }
+.jja-config { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: stretch; margin-bottom: 14px; }
+.jja-campo { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.jja-config label { color: #cbd5e1; font-size: .88rem; font-weight: 700; }
+.jja-config select, .jja-config input { box-sizing: border-box; width: 100%; min-width: 0; min-height: 44px; padding: 11px; border: 1px solid #475569; border-radius: 9px; background: #0b1220; color: #f8fafc; font: inherit; }
+.jja-botoes { display: flex; flex-wrap: wrap; gap: 9px; margin: 12px 0; }
+.jja-botoes button { flex: 1 1 190px; min-height: 44px; padding: 11px 14px; border: 1px solid #22c55e; border-radius: 10px; background: #15803d; color: white; font-weight: 800; cursor: pointer; }
+.jja-botoes button:hover:not(:disabled) { background: #16a34a; }
+.jja-botoes button:disabled { opacity: .42; cursor: not-allowed; }
+.jja-status { padding: 11px 13px; border-radius: 9px; background: rgba(34, 197, 94, .1); color: #bbf7d0; line-height: 1.45; }
+.jja-status.erro { background: rgba(239, 68, 68, .12); color: #fecaca; }
+.jja-proximo { margin: 16px 0; padding: 18px; border: 1px solid #334155; border-radius: 14px; background: radial-gradient(ellipse at top, rgba(34, 197, 94, .13), transparent 65%), #0b1220; }
+.jja-proximo-topo { display: flex; justify-content: space-between; gap: 10px; color: #86efac; font-size: .76rem; font-weight: 800; text-transform: uppercase; }
+.jja-proximo-topo > * { min-width: 0; overflow-wrap: anywhere; }
+.jja-confronto { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: center; margin: 20px 0 12px; text-align: center; }
+.jja-confronto strong { min-width: 0; font-size: clamp(1rem, 3vw, 1.35rem); overflow-wrap: anywhere; }
+.jja-confronto span { color: #64748b; font-weight: 900; }
+.jja-proximo p { color: #94a3b8; text-align: center; font-size: .85rem; }
+.jja-colunas { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 13px; }
+.jja-painel { min-width: 0; margin-top: 13px; padding: 15px; border: 1px solid #273449; border-radius: 12px; background: rgba(2, 8, 23, .48); }
+.jja-painel h3 { margin-bottom: 12px; font-size: 1rem; }
+.jja-placar { margin: 12px 0; font-size: 1.2rem; font-weight: 900; }
+.jja-painel p { color: #b7c4d5; line-height: 1.5; }
+.jja-tabela-wrap { max-height: 420px; overflow: auto; }
+.jja-classificacao .jja-tabela-wrap { max-height: 240px; }
+.jja-tabela { width: 100%; border-collapse: collapse; font-size: .83rem; }
+.jja-tabela th, .jja-tabela td { padding: 8px 6px; border-bottom: 1px solid #263449; text-align: right; white-space: nowrap; }
+.jja-classificacao .jja-tabela th,
+.jja-classificacao .jja-tabela td { padding: 5px 6px; }
+.jja-tabela th:nth-child(2), .jja-tabela td:nth-child(2) { text-align: left; }
+.jja-tabela th { position: sticky; top: 0; background: #111c2e; color: #9fb0c5; }
+.jja-tabela tr.meu-clube { background: rgba(34, 197, 94, .14); color: #bbf7d0; }
+.jja-competicoes { display: grid; gap: 10px; margin-top: 16px; }
+.jja-competicoes > h3 { font-size: 1rem; }
+.jja-competicao { padding: 12px; border: 1px solid #273449; border-radius: 10px; background: rgba(15, 23, 42, .55); }
+.jja-competicao__topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+.jja-competicao__topo h4 { font-size: .95rem; }
+.jja-competicao__topo strong { color: #86efac; font-size: .8rem; text-align: right; }
+.jja-competicao__progresso { height: 7px; margin-bottom: 10px; overflow: hidden; border-radius: 99px; background: #263449; }
+.jja-competicao__progresso span { display: block; height: 100%; border-radius: inherit; background: #22c55e; transition: width .2s ease; }
+.jja-fases { display: grid; grid-template-columns: repeat(auto-fit, minmax(125px, 1fr)); gap: 7px; list-style: none; }
+.jja-fase { display: grid; gap: 5px; min-width: 0; padding: 9px; border: 1px solid #334155; border-radius: 8px; background: rgba(2, 8, 23, .42); }
+.jja-fase > span { font-size: .78rem; font-weight: 800; }
+.jja-fase small { color: #94a3b8; font-size: .72rem; }
+.jja-fase > strong { font-size: .82rem; }
+.jja-fase--concluida { border-color: rgba(34, 197, 94, .45); }
+.jja-fase--concluida small { color: #86efac; }
+.jja-fase--eliminada { border-color: rgba(248, 113, 113, .4); }
+.jja-fase--eliminada small { color: #fca5a5; }
+.jja-fase--atual { border-color: #eab308; }
+.jja-fase--atual small { color: #fde68a; }
+.jja-lista-jogos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.jja-jogo { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 5px 8px; align-items: start; min-width: 0; padding: 9px; border: 1px solid #263449; border-radius: 8px; font-size: .82rem; }
+.jja-jogo--feito { border-color: rgba(34, 197, 94, .28); background: rgba(34, 197, 94, .06); }
+.jja-jogo-num { color: #86efac; font-weight: 900; }
+.jja-jogo-num { grid-row: 1 / span 2; padding-top: 1px; white-space: nowrap; }
+.jja-jogo-adversario { min-width: 0; overflow-wrap: anywhere; }
+.jja-jogo-resultado { grid-column: 2; min-width: 0; color: #cbd5e1; font-weight: 800; overflow-wrap: anywhere; }
+.jja-aviso { margin-top: 14px; font-size: .82rem; }
+@media (min-width: 1100px) {
+    .modo-jogo-a-jogo { max-width: 1500px; margin-inline: auto; }
+    .jja-colunas { grid-template-columns: minmax(300px, .85fr) minmax(0, 1.15fr); gap: 18px; }
+    .jja-lista-jogos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+    .modo-jogo-a-jogo { grid-template-columns: minmax(0, 1fr); gap: 18px 0; }
+    .jja-config { grid-template-columns: 1fr; gap: 10px; }
+    .jja-config label { margin-top: 0; }
+    .jja-colunas { grid-template-columns: 1fr; }
+    .jja-lista-jogos { grid-template-columns: 1fr; }
+    .jja-confronto { gap: 7px; }
+}
+@media (min-width: 761px) and (max-width: 899px) {
+    .modo-jogo-a-jogo { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+@media (min-width: 761px) and (max-width: 1050px) {
+    .jja-colunas { grid-template-columns: minmax(0, 1fr); }
+    .jja-lista-jogos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* A simulação clássica permanece acessível como alternativa ao modo principal. */
+.simulacao-classica {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    border: 1px solid var(--borda, #39424e);
+    border-radius: 12px;
+    background: var(--fundo-card, rgba(127, 127, 127, 0.06));
+}
+.simulacao-classica summary { cursor: pointer; font-weight: 700; }
+.simulacao-classica p { line-height: 1.5; }
+
+
+/* FootMain 1.19.14 — painel jogo a jogo compacto e prêmios por temporada */
+.jja-recolhivel { min-width: 0; margin-top: 12px; border: 1px solid #273449; border-radius: 12px; background: rgba(2, 8, 23, .48); overflow: hidden; }
+.jja-recolhivel > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 13px 15px; cursor: pointer; list-style: none; color: #e2e8f0; font-weight: 800; }
+.jja-recolhivel > summary::-webkit-details-marker { display: none; }
+.jja-recolhivel > summary::after { content: "+"; flex: 0 0 auto; color: #86efac; font-size: 1.2rem; }
+.jja-recolhivel[open] > summary::after { content: "−"; }
+.jja-recolhivel > summary:hover { background: rgba(148, 163, 184, .07); }
+.jja-recolhivel > #jja-tabela, .jja-recolhivel > #jja-calendario, .jja-recolhivel > #resultados { padding: 0 12px 13px; }
+.jja-competicao { border-color: rgba(74, 145, 105, .38); }
+html[data-theme="light"] .jja-competicao { background: rgba(241, 245, 249, .7); border-color: rgba(67, 126, 83, .3); }
+html[data-theme="light"] .jja-competicao__topo strong { color: #287044; }
+html[data-theme="light"] .jja-competicao__progresso { background: #d7e2db; }
+html[data-theme="light"] .jja-fase { background: rgba(255, 255, 255, .72); border-color: #cbd5e1; }
+html[data-theme="light"] .jja-fase small { color: #64748b; }
+html[data-theme="light"] .jja-fase--concluida small { color: #287044; }
+html[data-theme="light"] .jja-fase--eliminada small { color: #b91c1c; }
+html[data-theme="light"] .jja-fase--atual small { color: #854d0e; }
+.jja-jogo-resultado { text-align: right; white-space: normal; }
+@media (max-width: 560px) {
+  .jja-jogo { grid-template-columns: 48px minmax(0, 1fr); }
+  .jja-jogo-resultado { text-align: left; font-size: .75rem; }
+  .jja-recolhivel > summary { padding: 12px; }
+}
+.jja-desempenho-painel > #resultados {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0 12px 13px;
+    gap: 8px;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+.jja-desempenho-painel .resultados-cabecalho h2 { color: #e2e8f0; }
+.jja-desempenho-painel .resultados-cabecalho > span { color: #94a3b8; }
+.jja-desempenho-painel .resultado-estatistica {
+    min-height: 76px;
+    padding: 11px;
+    background: rgba(15, 23, 42, .75);
+    border: 1px solid #273449;
+    border-bottom: 1px solid #273449;
+    border-radius: 9px;
+}
+.jja-desempenho-painel .resultado-estatistica span { color: #94a3b8; }
+.jja-desempenho-painel .resultado-estatistica strong {
+    color: #e2e8f0;
+    font-size: 1.35rem;
+}
+.jja-desempenho-painel .titulos-resultados,
+.jja-desempenho-painel .mercado-resultados {
+    border-top-color: #273449;
+}
+.jja-desempenho-painel .resultado-detalhes {
+    border-color: rgba(74, 145, 105, .32);
+}
+
+/* Detalhes discretos em verde e dourado, preservando a paleta base dos painéis. */
+#inicio,
+#historico,
+#ranking,
+#conquistas,
+#configuracoes,
+.modo-jogo-a-jogo,
+.resumo-final,
+.jja-recolhivel,
+.jja-painel,
+.jja-proximo,
+.atributos-painel,
+#lista-temporadas > li,
+#lista-ranking > li,
+.conquista-card,
+.recorde-card {
+    border-color: rgba(74, 145, 105, .38);
+}
+
+.player-card,
+#inputs,
+#posi,
+.jja-desempenho-painel .resultado-estatistica,
+.jja-desempenho-painel .titulos-resultados,
+.jja-desempenho-painel .mercado-resultados,
+.resumo-trofeus div,
+.resumo-selecao-detalhes,
+.resumo-mercado,
+.mercado-resultados > div {
+    border-color: rgba(74, 145, 105, .32);
+}
+
+.jja-desempenho-painel .resultado-estatistica,
+.jja-desempenho-painel .titulos-resultados,
+.jja-desempenho-painel .mercado-resultados,
+.resumo-trofeus div,
+.resumo-selecao-detalhes,
+.resumo-mercado,
+.mercado-resultados > div,
+.jja-jogo--feito {
+    background-image: linear-gradient(120deg, rgba(39, 110, 75, .12), transparent 58%);
+}
+
+.resumo-final,
+.jja-proximo {
+    box-shadow: inset 3px 0 0 rgba(74, 145, 105, .5), 0 8px 22px rgba(2, 8, 23, .12);
+}
+
+.jja-recolhivel > summary::after,
+.beta-tag,
+.modo-jogo-cabecalho .beta-tag {
+    color: #9ed0a5;
+}
+
+.resumo-final h3,
+.resumo-grid strong,
+.jja-desempenho-painel .resultado-estatistica strong {
+    color: #e8d59a;
+}
+
+.jja-status {
+    border-left: 3px solid rgba(74, 145, 105, .55);
+}
+
+html[data-theme="light"] #inicio,
+html[data-theme="light"] #historico,
+html[data-theme="light"] #ranking,
+html[data-theme="light"] #conquistas,
+html[data-theme="light"] #configuracoes,
+html[data-theme="light"] .modo-jogo-a-jogo,
+html[data-theme="light"] .resumo-final,
+html[data-theme="light"] .jja-recolhivel,
+html[data-theme="light"] .jja-painel,
+html[data-theme="light"] .jja-proximo,
+html[data-theme="light"] .atributos-painel,
+html[data-theme="light"] #lista-temporadas > li,
+html[data-theme="light"] #lista-ranking > li,
+html[data-theme="light"] .conquista-card,
+html[data-theme="light"] .recorde-card,
+html[data-theme="light"] .player-card,
+html[data-theme="light"] #inputs,
+html[data-theme="light"] #posi,
+html[data-theme="light"] .jja-desempenho-painel .resultado-estatistica,
+html[data-theme="light"] .jja-desempenho-painel .titulos-resultados,
+html[data-theme="light"] .jja-desempenho-painel .mercado-resultados,
+html[data-theme="light"] .resumo-trofeus div,
+html[data-theme="light"] .resumo-selecao-detalhes,
+html[data-theme="light"] .resumo-mercado,
+html[data-theme="light"] .mercado-resultados > div {
+    border-color: rgba(67, 126, 83, .3);
+}
+
+html[data-theme="light"] .jja-desempenho-painel .resultado-estatistica,
+html[data-theme="light"] .jja-desempenho-painel .titulos-resultados,
+html[data-theme="light"] .jja-desempenho-painel .mercado-resultados,
+html[data-theme="light"] .resumo-trofeus div,
+html[data-theme="light"] .resumo-selecao-detalhes,
+html[data-theme="light"] .resumo-mercado,
+html[data-theme="light"] .mercado-resultados > div,
+html[data-theme="light"] .jja-jogo--feito {
+    background-image: linear-gradient(120deg, rgba(74, 145, 91, .07), transparent 58%);
+}
+
+html[data-theme="light"] .resumo-final,
+html[data-theme="light"] .jja-proximo {
+    box-shadow: inset 3px 0 0 rgba(67, 126, 83, .38), 0 8px 22px rgba(44, 75, 48, .08);
+}
+
+html[data-theme="light"] .jja-recolhivel > summary::after,
+html[data-theme="light"] .beta-tag {
+    color: #4b8155;
+}
+
+html[data-theme="light"] .resumo-final h3,
+html[data-theme="light"] .resumo-grid strong,
+html[data-theme="light"] .jja-desempenho-painel .resultado-estatistica strong {
+    color: #826a2c;
+}
+
+html[data-theme="light"] .jja-status {
+    border-left-color: rgba(67, 126, 83, .45);
+}
+
+html[data-theme="light"] .modo-jogo-a-jogo {
+    background: linear-gradient(145deg, #f3f7f1, #e6efe5);
+    color: #284438;
+}
+
+html[data-theme="light"] .jja-recolhivel,
+html[data-theme="light"] .jja-painel,
+html[data-theme="light"] .jja-competicao {
+    background: #f7faf6;
+}
+
+html[data-theme="light"] .jja-recolhivel > summary {
+    color: #315642;
+}
+
+html[data-theme="light"] .jja-painel p,
+html[data-theme="light"] .jja-proximo p,
+html[data-theme="light"] .jja-jogo-resultado,
+html[data-theme="light"] .jja-fase small {
+    color: #536b5b;
+}
+
+html[data-theme="light"] .jja-proximo {
+    border-color: #b7cfbb;
+    background: radial-gradient(ellipse at top, rgba(74, 145, 91, .12), transparent 65%), #edf4ec;
+}
+
+html[data-theme="light"] .jja-proximo-topo,
+html[data-theme="light"] .jja-jogo-num {
+    color: #39704b;
+}
+
+html[data-theme="light"] .jja-tabela th {
+    background: #e4eee3;
+    color: #42604a;
+}
+
+html[data-theme="light"] .jja-tabela tr.meu-clube {
+    background: #e1f0e2;
+    color: #285d39;
+}
+
+html[data-theme="light"] .jja-jogo {
+    border-color: #d0dfd0;
+    background: #f5f8f3;
+}
+
+html[data-theme="light"] .jja-jogo--feito {
+    border-color: #b4d2b7;
+    background: #eaf3e9;
+}
+
+html[data-theme="light"] .jja-desempenho-painel .resultado-estatistica {
+    background: #f7faf6;
+}
+
+html[data-theme="light"] .jja-desempenho-painel .titulos-resultados,
+html[data-theme="light"] .jja-desempenho-painel .mercado-resultados {
+    background: #f2f7f1;
+    border-radius: 10px;
+}
+
+html[data-theme="light"] .jja-desempenho-painel .resultado-detalhes {
+    border-color: #b7cfbb;
+    background: #eaf2e8;
+}
+
+html[data-theme="light"] .jja-competicao__progresso {
+    background: #dce8dc;
+}
+
+html[data-theme="light"] .jja-fase {
+    background: #f7faf6;
+}
+
+@media (max-width: 760px) {
+    .jja-desempenho-painel > #resultados {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .jja-desempenho-painel .mercado-resultados {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.jja-modal-decisao { z-index: 1100; }
+.jja-decisao-caixa {
+    box-sizing: border-box;
+    width: min(100%, 500px);
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    padding: 26px;
+    border: 1px solid rgba(74, 145, 105, .52);
+    border-radius: 18px;
+    background: linear-gradient(145deg, #0f172a, #123426);
+    color: #e2e8f0;
+    box-shadow: 0 24px 60px rgba(2, 8, 23, .6);
+    text-align: center;
+    animation: modalSlideIn .22s cubic-bezier(.2, .9, .3, 1.1);
+}
+.jja-decisao-progresso {
+    display: block;
+    margin-bottom: 12px;
+    color: #9ed0a5;
+    font-size: .78rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+.jja-decisao-icone {
+    display: grid;
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 12px;
+    place-items: center;
+    border: 1px solid rgba(74, 145, 105, .45);
+    border-radius: 50%;
+    background: rgba(39, 110, 75, .2);
+    font-size: 1.6rem;
+}
+.jja-decisao-caixa h3 { margin: 0 0 8px; color: #e8d59a; font-size: 1.3rem; }
+.jja-decisao-caixa > p { margin: 0 0 18px; color: #cbd5e1; line-height: 1.5; }
+.jja-decisao-caixa > .jja-decisao-aviso { margin: -8px 0 16px; color: #9ed0a5; font-size: .8rem; }
+.jja-decisao-opcoes { display: grid; gap: 9px; }
+.jja-decisao-opcao,
+.jja-decisao-continuar,
+.jja-decisao-voltar {
+    min-height: 44px;
+    padding: 11px 14px;
+    border: 1px solid rgba(74, 145, 105, .55);
+    border-radius: 10px;
+    font: inherit;
+    font-weight: 750;
+    cursor: pointer;
+    transition: background .15s ease, transform .15s ease;
+}
+.jja-decisao-opcao,
+.jja-decisao-continuar { background: #17643b; color: #f0fdf4; }
+.jja-decisao-opcao:hover,
+.jja-decisao-continuar:hover { background: #21834d; transform: translateY(-1px); }
+.jja-decisao-feedback { min-height: 1.5em; margin: 14px 0 0 !important; color: #b7e4c2 !important; }
+.jja-decisao-acoes { display: flex; gap: 10px; margin-top: 16px; }
+.jja-decisao-acoes button { flex: 1; }
+.jja-decisao-voltar { border-color: rgba(148, 163, 184, .38); background: rgba(148, 163, 184, .12); color: #dbe4ef; }
+.jja-decisao-voltar:hover { background: rgba(148, 163, 184, .22); }
+html[data-theme="light"] .jja-decisao-caixa {
+    border-color: rgba(67, 126, 83, .4);
+    background: linear-gradient(145deg, #f8fff8, #eaf5e9);
+    color: #263b2b;
+    box-shadow: 0 24px 60px rgba(44, 75, 48, .2);
+}
+html[data-theme="light"] .jja-decisao-progresso { color: #4b8155; }
+html[data-theme="light"] .jja-decisao-icone { border-color: rgba(67, 126, 83, .35); background: rgba(74, 145, 91, .1); }
+html[data-theme="light"] .jja-decisao-caixa h3 { color: #526e39; }
+html[data-theme="light"] .jja-decisao-caixa > p { color: #526253; }
+html[data-theme="light"] .jja-decisao-caixa > .jja-decisao-aviso { color: #4b8155; }
+html[data-theme="light"] .jja-decisao-feedback { color: #356b45 !important; }
+html[data-theme="light"] .jja-decisao-opcao,
+html[data-theme="light"] .jja-decisao-continuar { border-color: #4b8155; background: #4b8155; color: #fff; }
+html[data-theme="light"] .jja-decisao-opcao:hover,
+html[data-theme="light"] .jja-decisao-continuar:hover { background: #3d7048; }
+html[data-theme="light"] .jja-decisao-voltar { border-color: rgba(67, 126, 83, .3); background: rgba(67, 126, 83, .08); color: #405645; }
+html[data-theme="light"] .jja-decisao-voltar:hover { background: rgba(67, 126, 83, .16); }
+@media (max-width: 520px) {
+    .jja-decisao-caixa { padding: 20px 16px; }
+    .jja-decisao-acoes { flex-direction: column-reverse; }
 }
