@@ -398,6 +398,9 @@ function validarTemporada(temporada) {
     const assistenciasSelecao = Math.max(0, Math.floor(Number(temporada.assistenciasSelecao) || 0));
     const trofeusColetivos = Array.isArray(temporada.trofeusColetivos) ? temporada.trofeusColetivos.filter((t) => typeof t === "string") : [];
     const trofeusIndividuais = Array.isArray(temporada.trofeusIndividuais) ? temporada.trofeusIndividuais.filter((t) => typeof t === "string") : [];
+    const trofeusClube = Array.isArray(temporada.trofeusClube) ? temporada.trofeusClube.filter((t) => typeof t === "string") : trofeusColetivos.filter((t) => t !== "Copa do Mundo" && t !== "Copa América" && t !== "Eurocopa" && t !== "Copa Ouro" && t !== "Copa das Nações Africanas" && t !== "Copa da Ásia" && t !== "Copa das Nações da OFC" && t !== "Olimpíadas" && t !== "Mundial Sub-20" && t !== "Mundial Sub-17");
+    const trofeusSelecao = Array.isArray(temporada.trofeusSelecao) ? temporada.trofeusSelecao.filter((t) => typeof t === "string") : [];
+    const competicoesQualificadas = Array.isArray(temporada.competicoesQualificadas) ? temporada.competicoesQualificadas.filter((t) => typeof t === "string") : [];
     const eventos = normalizarEventosTemporada(temporada.eventos);
 
     const atributos = normalizarAtributos(temporada.atributos, posicaoNormalizada, idade);
@@ -440,7 +443,10 @@ function validarTemporada(temporada) {
         atributos,
         overall,
         trofeusColetivos,
+        trofeusClube,
+        trofeusSelecao,
         trofeusIndividuais,
+        competicoesQualificadas,
         eventos,
         lesaoGrave: !!temporada.lesaoGrave,
         lesaoCarreira: !!temporada.lesaoCarreira,
@@ -451,6 +457,8 @@ function validarTemporada(temporada) {
         valorMercado,
         salario,
         anosContrato,
+        premioFinanceiro: Math.max(0, Math.floor(Number(temporada.premioFinanceiro) || 0)),
+        rendaTemporada: Math.max(0, Math.floor(Number(temporada.rendaTemporada) || salario)),
     };
 }
 
@@ -527,7 +535,10 @@ function obterCarreiraAtual() {
         nacionalidade: "",
         clubeAlvo: "",
         anosContratoRestantes: 0,
-        rompimentosContratoUsados: 0
+        rompimentosContratoUsados: 0,
+        saldo: 0,
+        clubeQualificado: "",
+        competicoesQualificadas: []
     };
     carreiraPadrao.potencial = calcularPotencialDaCarreira(carreiraPadrao);
 
@@ -562,6 +573,11 @@ function obterCarreiraAtual() {
             salarioAtual: Number.isFinite(Number(carreira.salarioAtual))
                 ? Math.max(0, Math.floor(Number(carreira.salarioAtual)))
                 : 0,
+            saldo: Number.isFinite(Number(carreira.saldo)) ? Math.max(0, Math.floor(Number(carreira.saldo))) : 0,
+            clubeQualificado: obterClube(carreira.clubeQualificado)?.id || "",
+            competicoesQualificadas: Array.isArray(carreira.competicoesQualificadas)
+                ? carreira.competicoesQualificadas.filter((nome) => typeof nome === "string")
+                : [],
         };
     } catch (erro) {
         console.error("Erro ao ler a carreira atual:", erro);
@@ -593,6 +609,11 @@ function salvarCarreiraAtual(carreira) {
         salarioAtual: Number.isFinite(Number(carreiraAtual.salarioAtual))
             ? Math.max(0, Math.floor(Number(carreiraAtual.salarioAtual)))
             : 0,
+        saldo: Number.isFinite(Number(carreiraAtual.saldo)) ? Math.max(0, Math.floor(Number(carreiraAtual.saldo))) : 0,
+        clubeQualificado: obterClube(carreiraAtual.clubeQualificado)?.id || "",
+        competicoesQualificadas: Array.isArray(carreiraAtual.competicoesQualificadas)
+            ? carreiraAtual.competicoesQualificadas.filter((nome) => typeof nome === "string")
+            : [],
     }));
 }
 
@@ -811,13 +832,15 @@ function sortearPremio(chance) {
 
 function gerarTrofeusSelecao(nacionalidade, ano, multiplicadorTitulos) {
     const selecao = SELECOES.find((item) => item.id === nacionalidade);
-    if (!selecao || ano < 2028 || (ano - 2028) % 4 !== 0) {
+    const ciclo = Math.max(1, Number(getConfig().titulos.cicloCopaDoMundo) || 4);
+    const anoCopaDoMundo = ano >= 2028 && (ano - 2028) % ciclo === 0;
+    const anoTorneioRegional = ano >= ANO_INICIAL && (ano - ANO_INICIAL) % ciclo === 0 && !anoCopaDoMundo;
+    if (!selecao || (!anoCopaDoMundo && !anoTorneioRegional)) {
         return [];
     }
 
-    const competicoes = [
-        { nome: "Olimpíadas", participantes: SELECOES },
-        {
+    const competicoes = [];
+    if (anoTorneioRegional) competicoes.push({
             nome: {
                 americaSul: "Copa América",
                 europa: "Eurocopa",
@@ -827,8 +850,8 @@ function gerarTrofeusSelecao(nacionalidade, ano, multiplicadorTitulos) {
                 oceania: "Copa das Nações da OFC"
             }[selecao.regiao],
             participantes: SELECOES.filter((item) => item.regiao === selecao.regiao)
-        }
-    ];
+        });
+    if (anoTorneioRegional) competicoes.push({ nome: "Olimpíadas", participantes: SELECOES });
     const configPotencias = getConfig().selecao.potencias;
     const obterPotencia = (item) => Math.min(100, Math.max(1, Number(configPotencias[item.id]) || 1));
     const potenciaSelecionada = obterPotencia(selecao);
@@ -861,7 +884,7 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
     const trofeusIndividuais = [];
     const temporadaAtual = Number(ano) || ANO_INICIAL;
     const ciclo = Math.max(1, Number(t.cicloCopaDoMundo) || 4);
-    const cicloCopaDoMundo = (temporadaAtual - ANO_INICIAL) % ciclo === 0;
+    const cicloCopaDoMundo = temporadaAtual >= 2028 && (temporadaAtual - 2028) % ciclo === 0;
     const anoInicioMundial = Number(t.anoInicioMundialClubes) || 2029;
     const anoCopaDoMundoDeClubes = temporadaAtual >= anoInicioMundial && (temporadaAtual - anoInicioMundial) % ciclo === 0;
     const competicao = determinarCompeticaoContinental(clubeId);
@@ -1358,7 +1381,7 @@ function obterMetricasCarreira(carreira) {
     const reputacaoMax = Math.max(0, ...temporadas.map(t => Number(t.reputacao) || 0));
     const valorMax = Math.max(0, ...temporadas.map(t => Number(t.valorMercado) || 0));
     const salarioMax = Math.max(0, ...temporadas.map(t => Number(t.salario) || 0));
-    const ganhosTotais = temporadas.reduce((s, t) => s + (Number(t.salario) || 0), 0);
+    const ganhosTotais = temporadas.reduce((s, t) => s + (Number(t.rendaTemporada ?? t.salario) || 0), 0);
   
     return {
         gols: Number(carreira.gols) || 0,
@@ -1592,7 +1615,7 @@ function renderRanking() {
       const clube = obterClube(carreira.clube);
 
       const reputacaoMax = Math.max(0, ...(carreira.temporadas || []).map(t => Number(t.reputacao) || 0));
-      const ganhosTotais = (carreira.temporadas || []).reduce((s, t) => s + (Number(t.salario) || 0), 0);
+      const ganhosTotais = (carreira.temporadas || []).reduce((s, t) => s + (Number(t.rendaTemporada ?? t.salario) || 0), 0);
   
       const renderTrofeus = (trofeus, tipo) => {
           if (!trofeus.length) {
@@ -1726,6 +1749,8 @@ function atualizarResumoJogador(nome, idade, ano, nacionalidade = obterCarreiraA
     
     const perfilSalario = document.getElementById("perfil-salario");
     if (perfilSalario) perfilSalario.textContent = formatarValorCompacto(salarioAtualMostrar);
+    const perfilSaldo = document.getElementById("perfil-saldo");
+    if (perfilSaldo) perfilSaldo.textContent = formatarValorCompacto(carreiraAtual.saldo || 0);
   
 }
 
@@ -2066,7 +2091,7 @@ function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao, opc
     const reputacoes = historico.map(t => Number(t.reputacao) || 0).filter(Boolean);
     const valores = historico.map(t => Number(t.valorMercado) || 0).filter(Boolean);
     const salarios = historico.map(t => Number(t.salario) || 0).filter(Boolean);
-    const ganhosTotais = historico.reduce((s, t) => s + (Number(t.salario) || 0), 0);
+    const ganhosTotais = historico.reduce((s, t) => s + (Number(t.rendaTemporada ?? t.salario) || 0), 0);
     
     const setTexto = (id, valor) => {
         const el = document.getElementById(id);
@@ -2355,9 +2380,9 @@ function calcularPotencialDaCarreira(carreira) {
 function obterModificadorPotencial(chave, posicao) {
     const modificadores = {
         ata: { finalizacao: 1.05, drible: 1.05, velocidade: 1.00, passe: 0.90, fisico: 0.85, defesa: 0.60, reflexos: 0.10 },
-        me:  { finalizacao: 0.90, drible: 1.00, velocidade: 1.00, passe: 1.10, fisico: 0.90, defesa: 0.85, reflexos: 0.10 },
-        zag: { finalizacao: 0.60, drible: 0.85, velocidade: 0.85, passe: 0.90, fisico: 1.05, defesa: 1.05, reflexos: 0.10 },
-        go:  { finalizacao: 0.30, drible: 0.50, velocidade: 0.85, passe: 0.90, fisico: 1.00, defesa: 0.90, reflexos: 1.10 }
+        me:  { finalizacao: 1.00, drible: 1.00, velocidade: 1.00, passe: 1.10, fisico: 1.00, defesa: 0.85, reflexos: 0.10 },
+        zag: { finalizacao: 0.60, drible: 0.85, velocidade: 1.00, passe: 1.00, fisico: 1.05, defesa: 1.05, reflexos: 0.10 },
+        go:  { finalizacao: 0.30, drible: 0.50, velocidade: 0.85, passe: 1.00, fisico: 1.00, defesa: 1.00, reflexos: 1.10 }
     };
     return modificadores[posicao]?.[chave] ?? 1.0;
 }
@@ -2745,7 +2770,7 @@ function criarOfertaContrato(clube, idade, idadeLimite, temporadaAnterior = null
     };
 }
 
-async function escolherContratoParaTemporada(clubeAtual, temporadaInicial, idade, idadeLimite, carreiraAtual) {
+async function escolherContratoParaTemporada(clubeAtual, temporadaInicial, idade, idadeLimite, carreiraAtual, clubePreferidoExtra = "") {
     const limiteRompimentos = getConfig().geral.limiteRompimentosContrato;
     const rompimentosRestantes = Math.max(0, limiteRompimentos - carreiraAtual.rompimentosContratoUsados);
     const contratoAtivo = !temporadaInicial && carreiraAtual.anosContratoRestantes > 0;
@@ -2766,6 +2791,12 @@ async function escolherContratoParaTemporada(clubeAtual, temporadaInicial, idade
     const clubesOfertados = temporadaInicial
         ? sortearClubesParaCarreira(3, "", carreiraAtual.clubeAlvo, [])
         : sortearClubes(3, clubeAtual, carreiraAtual.clubeAlvo, desempenhoBom);
+    // O modo jogo a jogo pode acrescentar o clube escolhido como preferência,
+    // sem perder as três ofertas aleatórias da carreira clássica.
+    if (temporadaInicial && clubePreferidoExtra && !clubesOfertados.some((clube) => clube.id === clubePreferidoExtra)) {
+        const preferido = obterClube(clubePreferidoExtra);
+        if (preferido) clubesOfertados.push(preferido);
+    }
     const ofertas = clubesOfertados
         .map((clube) => criarOfertaContrato(clube, idade, idadeLimite, ultimaTemporada, historicoCarreira));
 
@@ -3070,7 +3101,19 @@ function mostrarNotificacaoFootMain(mensagem, tipo = "info") {
     mostrarNotificacaoFootMain._timer = setTimeout(() => { elemento.hidden = true; }, 6000);
 }
 
+function haTemporadaJogoAJogoEmAndamento() {
+    try {
+        const estadoJJA = JSON.parse(localStorage.getItem("footmain_jogo_a_jogo_carreira_v2") || "null");
+        return !!(estadoJJA && estadoJJA.integrado && !estadoJJA.salvaOficialmente && Array.isArray(estadoJJA.partidas)
+            && Number(estadoJJA.rodada) < estadoJJA.partidas.length);
+    } catch (_) { return false; }
+}
+
 async function gerar() {
+    if (haTemporadaJogoAJogoEmAndamento()) {
+        alert("Conclua a temporada jogo a jogo antes de usar a simulação clássica. Assim, os resultados e os clubes não se misturam no Histórico.");
+        return;
+    }
     if (processamentoEmAndamento) {
         return;
     }
@@ -3272,6 +3315,10 @@ function atualizarTitulosResultados(temporada) {
 }
 
 function simularTudo() {
+    if (haTemporadaJogoAJogoEmAndamento()) {
+        alert("Conclua a temporada jogo a jogo antes de usar a simulação clássica. Assim, os resultados e os clubes não se misturam no Histórico.");
+        return;
+    }
     if (processamentoEmAndamento) {
         return;
     }
@@ -3511,7 +3558,7 @@ function renderComparacao(carreiraA,carreiraB){
 function abrirModalComparacao(){const modal=document.getElementById('modal-comparacao'),sa=document.getElementById('comparacao-a'),sb=document.getElementById('comparacao-b');if(!modal||!sa||!sb)return;const carreiras=lerRanking();if(carreiras.length<2){alert("Você precisa ter pelo menos duas carreiras no ranking para comparar.");return;}const opts=carreiras.map(c=>`<option value="${escaparHTML(c.id)}">${escaparHTML(c.nome)} · ${escaparHTML(c.posicao||'')}</option>`).join('');sa.innerHTML=opts;sb.innerHTML=opts; if(carreiras.length>1)sb.selectedIndex=1;modal.hidden=false;renderComparacao(carreiras.find(c=>String(c.id)===sa.value),carreiras.find(c=>String(c.id)===sb.value));}
 function configurarComparacao(){document.getElementById('abrir-comparacao')?.addEventListener('click',abrirModalComparacao);document.getElementById('fechar-comparacao')?.addEventListener('click',()=>{document.getElementById('modal-comparacao').hidden=true;});for(const id of ['comparacao-a','comparacao-b'])document.getElementById(id)?.addEventListener('change',()=>{const cs=lerRanking();renderComparacao(cs.find(c=>String(c.id)===document.getElementById('comparacao-a').value),cs.find(c=>String(c.id)===document.getElementById('comparacao-b').value));});document.getElementById('modal-comparacao')?.addEventListener('click',e=>{if(e.target.id==='modal-comparacao')e.currentTarget.hidden=true;});}
 
-async function aposentarVoluntariamente() {
+async function aposentarVoluntariamente(jaConfirmada = false) {
     if (processamentoEmAndamento) return;
     const carreira = obterCarreiraAtual();
     const carreiraFinalizada = lerRanking().some(
@@ -3527,7 +3574,7 @@ async function aposentarVoluntariamente() {
         alert("Você precisa ter ao menos uma temporada simulada para se aposentar.");
         return;
     }
-    const confirmado = await confirmarAcao(
+    const confirmado = jaConfirmada || await confirmarAcao(
         "Tem certeza que deseja encerrar sua carreira agora?\n\nVocê terá um jogo de despedida e sua carreira será registrada no ranking.",
         "Aposentadoria voluntária"
     );
