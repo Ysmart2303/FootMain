@@ -377,6 +377,16 @@ function normalizarPosicaoDetalhada(valor) {
     return chavePosicaoCampo(valor);
 }
 
+const COMPETICOES_DA_SELECAO = new Set([
+    "Copa do Mundo", "Copa América", "Eurocopa", "Copa Ouro",
+    "Copa das Nações Africanas", "Copa da Ásia", "Copa das Nações da OFC",
+    "Olimpíadas", "Mundial Sub-20", "Mundial Sub-17"
+]);
+
+function ehCompeticaoDeSelecao(nome) {
+    return typeof nome === "string" && COMPETICOES_DA_SELECAO.has(nome);
+}
+
 function validarTemporada(temporada) {
     if (!temporada || typeof temporada !== "object") {
         return null;
@@ -402,7 +412,10 @@ function validarTemporada(temporada) {
     const trofeusIndividuais = Array.isArray(temporada.trofeusIndividuais) ? temporada.trofeusIndividuais.filter((t) => typeof t === "string") : [];
     const trofeusClube = Array.isArray(temporada.trofeusClube) ? temporada.trofeusClube.filter((t) => typeof t === "string") : trofeusColetivos.filter((t) => t !== "Copa do Mundo" && t !== "Copa América" && t !== "Eurocopa" && t !== "Copa Ouro" && t !== "Copa das Nações Africanas" && t !== "Copa da Ásia" && t !== "Copa das Nações da OFC" && t !== "Olimpíadas" && t !== "Mundial Sub-20" && t !== "Mundial Sub-17");
     const trofeusSelecao = Array.isArray(temporada.trofeusSelecao) ? temporada.trofeusSelecao.filter((t) => typeof t === "string") : [];
-    const competicoesQualificadas = Array.isArray(temporada.competicoesQualificadas) ? temporada.competicoesQualificadas.filter((t) => typeof t === "string") : [];
+  
+    const competicoesQualificadas = Array.isArray(temporada.competicoesQualificadas)
+        ? temporada.competicoesQualificadas.filter((t) => ehCompeticaoDeSelecao(t))
+        : [];
     const eventos = normalizarEventosTemporada(temporada.eventos);
 
     const atributos = normalizarAtributos(temporada.atributos, posicaoNormalizada, idade);
