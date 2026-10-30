@@ -246,19 +246,34 @@
     }
     function obterConvocacao(estadoTemporada, carreira, historico) {
         const selecao = (typeof SELECOES !== "undefined" ? SELECOES : []).find(s => s.id === estadoTemporada.nacionalidade);
-        if (!selecao || carreira.aposentadoriaSelecao) return null;
+        if (!selecao || carreira.aposentadoriaSelecao === true) return null;
+
         const cfg = typeof getConfig === "function" ? getConfig() : {};
         const potencia = Number(cfg.selecao?.potencias?.[selecao.id]) || 50;
-        const convocacoesAnteriores = historico.filter(t => t.convocado || Number(t.jogosSelecao) > 0).length;
-        let chance = Math.max(0, Math.min(.95, (estadoTemporada.overall - 65) / 35));
+        const temporadas = Array.isArray(historico) ? historico : [];
+        const convocacoesAnteriores = temporadas.filter(t => t.convocado || Number(t.jogosSelecao) > 0).length;
+        const ultimaTemporada = temporadas[temporadas.length - 1];
+        const convocadoNaTemporadaAnterior = !!(ultimaTemporada && (ultimaTemporada.convocado || Number(ultimaTemporada.jogosSelecao) > 0));
+
+        // Overall alto aumenta bastante a chance; seleções mais fortes têm maior concorrência.
+        const overall = Math.max(1, Math.min(99, Number(estadoTemporada.overall) || 50));
+        const notaOverall = Math.max(0, Math.min(1, (overall - 55) / 35));
+        let chance = .12 + notaOverall * .76;
+        chance -= Math.max(-20, Math.min(40, potencia - 50)) / 300;
+
         const clube = typeof obterClube === "function" ? obterClube(carreira.clube) : null;
         const jogaEuropa = !!clube?.pais && ["Inglaterra", "Espanha", "Alemanha", "Itália", "França", "Portugal", "Holanda"].some(pais => String(clube.pais).includes(pais));
-        chance += Math.max(0, potencia - 50) / 250 + (jogaEuropa ? .06 : 0) + Math.min(.18, convocacoesAnteriores * .035);
-        if (estadoTemporada.idade < 18) chance *= .25;
-        else if (estadoTemporada.idade > 35) chance *= .7;
-        if (Math.random() < Math.max(0, Math.min(.95, chance))) return selecao;
-        if (estadoTemporada.idade <= 30 && estadoTemporada.overall >= 72 && Math.random() < .025) return selecao;
-        return null;
+        chance += (jogaEuropa ? .04 : 0);
+        chance += Math.min(.20, convocacoesAnteriores * .025);
+        if (convocadoNaTemporadaAnterior) chance += .12;
+
+        const idade = Number(estadoTemporada.idade) || 18;
+        if (idade < 18) chance *= .35;
+        else if (idade > 35) chance *= .70;
+        if (idade > 38) chance *= .60;
+
+        chance = Math.max(0, Math.min(.97, chance));
+        return Math.random() < chance ? selecao : null;
     }
     function montarCalendarioTemporada(times, clube, rodadas, ano, carreira, historico, perfil) {
         const partidas = gerarCalendario(times, clube, rodadas, ano);
@@ -307,8 +322,10 @@
                 });
             }
             const cicloSelecoes = Math.max(1, Number(getConfig()?.titulos?.cicloCopaDoMundo) || 4);
-            const anoCopaDoMundo = ano >= 2028 && (ano - 2028) % cicloSelecoes === 0;
-            const anoTorneioRegional = ano >= ANO_INICIAL && (ano - ANO_INICIAL) % cicloSelecoes === 0 && !anoCopaDoMundo;
+            const anoBaseCopaDoMundo = typeof ANO_INICIAL !== "undefined" ? ANO_INICIAL : 2026;
+            const anoCopaDoMundo = ano >= anoBaseCopaDoMundo && (ano - anoBaseCopaDoMundo) % cicloSelecoes === 0;
+            const anoInicioContinental = anoBaseCopaDoMundo + 2;
+            const anoTorneioRegional = ano >= anoInicioContinental && (ano - anoInicioContinental) % cicloSelecoes === 0;
             if (anoCopaDoMundo || anoTorneioRegional) {
                 const competicaoRegional = {
                     americaSul: "Copa América", europa: "Eurocopa", americaNorte: "Copa Ouro",
@@ -322,7 +339,11 @@
                     adicionarEliminatoria(partidas, [], convocada.id, competicao, ano, 5 + indice, 4, `selecao:${convocada.id}`, competicao);
                 });
             }
-            if ((ano - (typeof ANO_INICIAL !== "undefined" ? ANO_INICIAL : 2026)) % 2 === 0) {
+            const anoBaseSelecoes = typeof ANO_INICIAL !== "undefined" ? ANO_INICIAL : 2026;
+            const anoMundialDeBase = ano > anoBaseSelecoes
+                && (ano - (anoBaseSelecoes + 1)) % 2 === 0
+                && !anoCopaDoMundo;
+            if (anoMundialDeBase) {
                 if (perfil.idade <= 20) adicionarEliminatoria(partidas, [], convocada.id, "Mundial Sub-20", ano, 5, 4, `selecao:${convocada.id}`, "Mundial Sub-20");
                 if (perfil.idade <= 17) adicionarEliminatoria(partidas, [], convocada.id, "Mundial Sub-17", ano, 5, 4, `selecao:${convocada.id}`, "Mundial Sub-17");
             }
