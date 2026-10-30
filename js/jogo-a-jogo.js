@@ -1370,16 +1370,25 @@
             temporada.reputacao = reputacao;
             temporada.valorMercado = typeof calcularValorMercado === "function" ? calcularValorMercado(temporada.overall, estado.idade, reputacao, carreira.anosContratoRestantes || 1) : 0;
             temporada.salario = typeof calcularSalario === "function" ? calcularSalario(temporada.valorMercado, reputacao, estado.clubeId) : 0;
+            
             temporada.anosContrato = Math.max(0, Number(carreira.anosContratoRestantes) || 0);
-            temporada.competicoesQualificadas = obterCompeticoesQualificadas(tabela, estado.liga);
-            const premiacaoTitulos = temporada.trofeusColetivos.length * Math.round(50000 + forcaClube(clubesDisponiveis().find(c => c.id === estado.clubeId)) * 10000);
+            
+            const competicoesClubeProxima = obterCompeticoesQualificadas(tabela, estado.liga);            
+            temporada.competicoesQualificadas = estado.estatisticas.convocado
+                ? obterCompeticoesSelecao(estado.nacionalidade, estado.ano)
+                : [];
+            
+            const premiacaoTitulos = temporada.trofeusColetivos.length * Math.round(50000 + forcaClube(clubesDisponiveis().find(c => c.id === estado.clubeId)) * 10000); 
+          
             const premiacaoIndividual = temporada.trofeusIndividuais.length * 50000;
             temporada.premioFinanceiro = premiacaoTitulos + premiacaoIndividual;
             temporada.rendaTemporada = (Number(temporada.salario) || 0) + temporada.premioFinanceiro;
             carreira.saldo = Math.max(0, Number(carreira.saldo) || 0) + temporada.rendaTemporada;
             estado.resumoFinanceiro = { reputacao, valorMercado: temporada.valorMercado, salario: temporada.salario, premioFinanceiro: temporada.premioFinanceiro, renda: temporada.rendaTemporada, saldo: carreira.saldo };
-            carreira.competicoesQualificadas = temporada.competicoesQualificadas;
+                      
+            carreira.competicoesQualificadas = competicoesClubeProxima;
             carreira.clubeQualificado = estado.clubeId;
+         
             const novoHistorico = [...historicoCompleto, temporada];
             if (typeof salvarHistorico !== "function" || !salvarHistorico(novoHistorico)) throw new Error("Falha ao salvar o Histórico oficial.");
             carreira.nome = estado.nome; carreira.clube = estado.clubeId; carreira.posicaoDetalhe = estado.posicao;
