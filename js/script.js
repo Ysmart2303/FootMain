@@ -836,6 +836,32 @@ function sortearPremio(chance) {
     return Math.random() < chance;
 }
 
+function obterCompeticoesSelecao(nacionalidade, ano) {
+    const selecao = SELECOES.find((item) => item.id === nacionalidade);
+    if (!selecao) return [];
+
+    const anoCopaDoMundo = ano >= ANO_BASE_COPA_DO_MUNDO_SELECOES
+        && (ano - ANO_BASE_COPA_DO_MUNDO_SELECOES) % CICLO_COPA_DO_MUNDO_SELECOES === 0;
+    const anoInicioContinental = ANO_BASE_COPA_DO_MUNDO_SELECOES + 2;
+    const anoTorneioRegional = ano >= anoInicioContinental
+        && (ano - anoInicioContinental) % CICLO_COPA_DO_MUNDO_SELECOES === 0;
+
+    const competicoes = [];
+    if (anoCopaDoMundo) competicoes.push("Copa do Mundo");
+    if (anoTorneioRegional) {
+        competicoes.push({
+            americaSul: "Copa América",
+            europa: "Eurocopa",
+            americaNorte: "Copa Ouro",
+            africa: "Copa das Nações Africanas",
+            asia: "Copa da Ásia",
+            oceania: "Copa das Nações da OFC"
+        }[selecao.regiao]);
+        competicoes.push("Olimpíadas");
+    }
+    return competicoes.filter(Boolean);
+}
+
 function gerarTrofeusSelecao(nacionalidade, ano, multiplicadorTitulos) {
     const selecao = SELECOES.find((item) => item.id === nacionalidade);
     const anoCopaDoMundo = ano >= ANO_BASE_COPA_DO_MUNDO_SELECOES
@@ -860,7 +886,7 @@ function gerarTrofeusSelecao(nacionalidade, ano, multiplicadorTitulos) {
                 asia: "Copa da Ásia",
                 oceania: "Copa das Nações da OFC"
             }[selecao.regiao],
-            participantes: SELECOES.filter((item) => regionesElegiveis.includes(item.regiao))
+            participantes: SELECOES.filter((item) => regioesElegiveis.includes(item.regiao))
         });
     }
     if (anoTorneioRegional) competicoes.push({ nome: "Olimpíadas", participantes: SELECOES });
@@ -1935,6 +1961,9 @@ function renderHistorico() {
                         <div class="titulo-tags">${renderTrofeus(trofeusIndividuais, "individual")}</div>
                     </div>
                 </div>
+                ${(Array.isArray(temporada.competicoesQualificadas) && temporada.competicoesQualificadas.length)
+                    ? `<div class="temporada-eventos"><span class="titulos-grupo-label">🌍 Competições da seleção</span><div class="titulo-tags">${renderTrofeus(temporada.competicoesQualificadas, "coletivo")}</div></div>`
+                    : ""}
                 <div class="temporada-eventos">
                     <span class="titulos-grupo-label">⚡ Eventos da temporada</span>
                     ${formatarEventosTemporada(temporada.eventos)}
@@ -2625,6 +2654,7 @@ function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], na
         jogos: sim.jogos, gols: sim.gols, assistencias: sim.assistencias,
         jogosClube: sim.jogosClube, golsClube: sim.golsClube, assistenciasClube: sim.assistenciasClube,
         jogosSelecao: sim.jogosSelecao, golsSelecao: sim.golsSelecao, assistenciasSelecao: sim.assistenciasSelecao, convocado: sim.convocado,
+        competicoesQualificadas: sim.convocado ? obterCompeticoesSelecao(nacionalidade, ano) : [],
         jogosSelecaoPorCompeticao: sim.jogosSelecaoPorCompeticao, golsSelecaoPorCompeticao: sim.golsSelecaoPorCompeticao,
         motm: sim.motm, cartaoAmarelo: sim.cartaoAmarelo, cartaoVermelho: sim.cartaoVermelho, cleanSheets: sim.cleanSheets,
         penaltisDefendidos: sim.penaltisDefendidos, penaltisCometidos: sim.penaltisCometidos, minutosJogados: sim.minutosJogados,
