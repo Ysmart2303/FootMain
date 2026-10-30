@@ -833,8 +833,9 @@ function sortearPremio(chance) {
 function gerarTrofeusSelecao(nacionalidade, ano, multiplicadorTitulos) {
     const selecao = SELECOES.find((item) => item.id === nacionalidade);
     const ciclo = Math.max(1, Number(getConfig().titulos.cicloCopaDoMundo) || 4);
-    const anoCopaDoMundo = ano >= 2028 && (ano - 2028) % ciclo === 0;
-    const anoTorneioRegional = ano >= ANO_INICIAL && (ano - ANO_INICIAL) % ciclo === 0 && !anoCopaDoMundo;
+    const anoCopaDoMundo = ano >= ANO_INICIAL && (ano - ANO_INICIAL) % ciclo === 0;
+    const anoInicioContinental = ANO_INICIAL + 2;
+    const anoTorneioRegional = ano >= anoInicioContinental && (ano - anoInicioContinental) % ciclo === 0;
     if (!selecao || (!anoCopaDoMundo && !anoTorneioRegional)) {
         return [];
     }
@@ -884,7 +885,7 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
     const trofeusIndividuais = [];
     const temporadaAtual = Number(ano) || ANO_INICIAL;
     const ciclo = Math.max(1, Number(t.cicloCopaDoMundo) || 4);
-    const cicloCopaDoMundo = temporadaAtual >= 2028 && (temporadaAtual - 2028) % ciclo === 0;
+    const cicloCopaDoMundo = temporadaAtual >= ANO_INICIAL && (temporadaAtual - ANO_INICIAL) % ciclo === 0;
     const anoInicioMundial = Number(t.anoInicioMundialClubes) || 2029;
     const anoCopaDoMundoDeClubes = temporadaAtual >= anoInicioMundial && (temporadaAtual - anoInicioMundial) % ciclo === 0;
     const competicao = determinarCompeticaoContinental(clubeId);
@@ -956,10 +957,13 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
     }
 
     // ====== Competições de base (novas) ======
-    if (convocado && Number(idade) <= 20 && (temporadaAtual - ANO_INICIAL) % 2 === 0 && sortearPremio((t.chanceMundialSub20 || 0.14) * multColetivos)) {
+    const anoMundialDeBase = temporadaAtual > ANO_INICIAL
+        && (temporadaAtual - (ANO_INICIAL + 1)) % 2 === 0
+        && !cicloCopaDoMundo;
+    if (convocado && Number(idade) <= 20 && anoMundialDeBase && sortearPremio((t.chanceMundialSub20 || 0.14) * multColetivos)) {
         trofeusColetivos.push("Mundial Sub-20");
     }
-    if (convocado && Number(idade) <= 17 && (temporadaAtual - ANO_INICIAL) % 2 === 0 && sortearPremio((t.chanceMundialSub17 || 0.10) * multColetivos)) {
+    if (convocado && Number(idade) <= 17 && anoMundialDeBase && sortearPremio((t.chanceMundialSub17 || 0.10) * multColetivos)) {
         trofeusColetivos.push("Mundial Sub-17");
     }
 
@@ -2532,7 +2536,8 @@ function simularTemporadaPorJogo(posicao, atributos, idade, jogosForaInicioTempo
     let jogosSelecao=0,golsSelecao=0,assistenciasSelecao=0;const jogosSelecaoPorCompeticao={},golsSelecaoPorCompeticao={};
     if(convocado){
       const ano=Number(temporadasAnteriores.length?temporadasAnteriores[temporadasAnteriores.length-1].ano+1:ANO_INICIAL);
-      const anoTorneio=(ano-2028)%4===0, maxSelecao=(8+Math.floor(Math.random()*5)+(anoTorneio?4:0));
+      const cicloSelecoes = Math.max(1, Number(cfg.titulos?.cicloCopaDoMundo) || 4);
+      const anoTorneio=(ano >= ANO_INICIAL + 2) && (ano - (ANO_INICIAL + 2)) % cicloSelecoes === 0, maxSelecao=(8+Math.floor(Math.random()*5)+(anoTorneio?4:0));
       for(let i=0;i<maxSelecao;i++){if(Math.random()>Math.min(.98,probParticipar+.08))continue;jogosSelecao++;
         const competicao=anoTorneio&&i>=8?(selecao.regiao==="europa"?"Continental":"Copa"):i%3===0?"Eliminatórias":"Amistoso";
         jogosSelecaoPorCompeticao[competicao]=(jogosSelecaoPorCompeticao[competicao]||0)+1;
