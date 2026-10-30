@@ -1011,18 +1011,22 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
     }
 
     const eventosDeDesempenho = Array.isArray(eventos) ? eventos : [];
-    const defesasDecisivas = eventosDeDesempenho.filter((evento) =>
-        ["defesa-ultimo-lance", "penalti-defendido", "falta-defendida"].includes(evento.tipo)).length;
-    const acoesDefensivasDecisivas = eventosDeDesempenho.filter((evento) =>
-        ["contra-ataque-desarmado", "interceptacao-decisiva"].includes(evento.tipo)).length;
-
-    if (posicao === "Zagueiro" && ["ZCE", "ZCD"].includes(posicaoDetalhe) && jogos >= 30 &&
-        (acoesDefensivasDecisivas >= 2 || (acoesDefensivasDecisivas >= 1 && overall >= 80)) &&
+    const defesasDecisivas = eventosDeDesempenho.filter(e =>
+    ["defesa-ultimo-lance", "penalti-defendido", "falta-defendida"].includes(e.tipo)
+    ).length;
+    
+    const acoesDefensivasDecisivas = eventosDeDesempenho.filter(e =>
+        ["contra-ataque-desarmado", "interceptacao-decisiva"].includes(e.tipo)
+    ).length;
+    
+    if (posicao === "Zagueiro" && ["ZCE","ZCD","LE","LD"].includes(posicaoDetalhe) && jogos >= 25 &&
+        (acoesDefensivasDecisivas >= 1 || overall >= 82) &&
         sortearPremio(t.chanceBolaDeOuroZagueiro * multIndividuais)) {
         trofeusIndividuais.push("Defender of the Year");
     }
-    if (posicao === "Goleiro" && jogos >= 25 &&
-        (defesasDecisivas >= 2 || (defesasDecisivas >= 1 && overall >= 80)) &&
+    
+    if (posicao === "Goleiro" && jogos >= 20 &&
+        (defesasDecisivas >= 1 || overall >= 80) &&
         sortearPremio(t.chanceBolaDeOuroGoleiro * multIndividuais)) {
         trofeusIndividuais.push("GoalKeeper of the year");
     }
