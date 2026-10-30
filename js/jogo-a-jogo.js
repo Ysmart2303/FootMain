@@ -605,9 +605,17 @@
             if (posicao < 2) qualificadas = ["Champions League"];
             else if (posicao < 4) qualificadas = ["Europa League"];
             else if (posicao < 6) qualificadas = ["Conference League"];
-        } else if (["Brasileirão", "Argentine Primera División", "Colombian Primera A", "Chilean Primera División", "Uruguayan Primera División", "Ecuadorian Serie A", "Paraguayan Primera División"].includes(liga)) {
-            if (posicao < (liga === "Brasileirão" ? 6 : 4)) qualificadas = ["Libertadores"];
-            else if (posicao < (liga === "Brasileirão" ? 12 : 8)) qualificadas = ["Copa Sul-Americana"];
+
+        } else if (["Brasileirão"].includes(liga)) {
+            // 1-4 Libertadores · 5 Pré-Libertadores (ainda vai pra Libertadores) · 6-11 Sul-Americana
+            if (posicao < 4) qualificadas = ["Libertadores"];
+            else if (posicao === 4) qualificadas = ["Libertadores"]; // vaga de Pré-Libertadores
+            else if (posicao < 11) qualificadas = ["Copa Sul-Americana"];
+          
+        } else if (["Argentine Primera División", "Colombian Primera A", "Chilean Primera División",
+            "Uruguayan Primera División", "Ecuadorian Serie A", "Paraguayan Primera División"].includes(liga)) {
+            if (posicao < 4) qualificadas = ["Libertadores"];
+            else if (posicao < 8) qualificadas = ["Copa Sul-Americana"];
         } else if (["MLS", "Liga MX"].includes(liga)) {
             if (posicao < 4) qualificadas = ["CONCACAF Champions Cup"];
         } else if (["Saudi Pro League", "J1 League", "K League 1", "Chinese Super League", "Australian A-League"].includes(liga)) {
@@ -617,6 +625,7 @@
             if (posicao < 2) qualificadas = ["CAF Champions League"];
             else if (posicao < 5) qualificadas = ["CAF Confederation Cup"];
         }
+  
         const trofeus = estado.trofeusClube || [];
         const nomes = typeof obterNomesTrofeusClube === "function" ? obterNomesTrofeusClube(estado.clubeId) : {};
         if (trofeus.includes(nomes.copa)) {
@@ -913,17 +922,24 @@
             return { ...lance, opcoes: lance.opcoes.map(opcao => ({ ...opcao, contaComoDesarme: true })) };
         };
         const opcoesDrible = (titulo, contexto, opcoes) => criarLance(titulo, contexto, "drible", "drible", opcoes);
-        const penaltiComum = (titulo, contexto, lado = "meio") => criarLance(
-            titulo,
-            contexto,
-            "penalti",
-            "finalizacao",
-            [
-                [lado === "meio" ? "Mandar no centro do gol" : `Chutar para a ${lado}`, .72, lado === "meio" ? "meio" : lado],
-                ["Mandar no centro do gol", .68, "meio"],
-                [lado === "meio" ? "Chutar rasteiro ao meio" : `Tentar um chute rasteiro para a ${lado}`, .62, lado === "meio" ? "meio" : lado]
-            ]
-        );
+        const penaltiComum = (titulo, contexto, lado = "meio") => {
+            // Se o lado sorteado for "meio", usa esquerda/direita para manter 3 opções distintas
+            const ladoChute = lado === "meio"
+                ? (Math.random() < 0.5 ? "esquerda" : "direita")
+                : lado;
+            const ladoOposto = ladoChute === "esquerda" ? "direita" : "esquerda";
+            return criarLance(
+                titulo,
+                contexto,
+                "penalti",
+                "finalizacao",
+                [
+                    [`Chutar para a ${ladoChute}`, .72, ladoChute],
+                    ["Mandar no centro do gol", .68, "meio"],
+                    [`Tentar um chute rasteiro para a ${ladoOposto}`, .62, ladoOposto]
+                ]
+            );
+        };
         const penaltiGoleiro = (titulo, contexto) => criarLance(
             titulo,
             contexto,
@@ -1294,21 +1310,50 @@
             temporada.desarmes = Number(e.desarmes) || 0;
             temporada.defesas = Number(e.defesas) || 0;
             temporada.jogadasCriadas = Number(e.jogadasCriadas) || 0;
-            temporada.eventos = estado.eventos || [];
+           
+            // Garante que o estado tem um array e que a temporada compartilha a mesma referência.
+            estado.eventos = Array.isArray(estado.eventos) ? estado.eventos : [];
+            temporada.eventos = estado.eventos;
+            
             temporada.lesaoGrave = temporada.eventos.some(evento => evento.tipo === "lesao-grave");
             temporada.lesaoCarreira = !!estado.disponibilidade?.lesaoCarreira;
             temporada.jogosForaProximaTemporada = Number(estado.disponibilidade?.jogosLesao) || 0;
             temporada.cleanSheets = estado.posicao === "GOL"
                 ? Number(estado.desempenhoPosicional?.jogosSemSofrer) || 0
                 : 0;
-            temporada.penaltisDefendidos = 0; temporada.penaltisCometidos = 0;
+            temporada.penaltisDefendidos = 0;
+            temporada.penaltisCometidos = 0;
             temporada.minutosJogados = e.jogos * 90;
-            temporada.clube = estado.clubeId; temporada.ano = estado.ano; temporada.idade = estado.idade;
-            temporada.nome = estado.nome; temporada.nacionalidade = estado.nacionalidade; temporada.posicaoDetalhe = estado.posicao;
+            temporada.clube = estado.clubeId;
+            temporada.ano = estado.ano;
+            temporada.idade = estado.idade;
+            temporada.nome = estado.nome;
+            temporada.nacionalidade = estado.nacionalidade;
+            temporada.posicaoDetalhe = estado.posicao;
             temporada.posicao = (typeof POSICOES_CAMPO !== "undefined" && POSICOES_CAMPO[estado.posicao]?.nome) || estado.posicao;
-            const trofeusCalculados = typeof gerarTrofeusTemporada === "function"
-                ? gerarTrofeusTemporada(temporada.posicaoKey, e.jogos, e.gols, e.assistencias, estado.ano, estado.idade, historicoCarreira, estado.nacionalidade, estado.clubeId, [], temporada.overall, estado.posicao, !!e.convocado, temporada.atributos)
-                : { trofeusColetivos: [], trofeusIndividuais: [] };
+            
+            // --- Eventos sintéticos de defesa/goleiro -----------------------------
+            // Entram em estado.eventos (jogo: 0 = "sem partida específica") e por isso
+            // aparecem no resumo da temporada E são considerados nos prêmios.
+            const eventosSinteticos = [];
+            if (Number(e.defesas) >= 10 && Math.random() < 0.65) eventosSinteticos.push("defesa-ultimo-lance");
+            if (Number(e.defesas) >= 20 && Math.random() < 0.55) eventosSinteticos.push("penalti-defendido");
+            if (Number(e.desarmes) >= 30 && Math.random() < 0.60) eventosSinteticos.push("interceptacao-decisiva");
+            if (Number(e.desarmes) >= 50 && Math.random() < 0.50) eventosSinteticos.push("contra-ataque-desarmado");
+            
+            eventosSinteticos.forEach(tipo => {
+                estado.eventos.push({ tipo, jogo: 0 });
+            });
+            
+            // Passa a referência real (a função só faz .filter(), não muta).
+            const trofeusCalculados = gerarTrofeusTemporada(
+                temporada.posicaoKey, e.jogos, e.gols, e.assistencias,
+                estado.ano, estado.idade, historicoCarreira, estado.nacionalidade,
+                estado.clubeId,
+                estado.eventos,
+                temporada.overall, estado.posicao, !!e.convocado, temporada.atributos
+            );
+          
             const tabela = estado.tabela.filter(t => !String(t.id).startsWith("__rodada__")).sort((a,b) => b.pts-a.pts || (b.gp-b.gc)-(a.gp-a.gc) || b.gp-a.gp);
             const campeao = tabela[0]?.id === estado.clubeId;
             const nomesTrofeus = typeof obterNomesTrofeusClube === "function" ? obterNomesTrofeusClube(estado.clubeId) : { liga: estado.liga };
@@ -1392,6 +1437,76 @@
         const trofeus = partida.tipo === "selecao" ? estado.trofeusSelecao : estado.trofeusClube;
         return (trofeus || []).includes(partida.competicao);
     }
+
+    /* ============================================================
+     Zonas de classificação por liga.
+     ============================================================ */
+    function obterZonasClassificacao(liga) {
+        if (liga === "Brasileirão") return [
+            { ate: 4, tipo: "libertadores", nome: "Libertadores", cor: "#22c55e" },
+            { ate: 5, tipo: "pre-libertadores", nome: "Pré-Libertadores", cor: "#60a5fa" },
+            { ate: 11, tipo: "sul-americana", nome: "Copa Sul-Americana", cor: "#facc15" },
+            { ultimos: 4, tipo: "rebaixamento", nome: "Rebaixamento", cor: "#ef4444" }
+        ];
+        if (["Premier League", "La Liga", "Serie A", "Bundesliga", "Ligue 1"].includes(liga)) return [
+            { ate: 4, tipo: "champions", nome: "Champions League", cor: "#22c55e" },
+            { ate: 6, tipo: "europa-league", nome: "Europa League", cor: "#60a5fa" },
+            { ate: 7, tipo: "conference-league", nome: "Conference League", cor: "#a78bfa" },
+            { ultimos: 3, tipo: "rebaixamento", nome: "Rebaixamento", cor: "#ef4444" }
+        ];
+        if (["Primeira Liga", "Eredivisie", "Süper Lig", "Belgian Pro League",
+             "Scottish Premiership", "Swiss Super League", "Austrian Bundesliga",
+             "Russian Premier League", "Ukrainian Premier League", "Greek Super League"].includes(liga)) return [
+            { ate: 2, tipo: "champions", nome: "Champions League", cor: "#22c55e" },
+            { ate: 4, tipo: "europa-league", nome: "Europa League", cor: "#60a5fa" },
+            { ate: 6, tipo: "conference-league", nome: "Conference League", cor: "#a78bfa" },
+            { ultimos: 3, tipo: "rebaixamento", nome: "Rebaixamento", cor: "#ef4444" }
+        ];
+        if (["Argentine Primera División", "Colombian Primera A", "Chilean Primera División",
+             "Uruguayan Primera División", "Ecuadorian Serie A", "Paraguayan Primera División"].includes(liga)) return [
+            { ate: 4, tipo: "libertadores", nome: "Libertadores", cor: "#22c55e" },
+            { ate: 8, tipo: "sul-americana", nome: "Copa Sul-Americana", cor: "#facc15" },
+            { ultimos: 2, tipo: "rebaixamento", nome: "Rebaixamento", cor: "#ef4444" }
+        ];
+        if (["MLS", "Liga MX"].includes(liga)) return [
+            { ate: 4, tipo: "concacaf", nome: "CONCACAF Champions Cup", cor: "#22c55e" },
+            { ate: 8, tipo: "playoffs", nome: "Playoffs", cor: "#60a5fa" }
+        ];
+        if (["Saudi Pro League", "J1 League", "K League 1", "Chinese Super League"].includes(liga)) return [
+            { ate: 3, tipo: "afc", nome: "AFC Champions League", cor: "#22c55e" },
+            { ate: 6, tipo: "afc-2", nome: "AFC Champions League 2", cor: "#60a5fa" },
+            { ultimos: 3, tipo: "rebaixamento", nome: "Rebaixamento", cor: "#ef4444" }
+        ];
+        if (["Egyptian Premier League", "South African Premier Division", "Moroccan Botola"].includes(liga)) return [
+            { ate: 2, tipo: "caf", nome: "CAF Champions League", cor: "#22c55e" },
+            { ate: 5, tipo: "caf-conf", nome: "CAF Confederation Cup", cor: "#60a5fa" },
+            { ultimos: 3, tipo: "rebaixamento", nome: "Rebaixamento", cor: "#ef4444" }
+        ];
+        if (liga === "Australian A-League") return [
+            { ate: 2, tipo: "afc", nome: "AFC Champions League", cor: "#22c55e" },
+            { ate: 6, tipo: "playoffs", nome: "Playoffs", cor: "#60a5fa" }
+        ];
+        return [];
+    }
+    
+    function obterZonaPosicao(zonas, posicao, totalTimes) {
+        for (const zona of zonas) {
+            if (zona.ate !== undefined && posicao <= zona.ate) return zona;
+            if (zona.ultimos !== undefined && posicao > totalTimes - zona.ultimos) return zona;
+        }
+        return null;
+    }
+    
+    function renderizarLegendaZonas(zonas) {
+        if (!zonas || !zonas.length) return "";
+        return `<ul class="jja-legenda-zonas" aria-label="Legenda das zonas da classificação">
+            ${zonas.map(zona => `<li class="jja-legenda-item">
+                <span class="jja-legenda-cor" style="background:${zona.cor}" aria-hidden="true"></span>
+                <span class="jja-legenda-texto">${escapar(zona.nome)}</span>
+            </li>`).join("")}
+        </ul>`;
+    }
+  
     function renderizarProgressoCompeticoes() {
         const partidas = estado.partidas.filter(partida => partida.torneioId && Number(partida.fase) > 0);
         const competicoes = new Map();
@@ -1504,7 +1619,36 @@
         $("jja-defesas").textContent = String(Number(e.defesas) || 0);
         $("jja-jogadas-criadas").textContent = String(Number(e.jogadasCriadas) || 0);
         const tabela=estado.tabela.filter(t=>!t.id.startsWith("__rodada__")).sort((a,b)=>b.pts-a.pts||(b.gp-b.gc)-(a.gp-a.gc)||b.gp-a.gp);
-        $("jja-tabela").innerHTML=`<div class="jja-tabela-wrap"><table class="jja-tabela"><thead><tr><th>#</th><th>Clube</th><th>J</th><th>SG</th><th>Pts</th></tr></thead><tbody>${tabela.map((t,i)=>`<tr class="${t.id===estado.clubeId?"meu-clube":""}"><td>${i+1}</td><td>${escapar(t.nome)}</td><td>${t.j}</td><td>${t.gp-t.gc}</td><td><strong>${t.pts}</strong></td></tr>`).join("")}</tbody></table></div>${renderizarProgressoCompeticoes()}`;
+      
+        const ligaParaZonas = estado.liga || clubesDisponiveis().find(c => c.id === estado.clubeId)?.liga || "";
+        const zonasClassificacao = obterZonasClassificacao(ligaParaZonas);
+        const totalTimesTabela = tabela.length;
+        const linhasTabela = tabela.map((t, i) => {
+            const posicao = i + 1;
+            const zona = obterZonaPosicao(zonasClassificacao, posicao, totalTimesTabela);
+            const attrs = zona
+                ? ` data-zona="${escapar(zona.tipo)}" style="--zona-cor:${zona.cor}"`
+                : "";
+            const classe = t.id === estado.clubeId ? "meu-clube" : "";
+            return `<tr class="${classe}"${attrs}>
+                <td>${posicao}</td>
+                <td>${escapar(t.nome)}</td>
+                <td>${t.j}</td>
+                <td>${t.gp - t.gc}</td>
+                <td><strong>${t.pts}</strong></td>
+            </tr>`;
+        }).join("");
+        
+        $("jja-tabela").innerHTML = `
+            <div class="jja-tabela-wrap">
+                <table class="jja-tabela">
+                    <thead><tr><th>#</th><th>Clube</th><th>J</th><th>SG</th><th>Pts</th></tr></thead>
+                    <tbody>${linhasTabela}</tbody>
+                </table>
+            </div>
+            ${renderizarLegendaZonas(zonasClassificacao)}
+            ${renderizarProgressoCompeticoes()}`;
+      
         $("jja-calendario").innerHTML=`<div class="jja-lista-jogos">${estado.partidas.map(p=>{const adv=clubesDisponiveis().find(c=>c.id===p.adversarioId);const nomeCasa=p.casa?(p.tipo==="selecao"?equipeSelecao?.nome:clube?.nome):(adv?.nome||p.adversarioNome);const nomeFora=p.casa?(adv?.nome||p.adversarioNome):(p.tipo==="selecao"?equipeSelecao?.nome:clube?.nome);const status=p.status==="concluida"?`${p.golsCasa}–${p.golsFora}${p.motmJogador?" · MOTM":""}${p.motivoAusencia?` · Ausente: ${p.motivoAusencia}`:""}`:p.status==="cancelada"?"Eliminado":p.status==="bloqueada"?"Aguardando classificação":"Agendado";return `<div class="jja-jogo ${p.status==="concluida"?"jja-jogo--feito":""}"><span class="jja-jogo-num">${p.data?new Date(p.data).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"}):String(p.numero).padStart(2,"0")}</span><span class="jja-jogo-adversario">${escapar(p.competicao)} · ${escapar(nomeCasa || "Equipe")} × ${escapar(nomeFora || "Adversário")}</span><span class="jja-jogo-resultado">${escapar(status)}</span></div>`}).join("")}</div>`;
     }
     function mostrarDesempenhoTemporada(temporada) {
