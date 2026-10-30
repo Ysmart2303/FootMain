@@ -8,6 +8,30 @@
     let bloqueioAcoesPartida = false;
     let decisaoEmAndamento = false;
     let fluxoDecisao = null;
+    let loadingEl = null;
+
+    function mostrarCarregamento(texto = "Simulando...") {
+        if (!loadingEl) {
+            loadingEl = document.createElement("div");
+            loadingEl.className = "footmain-loading-overlay";
+            loadingEl.hidden = true;
+            loadingEl.setAttribute("role", "status");
+            loadingEl.setAttribute("aria-live", "polite");
+            loadingEl.setAttribute("aria-busy", "true");
+            loadingEl.innerHTML = `
+                <div class="footmain-loading-spinner" aria-hidden="true"></div>
+                <p class="footmain-loading-texto"></p>`;
+            document.body.append(loadingEl);
+        }
+        loadingEl.querySelector(".footmain-loading-texto").textContent = texto;
+        loadingEl.hidden = false;
+        // Libera o frame para o navegador pintar o overlay antes da simulação bloquear a thread.
+        return new Promise((resolve) => setTimeout(resolve, 30));
+    }
+    
+    function ocultarCarregamento() {
+        if (loadingEl) loadingEl.hidden = true;
+    }
 
     function bloquearAcoesPartida() {
         bloqueioAcoesPartida = true;
@@ -500,22 +524,36 @@
             informar("A opção de aposentadoria não está disponível nesta página.", true);
             return;
         }
-        if (temporadaEmAndamento(typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : {})) {
-            const mensagem = "A temporada atual será concluída automaticamente antes da aposentadoria. Deseja continuar?";
-            if (typeof confirmarAcao !== "function") {
-                informar("O modal de confirmação não está disponível nesta página.", true);
-                return;
-            }
-            const confirmado = await confirmarAcao(mensagem, "Confirmar aposentadoria");
-            if (!confirmado) return;
-            simularRestantes();
-            if (!estado?.salvaOficialmente) return;
-            await aposentarVoluntariamente(true);
-        } else {
-            await aposentarVoluntariamente();
+        if (typeof confirmarAcao !== "function") {
+            informar("O modal de confirmação não está disponível nesta página.", true);
+            return;
         }
+    
+        const carreira = typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : {};
+        const emAndamento = temporadaEmAndamento(carreira);
+    
+        const mensagem = emAndamento
+            ? "A temporada atual será concluída automaticamente antes da aposentadoria.\n\nTem certeza que deseja aposentar o jogador agora?"
+            : "Tem certeza que deseja aposentar o jogador agora?\n\nA carreira será registrada no ranking e não poderá ser retomada.";
+    
+        const confirmado = await confirmarAcao(mensagem, "Confirmar aposentadoria");
+        if (!confirmado) return;
+    
+        if (emAndamento) {
+            await mostrarCarregamento("Concluindo a temporada atual antes da aposentadoria...");
+            try {
+                simularRestantes();
+            } finally {
+                ocultarCarregamento();
+            }
+            if (!estado?.salvaOficialmente) return;
+        }
+    
+        // Já confirmamos acima; evita a segunda confirmação dentro de aposentarVoluntariamente().
+        await aposentarVoluntariamente(true);
         renderizar();
     }
+  
     function registrarResultado(timeCasa, timeFora, golsCasa, golsFora) {
         const casa = estado.tabela.find(t => t.id === timeCasa.id), fora = estado.tabela.find(t => t.id === timeFora.id);
         if (!casa || !fora) return;
@@ -1027,7 +1065,8 @@
         renderizar();
         exibirLanceDecisao();
     }
-    function simularRestantes(simulacaoAutomatica = false) {
+  
+    function simularRestantes(simulacaoAutomatica = false, comLoading = false) {
         if (decisaoEmAndamento || (bloqueioAcoesPartida && !simulacaoAutomatica)) return;
         if (!estado) { informar("Inicie sua carreira primeiro.", true); return; }
         if (!estado.partidas.some(p => p.status === "agendada")) { informar("A temporada já foi concluída."); return; }
@@ -1044,6 +1083,7 @@
         salvar(); renderizar();
         if (!estado.partidas.some(p => p.status === "agendada") && !estado.salvaOficialmente) finalizarTemporadaOficial();
     }
+  
     function finalizarTemporadaOficial() {
         if (!estado || estado.salvaOficialmente || !estado.integrado) {
             return;
@@ -1289,26 +1329,57 @@
         if (typeof atualizarTitulosResultados === "function") atualizarTitulosResultados(temporada);
         if (typeof atualizarMercadoResultados === "function") atualizarMercadoResultados(temporada);
     }
+  
     async function simularFimCarreira() {
         if (decisaoEmAndamento) return;
+        if (typeof confirmarAcao !== "function") {
+            informar("O modal de confirmação não está disponível nesta página.", true);
+            return;
+        }
+    
+        const confirmado = await confirmarAcao(
+            "Deseja simular automaticamente todas as temporadas restantes até a aposentadoria?\n\nA simulação continuará a partir da temporada atual e pode levar alguns segundos.",
+            "Simular fim de carreira"
+        );
+        if (!confirmado) return;
+    
         try {
             if (!estado) {
                 await iniciar();
                 if (!estado) return;
             }
             simulandoCarreira = true;
+    
             while (estado && estado.idade <= estado.idadeLimite) {
-                if (!estado.salvaOficialmente) simularRestantes(true);
-                if (!estado.salvaOficialmente || estado.idade >= estado.idadeLimite || estado.disponibilidade?.lesaoCarreira) break;
+                if (!estado.salvaOficialmente) {
+                    await mostrarCarregamento(`Simulando a temporada ${estado.ano}...`);
+                    try {
+                        simularRestantes(true);
+                    } finally {
+                        ocultarCarregamento();
+                    }
+                }
+                if (!estado.salvaOficialmente
+                    || estado.idade >= estado.idadeLimite
+                    || estado.disponibilidade?.lesaoCarreira) break;
+    
                 const temporadaAnterior = estado;
                 await iniciar();
                 if (estado === temporadaAnterior) break;
             }
+    
+            ocultarCarregamento();
             const carreira = typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : {};
             const historico = obterHistoricoCarreira(carreira);
             const temporadaFinal = historico[historico.length - 1];
             if (temporadaFinal && typeof mostrarResumoFinal === "function") {
-                mostrarResumoFinal(carreira.nome || temporadaFinal.nome, carreira.idadeLimite || temporadaFinal.idade, temporadaFinal.ano, historico, temporadaFinal.posicao);
+                mostrarResumoFinal(
+                    carreira.nome || temporadaFinal.nome,
+                    carreira.idadeLimite || temporadaFinal.idade,
+                    temporadaFinal.ano,
+                    historico,
+                    temporadaFinal.posicao
+                );
                 mostrarDesempenhoTemporada(temporadaFinal);
             }
             informar(`Fim da carreira simulada até ${temporadaFinal?.idade || estado?.idade || "a última temporada"} anos. O Histórico contém o resumo de cada temporada.`);
@@ -1316,9 +1387,11 @@
             console.error("Falha ao simular o fim da carreira:", erro);
             informar(`Não foi possível concluir a simulação da carreira: ${erro.message || erro}`, true);
         } finally {
+            ocultarCarregamento();
             simulandoCarreira = false;
         }
     }
+  
     function inicializar() {
         carregar();
         const carreira = typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : {};
