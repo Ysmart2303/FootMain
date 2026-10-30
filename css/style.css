@@ -4543,6 +4543,59 @@ html[data-theme="light"] .mercado-resultados > div {
 .jja-placar { margin: 12px 0; font-size: 1.2rem; font-weight: 900; }
 .jja-painel p { color: #b7c4d5; line-height: 1.5; }
 .jja-tabela-wrap { max-height: 420px; overflow: auto; }
+
+/* ============================================================
+   Zonas de classificação (indicador colorido à esquerda da posição)
+   ============================================================ */
+.jja-tabela tbody tr[data-zona] > td:first-child {
+    position: relative;
+    padding-left: 12px;
+}
+.jja-tabela tbody tr[data-zona] > td:first-child::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 2px;
+    bottom: 2px;
+    width: 3px;
+    border-radius: 2px;
+    background: var(--zona-cor, transparent);
+}
+
+.jja-legenda-zonas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    margin: 10px 0 14px;
+    padding: 0;
+    list-style: none;
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+.jja-legenda-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+.jja-legenda-cor {
+    display: inline-block;
+    flex: 0 0 10px;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+}
+.jja-legenda-texto {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Tema claro */
+html[data-theme="light"] .jja-legenda-zonas {
+    color: #475569;
+}
+
 .jja-classificacao .jja-tabela-wrap { max-height: 240px; }
 .jja-tabela { width: 100%; border-collapse: collapse; font-size: .83rem; }
 .jja-tabela th, .jja-tabela td { padding: 8px 6px; border-bottom: 1px solid #263449; text-align: right; white-space: nowrap; }
