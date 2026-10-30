@@ -2,6 +2,8 @@
 (() => {
     "use strict";
     const KEY = "footmain_jogo_a_jogo_carreira_v2";
+    const ANO_BASE_COPA_DO_MUNDO_SELECOES = 2026;
+    const CICLO_COPA_DO_MUNDO_SELECOES = 4;
     const $ = (id) => document.getElementById(id);
     let estado = null;
     let simulandoCarreira = false;
@@ -73,28 +75,30 @@
         acao.tentativas++;
         if (sucesso) acao.sucessos++;
     }
-    function calcularDesempenhoPosicional(posicao, desempenho) {
+    function calcularDesempenhoPosicional(posicao, desempenho, estatisticas = {}) {
         const jogos = Math.max(1, Number(desempenho.jogos) || 0);
         const porJogo = tipo => (Number(desempenho.acoes?.[tipo]?.sucessos) || 0) / jogos;
         const gols = (Number(desempenho.gols) || 0) / jogos;
         const assistencias = (Number(desempenho.assistencias) || 0) / jogos;
+        const desarmes = (Number(estatisticas.desarmes) || 0) / jogos;
+        const defesas = (Number(estatisticas.defesas) || 0) / jogos;
         const vitorias = (Number(desempenho.vitorias) || 0) / jogos;
         const jogosSemSofrer = (Number(desempenho.jogosSemSofrer) || 0) / jogos;
         const categoria = ["PE", "CA", "PD"].includes(posicao) ? "ata"
             : ["ME", "MC", "MD"].includes(posicao) ? "me"
                 : posicao === "GOL" ? "go" : "zag";
         const pontuacao = categoria === "go"
-            ? porJogo("defesa") * .9 + jogosSemSofrer * .8 + porJogo("reposicao") * .25 + assistencias * .35 + vitorias * .18
+            ? defesas * .45 + jogosSemSofrer * .55 + porJogo("reposicao") * .25 + assistencias * .35 + vitorias * .18
             : categoria === "zag"
-                ? porJogo("defesa") * .8 + jogosSemSofrer * .7 + porJogo("passe") * .3 + (gols + assistencias) * .3 + vitorias * .18
+                ? desarmes * .35 + jogosSemSofrer * .45 + porJogo("passe") * .3 + (gols + assistencias) * .3 + vitorias * .18
                 : categoria === "me"
-                    ? porJogo("passe") * .75 + porJogo("drible") * .45 + porJogo("defesa") * .35 + assistencias * .55 + gols * .25 + vitorias * .18
-                    : gols * .7 + assistencias * .55 + porJogo("drible") * .65 + porJogo("passe") * .25 + vitorias * .18;
+                    ? porJogo("passe") * .75 + porJogo("drible") * .45 + desarmes * .3 + assistencias * .55 + gols * .25 + vitorias * .18
+                    : gols * .7 + assistencias * .55 + desarmes * .2 + porJogo("drible") * .65 + porJogo("passe") * .25 + vitorias * .18;
         return { categoria, pontuacao };
     }
     function aplicarDesempenhoPosicional(temporada) {
         const desempenho = estado.desempenhoPosicional || desempenhoPosicionalInicial();
-        const { categoria, pontuacao } = calcularDesempenhoPosicional(estado.posicao, desempenho);
+        const { categoria, pontuacao } = calcularDesempenhoPosicional(estado.posicao, desempenho, estado.estatisticas);
         const aumento = pontuacao >= 1.2 ? 2 : pontuacao >= .45 ? 1 : 0;
         const atributosPrincipais = {
             go: ["reflexos", "fisico", "defesa", "passe"],
@@ -191,7 +195,10 @@
                     ...(estado.desempenhoPosicional || {}),
                     acoes: { ...(estado.desempenhoPosicional?.acoes || {}) }
                 };
-                estado.estatisticas = { jogos: 0, gols: 0, assistencias: 0, jogosClube: 0, golsClube: 0, assistenciasClube: 0, jogosSelecao: 0, golsSelecao: 0, assistenciasSelecao: 0, jogosSelecaoPorCompeticao: {}, golsSelecaoPorCompeticao: {}, amarelos: 0, vermelhos: 0, motm: 0, vitorias: 0, empates: 0, derrotas: 0, ...estado.estatisticas };
+                estado.estatisticas = { jogos: 0, gols: 0, assistencias: 0, jogosClube: 0, golsClube: 0, assistenciasClube: 0, jogosSelecao: 0, golsSelecao: 0, assistenciasSelecao: 0, jogosSelecaoPorCompeticao: {}, golsSelecaoPorCompeticao: {}, amarelos: 0, vermelhos: 0, motm: 0, vitorias: 0, empates: 0, derrotas: 0, driblesCompletos: 0, desarmes: 0, defesas: 0, jogadasCriadas: 0, ...estado.estatisticas };
+                ["driblesCompletos", "desarmes", "defesas", "jogadasCriadas"].forEach(chave => {
+                    estado.estatisticas[chave] = Math.max(0, Number(estado.estatisticas[chave]) || 0);
+                });
                 if (!Number.isFinite(Number(valor.estatisticas?.jogosClube))) estado.estatisticas.jogosClube = Number(estado.estatisticas.jogos) || 0;
                 if (!Number.isFinite(Number(valor.estatisticas?.golsClube))) estado.estatisticas.golsClube = Number(estado.estatisticas.gols) || 0;
                 if (!Number.isFinite(Number(valor.estatisticas?.assistenciasClube))) estado.estatisticas.assistenciasClube = Number(estado.estatisticas.assistencias) || 0;
@@ -246,8 +253,26 @@
         });
         return jogos;
     }
+    function obterSelecoesAdversarias(competicao, selecaoId) {
+        const selecao = (typeof SELECOES !== "undefined" ? SELECOES : []).find(item => item.id === selecaoId);
+        const todas = (typeof SELECOES !== "undefined" ? SELECOES : []).filter(item => item.id !== selecaoId);
+        const regioesPorCompeticao = {
+            "Copa América": ["americaSul", "americaNorte"],
+            "Copa Ouro": ["americaSul", "americaNorte"],
+            "Eurocopa": ["europa"],
+            "Copa das Nações Africanas": ["africa"],
+            "Copa da Ásia": ["asia"],
+            "Copa das Nações da OFC": ["oceania"],
+            "Eliminatórias": selecao ? [selecao.regiao] : []
+        };
+        const regioes = regioesPorCompeticao[competicao];
+        if (regioes === undefined || ["Copa do Mundo", "Olimpíadas", "Amistoso"].includes(competicao)) return todas;
+        const elegiveis = todas.filter(item => regioes.includes(item.regiao));
+        return elegiveis.length ? elegiveis : todas;
+    }
     function adicionarEliminatoria(partidas, times, clubeId, competicao, ano, mesInicial, quantidadeRodadas, prefixo, selecao = null, statusInicial = "agendada") {
-        const oponentes = times.filter(t => t.id !== clubeId);
+        const adversarios = selecao && !times.length ? obterSelecoesAdversarias(competicao, clubeId) : times;
+        const oponentes = adversarios.filter(t => t.id !== clubeId);
         const fases = [];
         for (let fase = 0; fase < quantidadeRodadas; fase++) {
             const adversario = oponentes[Math.floor(Math.random() * oponentes.length)];
@@ -333,23 +358,28 @@
         const convocada = obterConvocacao({ ...perfil, ano }, carreira, historico);
         const jogosSelecao = [];
         if (convocada) {
+            const adversariosPorCompeticao = {};
             for (let i = 0; i < 6; i++) {
+                const competicao = i % 2 === 0 ? "Eliminatórias" : "Amistoso";
+                const adversarios = adversariosPorCompeticao[competicao] ||= obterSelecoesAdversarias(competicao, convocada.id);
+                const indiceAdversario = Math.floor(Math.random() * adversarios.length);
+                const [adversario] = adversarios.splice(indiceAdversario, 1);
                 jogosSelecao.push({
                     data: Date.UTC(ano, [2, 3, 5, 8, 9, 10][i], 12),
-                    adversarioId: "",
-                    adversarioNome: "Seleção adversária",
+                    adversarioId: adversario.id,
+                    adversarioNome: adversario.nome,
                     casa: i % 2 === 0,
-                    competicao: i % 2 === 0 ? "Eliminatórias" : "Amistoso",
+                    competicao,
                     tipo: "selecao",
                     selecao: "amistoso",
                     status: "agendada"
                 });
             }
-            const cicloSelecoes = Math.max(1, Number(getConfig()?.titulos?.cicloCopaDoMundo) || 4);
-            const anoBaseCopaDoMundo = typeof ANO_INICIAL !== "undefined" ? ANO_INICIAL : 2026;
-            const anoCopaDoMundo = ano >= anoBaseCopaDoMundo && (ano - anoBaseCopaDoMundo) % cicloSelecoes === 0;
-            const anoInicioContinental = anoBaseCopaDoMundo + 2;
-            const anoTorneioRegional = ano >= anoInicioContinental && (ano - anoInicioContinental) % cicloSelecoes === 0;
+            const anoCopaDoMundo = ano >= ANO_BASE_COPA_DO_MUNDO_SELECOES
+                && (ano - ANO_BASE_COPA_DO_MUNDO_SELECOES) % CICLO_COPA_DO_MUNDO_SELECOES === 0;
+            const anoInicioContinental = ANO_BASE_COPA_DO_MUNDO_SELECOES + 2;
+            const anoTorneioRegional = ano >= anoInicioContinental
+                && (ano - anoInicioContinental) % CICLO_COPA_DO_MUNDO_SELECOES === 0;
             if (anoCopaDoMundo || anoTorneioRegional) {
                 const competicaoRegional = {
                     americaSul: "Copa América", europa: "Eurocopa", americaNorte: "Copa Ouro",
@@ -363,7 +393,7 @@
                     adicionarEliminatoria(partidas, [], convocada.id, competicao, ano, 5 + indice, 4, `selecao:${convocada.id}`, competicao);
                 });
             }
-            const anoBaseSelecoes = typeof ANO_INICIAL !== "undefined" ? ANO_INICIAL : 2026;
+            const anoBaseSelecoes = ANO_BASE_COPA_DO_MUNDO_SELECOES;
             const anoMundialDeBase = ano > anoBaseSelecoes
                 && (ano - (anoBaseSelecoes + 1)) % 2 === 0
                 && !anoCopaDoMundo;
@@ -473,7 +503,7 @@
             const partidas = montarCalendarioTemporada(times, clube, rodadas, ano, carreira, historicoCarreira, perfil);
             partidas.forEach((partida, indice) => { partida.numero = indice + 1; });
             const jogosLesaoAnterior = Number(ultimaTemporada?.jogosForaProximaTemporada) || 0;
-            estado = { versao: 4, integrado: true, carreiraId: carreira.id, nome, posicao, nacionalidade, overall, atributos: modeloTemporada?.atributos || null, idade, idadeLimite, ano, clubeId, liga: clube.liga, rodada: 0, rodadas, partidas, tabela, disponibilidade: disponibilidadeInicial(jogosLesaoAnterior), desempenhoPosicional: desempenhoPosicionalInicial(), estatisticas: { jogos: 0, gols: 0, assistencias: 0, jogosClube: 0, golsClube: 0, assistenciasClube: 0, jogosSelecao: 0, golsSelecao: 0, assistenciasSelecao: 0, jogosSelecaoPorCompeticao: {}, golsSelecaoPorCompeticao: {}, convocado: partidas.some(p => p.tipo === "selecao"), amarelos: 0, vermelhos: 0, motm: 0, vitorias: 0, empates: 0, derrotas: 0 }, eventos: [], competicoes: {}, trofeusClube: [], trofeusSelecao: [], trofeusColetivos: [], trofeusIndividuais: [], ultima: null, feed: [], salvaOficialmente: false };
+            estado = { versao: 4, integrado: true, carreiraId: carreira.id, nome, posicao, nacionalidade, overall, atributos: modeloTemporada?.atributos || null, idade, idadeLimite, ano, clubeId, liga: clube.liga, rodada: 0, rodadas, partidas, tabela, disponibilidade: disponibilidadeInicial(jogosLesaoAnterior), desempenhoPosicional: desempenhoPosicionalInicial(), estatisticas: { jogos: 0, gols: 0, assistencias: 0, jogosClube: 0, golsClube: 0, assistenciasClube: 0, jogosSelecao: 0, golsSelecao: 0, assistenciasSelecao: 0, jogosSelecaoPorCompeticao: {}, golsSelecaoPorCompeticao: {}, convocado: partidas.some(p => p.tipo === "selecao"), amarelos: 0, vermelhos: 0, motm: 0, vitorias: 0, empates: 0, derrotas: 0, driblesCompletos: 0, desarmes: 0, defesas: 0, jogadasCriadas: 0 }, eventos: [], competicoes: {}, trofeusClube: [], trofeusSelecao: [], trofeusColetivos: [], trofeusIndividuais: [], ultima: null, feed: [], salvaOficialmente: false };
             salvar(); renderizar();
             const convocado = estado.estatisticas.convocado ? ` Convocado para ${SELECOES.find(s => s.id === nacionalidade)?.nome || "a seleção"}; partidas internacionais adicionadas ao calendário.` : "";
             informar(`Temporada ${ano} iniciada por contrato com ${clube.nome}.${convocado}`);
@@ -642,7 +672,11 @@
         const meuClube = pelaSelecao
             ? (typeof SELECOES !== "undefined" ? SELECOES.find(s => s.id === estado.nacionalidade) : null)
             : times.find(c => c.id === estado.clubeId);
-        const adversario = partida.adversarioId ? times.find(c => c.id === partida.adversarioId) : null;
+        const adversario = partida.adversarioId
+            ? pelaSelecao
+                ? (typeof SELECOES !== "undefined" ? SELECOES.find(s => s.id === partida.adversarioId) : null)
+                : times.find(c => c.id === partida.adversarioId)
+            : null;
         if (!meuClube || (!pelaSelecao && !adversario)) { informar("Não foi possível localizar uma equipe do calendário.", true); return; }
         const visitante = adversario || { id: `${meuClube.id}-adversario`, nome: partida.adversarioNome || "Seleção adversária" };
         const casa = partida.casa ? meuClube : visitante, fora = partida.casa ? visitante : meuClube;
@@ -652,7 +686,11 @@
         const impactoBaseJogador = ((Number(estado.overall) || 65) - 70) * 0.3;
         const impactoJogador = Math.max(-5, Math.min(8, impactoBaseJogador * (posicaoDefensiva ? 1.35 : 1)));
         const forcaMinhaEquipe = Math.max(35, Math.min(99, forcaBaseMinhaEquipe + impactoJogador));
-        const forcaAdversaria = adversario ? forcaClube(adversario) : 60 + Math.random() * 20;
+        const forcaAdversaria = adversario
+            ? pelaSelecao
+                ? Number(getConfig()?.selecao?.potencias?.[adversario.id]) || 60
+                : forcaClube(adversario)
+            : 60 + Math.random() * 20;
         const delta = (partida.casa ? forcaMinhaEquipe - forcaAdversaria : forcaAdversaria - forcaMinhaEquipe) / 25 + vantagemCasa;
         let golsCasa = sortearPoisson(Math.max(0.25, 1.35 + delta * 0.55));
         let golsFora = sortearPoisson(Math.max(0.25, 1.15 - delta * 0.45));
@@ -673,6 +711,24 @@
             ? { participou: false, gols: 0, assistencias: 0, amarelo: 0, vermelho: 0, motm: false }
             : sortearEstatisticasJogador(partida, meuClube, golsCasa, golsFora, interacao?.participou ?? null);
         const participou = statsJogador.participou;
+        const posicao = typeof chavePosicaoCampo === "function"
+            ? chavePosicaoCampo(estado.posicao)
+            : String(estado.posicao || "").toUpperCase();
+        const ehGoleiro = posicao === "GOL";
+        const ehDefensor = ["ZCE", "ZCD", "LE", "LD"].includes(posicao);
+        const ehMeiaOuAtacante = ["ME", "MC", "MD", "PE", "CA", "PD"].includes(posicao);
+        const estatisticasComplementares = {
+            driblesCompletos: participou && ehMeiaOuAtacante ? sortearPoisson(.8) : 0,
+            desarmes: participou && ehDefensor ? sortearPoisson(1.7) : 0,
+            defesas: participou && ehGoleiro ? sortearPoisson(.9) : 0,
+            jogadasCriadas: participou ? sortearPoisson(ehGoleiro ? .15 : ehDefensor ? .25 : .45) : 0
+        };
+        if (participou && interacao) {
+            estatisticasComplementares.driblesCompletos += Math.max(0, Number(interacao.driblesCompletos) || 0);
+            estatisticasComplementares.desarmes += Math.max(0, Number(interacao.desarmes) || 0);
+            estatisticasComplementares.defesas += Math.max(0, Number(interacao.defesas) || 0);
+            estatisticasComplementares.jogadasCriadas += Math.max(0, Number(interacao.jogadasCriadas) || 0);
+        }
         let golsJogador = statsJogador.gols;
         let assistJogador = statsJogador.assistencias;
         const golsEquipeCriados = Math.max(0, interacao?.golsEquipeCriados || 0);
@@ -705,6 +761,10 @@
                 golsPorCompeticao[competicao] = (golsPorCompeticao[competicao] || 0) + golsJogador;
             }
             estado.estatisticas.jogos++; estado.estatisticas.gols += golsJogador; estado.estatisticas.assistencias += assistJogador;
+            estado.estatisticas.driblesCompletos += estatisticasComplementares.driblesCompletos;
+            estado.estatisticas.desarmes += estatisticasComplementares.desarmes;
+            estado.estatisticas.defesas += estatisticasComplementares.defesas;
+            estado.estatisticas.jogadasCriadas += estatisticasComplementares.jogadasCriadas;
             estado.estatisticas.amarelos += amarelo; estado.estatisticas.vermelhos += vermelho;
             if (motm) estado.estatisticas.motm = (estado.estatisticas.motm || 0) + 1;
             if (vermelho) {
@@ -744,6 +804,10 @@
         partida.status = "concluida"; partida.golsCasa = golsCasa; partida.golsFora = golsFora; partida.participou = participou;
         partida.motivoAusencia = motivoAusencia;
         partida.golsJogador = golsJogador; partida.assistenciasJogador = assistJogador; partida.amarelo = amarelo; partida.vermelho = vermelho; partida.motmJogador = !!motm;
+        partida.driblesCompletos = participou ? estatisticasComplementares.driblesCompletos : 0;
+        partida.desarmes = participou ? estatisticasComplementares.desarmes : 0;
+        partida.defesas = participou ? estatisticasComplementares.defesas : 0;
+        partida.jogadasCriadas = participou ? estatisticasComplementares.jogadasCriadas : 0;
         partida.casaNome = casa.nome; partida.foraNome = fora.nome;
         estado.rodada++;
         const resumoTorneio = processarEliminatoria(partida, golsCasa, golsFora);
@@ -788,7 +852,7 @@
         const detalhes = participou
             ? `${estado.nome}: ${golsJogador} gol(s)${hatTrick ? " — HAT-TRICK!" : ""}, ${assistJogador} assistência(s)${motm ? ", MOTM (melhor em campo)" : ""}${amarelo ? ", cartão amarelo" : ""}${vermelho ? ", cartão vermelho" : ""}.${jogosSuspensaoCartao ? ` Suspenso por ${jogosSuspensaoCartao} próxima(s) partida(s)${suspensaoPorAmarelos ? " por acúmulo de amarelos" : ""}.` : ""}${detalheLesao}${resumoTorneio ? ` ${resumoTorneio}` : ""}`
             : `${estado.nome} não entrou em campo${motivoAusencia ? ` (${motivoAusencia})` : ""}.${resumoTorneio ? ` ${resumoTorneio}` : ""}`;
-        estado.ultima = { resumo, detalhes, competicao: partida.competicao, rodada: partida.numero, participou, golsJogador, assistJogador, motm: !!motm, hatTrick, amarelo, vermelho };
+        estado.ultima = { resumo, detalhes, competicao: partida.competicao, rodada: partida.numero, participou, golsJogador, assistJogador, driblesCompletos: partida.driblesCompletos, desarmes: partida.desarmes, defesas: partida.defesas, jogadasCriadas: partida.jogadasCriadas, motm: !!motm, hatTrick, amarelo, vermelho };
         estado.eventos = estado.eventos || [];
         if (hatTrick) estado.eventos.push({ tipo: "hat-trick", jogo: partida.numero });
         if (amarelo) estado.eventos.push({ tipo: "cartao-amarelo", jogo: partida.numero });
@@ -815,11 +879,20 @@
         confrontos.forEach(j => { if (j.casaId === estado.clubeId || j.foraId === estado.clubeId) j.status = "concluido"; });
     }
     function criarLancesDaPartida() {
-        const posicao = String(estado.posicao || "CA").toUpperCase();
+        const posicao = typeof chavePosicaoCampo === "function"
+            ? chavePosicaoCampo(estado.posicao)
+            : String(estado.posicao || "CA").toUpperCase();
+        const normalizarOpcao = (opcao, tipo, atributo) => {
+            if (opcao && typeof opcao === "object" && !Array.isArray(opcao)) {
+                return { ...opcao, tipo, atributo };
+            }
+            const [texto, chance, direcao] = Array.isArray(opcao) ? opcao : [opcao, 0, undefined];
+            return { texto, chance, tipo, atributo, ...(direcao !== undefined ? { direcao } : {}) };
+        };
         const criarLance = (titulo, contexto, tipo, atributo, opcoes) => ({
             titulo,
             contexto,
-            opcoes: opcoes.map(([texto, chance]) => ({ texto, chance, tipo, atributo }))
+            opcoes: opcoes.map((opcao) => normalizarOpcao(opcao, tipo, atributo))
         });
         const finalizacao = criarLance("Chance de gol", "Você recebe a bola perto da área. Como finaliza?", "finalizacao", "finalizacao", [
             ["Chutar colocado no canto", .58], ["Bater forte no meio do gol", .49], ["Tentar uma cavadinha", .4]
@@ -835,72 +908,127 @@
         ]);
         const opcoesPasse = (titulo, contexto, opcoes) => criarLance(titulo, contexto, "passe", "passe", opcoes);
         const opcoesDefesa = (titulo, contexto, atributo, opcoes) => criarLance(titulo, contexto, "defesa", atributo, opcoes);
+        const opcoesDesarme = (titulo, contexto, atributo, opcoes) => {
+            const lance = opcoesDefesa(titulo, contexto, atributo, opcoes);
+            return { ...lance, opcoes: lance.opcoes.map(opcao => ({ ...opcao, contaComoDesarme: true })) };
+        };
         const opcoesDrible = (titulo, contexto, opcoes) => criarLance(titulo, contexto, "drible", "drible", opcoes);
+        const penaltiComum = (titulo, contexto, lado = "meio") => criarLance(
+            titulo,
+            contexto,
+            "penalti",
+            "finalizacao",
+            [
+                [lado === "meio" ? "Mandar no centro do gol" : `Chutar para a ${lado}`, .72, lado === "meio" ? "meio" : lado],
+                ["Mandar no centro do gol", .68, "meio"],
+                [lado === "meio" ? "Chutar rasteiro ao meio" : `Tentar um chute rasteiro para a ${lado}`, .62, lado === "meio" ? "meio" : lado]
+            ]
+        );
+        const penaltiGoleiro = (titulo, contexto) => criarLance(
+            titulo,
+            contexto,
+            "penalti-defesa",
+            "reflexos",
+            [
+                ["Defender para a esquerda", .66, "esquerda"],
+                ["Defender para a direita", .66, "direita"],
+                ["Esperar o chute e fechar o ângulo", .62, "centro"]
+            ]
+        );
         const posicoes = {
             GOL: [
                 opcoesDefesa("Cara a cara", "O atacante invade a área. Como você tenta defender?", "reflexos", [["Fechar o ângulo", .76], ["Esperar o chute e reagir", .72], ["Sair nos pés do atacante", .62]]),
                 opcoesDefesa("Bola cruzada", "Um cruzamento fechado atravessa a pequena área. Qual decisão toma?", "reflexos", [["Sair para encaixar", .7], ["Espalmar para longe", .77], ["Proteger o primeiro poste", .73]]),
-                opcoesPasse("Reposição do goleiro", "Após a defesa, você inicia a jogada. Como repõe a bola?", [["Passe curto para o zagueiro", .77], ["Lançamento no contra-ataque", .51], ["Reposição rápida no espaço", .61]])
+                opcoesDesarme("Saída da área", "Um atacante dispara nas costas da defesa e a bola fica fora da área. Como você intervém?", "velocidade", [["Chegar primeiro e afastar para longe", .68], ["Antecipar o domínio e tocar para um lado", .64], ["Deslizar para cortar a bola com segurança", .56]]),
+                opcoesDesarme("Cobertura como último homem", "Um passe longo supera a defesa e você precisa agir longe do gol.", "defesa", [["Afastar de primeira para a lateral", .72], ["Dominar e iniciar a saída", .62], ["Antecipar a disputa antes do atacante", .58]]),
+                penaltiGoleiro("Pênalti defendido", "O árbitro marca pênalti. Você precisa escolher o lado e a forma de defender."),
+                criarLance("Reposição do goleiro", "Após a defesa, você inicia a jogada. Como repõe a bola?", "reposicao", "passe", [["Passe curto para o zagueiro", .77], ["Lançamento no contra-ataque", .51], ["Reposição rápida no espaço", .61]])
             ],
             ZCE: [
                 opcoesDefesa("Cobertura central", "Um atacante tenta passar entre você e o outro zagueiro. Como fecha o espaço?", "defesa", [["Antecipar a enfiada", .65], ["Acompanhar e bloquear o chute", .7], ["Dar o bote para desarmar", .55]]),
                 opcoesDefesa("Bola aérea", "A bola vem alta na área. Como disputa a jogada?", "fisico", [["Subir para afastar de cabeça", .71], ["Ganhar posição e proteger", .74], ["Tentar dominar para sair jogando", .55]]),
+                penaltiComum("Pênalti para decidir", "Você é chamado para cobrar um pênalti. Qual escolha faz?", "esquerda"),
                 opcoesPasse("Construção por dentro", "Seu time recupera a bola no campo defensivo. Qual saída escolhe?", [["Passe vertical entre as linhas", .56], ["Inversão para o lado oposto", .64], ["Passe curto para manter a posse", .76]])
             ],
             ZCD: [
                 opcoesDefesa("Proteção do lado direito", "O ponta adversário avança pela sua faixa. Como marca?", "defesa", [["Conduzir o atacante para a lateral", .74], ["Desarmar no momento certo", .56], ["Bloquear o cruzamento", .69]]),
                 opcoesDefesa("Disputa pelo alto", "Um cruzamento busca o centroavante. Qual ação escolhe?", "fisico", [["Atacar a bola de cabeça", .7], ["Fazer a cobertura do companheiro", .75], ["Afastar de primeira", .66]]),
+                penaltiComum("Pênalti para decidir", "Você é chamado para cobrar um pênalti. Qual escolha faz?", "direita"),
                 opcoesPasse("Saída pelo lado direito", "Você recupera a bola e encontra espaço à frente.", [["Passe para o lateral avançar", .72], ["Lançamento para o ponta", .54], ["Passe vertical no meio", .59]])
             ],
             LE: [
                 opcoesDefesa("Duelo na lateral esquerda", "O ponta tenta avançar pela sua faixa. Como reage?", "defesa", [["Fechar o corredor e esperar apoio", .75], ["Tentar o desarme", .58], ["Bloquear o cruzamento", .68]]),
                 opcoesPasse("Apoio pela esquerda", "Você encontra espaço para apoiar o ataque. O que faz?", [["Cruzar na área", .55], ["Tocar por baixo para trás", .69], ["Conduzir até a linha de fundo", .59]]),
+                penaltiComum("Pênalti para decidir", "Você é chamado para cobrar um pênalti. Qual escolha faz?", "esquerda"),
                 opcoesDefesa("Cobertura do zagueiro", "Um atacante aparece nas suas costas.", "velocidade", [["Voltar em velocidade", .67], ["Fechar a linha de passe", .73], ["Fazer o corte antes do domínio", .61]])
             ],
             LD: [
                 opcoesDefesa("Duelo na lateral direita", "O ponta adversário tenta ganhar a linha de fundo. Como defende?", "defesa", [["Fechar o corredor", .75], ["Dar o bote por dentro", .56], ["Bloquear o cruzamento", .68]]),
                 opcoesPasse("Apoio pela direita", "Você passa pelo marcador e chega perto da área.", [["Cruzar no segundo poste", .56], ["Tocar rasteiro para trás", .7], ["Buscar a tabela e invadir a área", .61]]),
+                penaltiComum("Pênalti para decidir", "Você é chamado para cobrar um pênalti. Qual escolha faz?", "direita"),
                 opcoesDefesa("Recuperação defensiva", "Um contra-ataque ameaça o seu lado.", "velocidade", [["Acompanhar o atacante", .68], ["Cortar a linha de passe", .72], ["Pressionar junto ao companheiro", .64]])
             ],
             ME: [
                 opcoesPasse("Criação pelo lado esquerdo", "Você recebe entre o meio e a ponta. Como cria perigo?", [["Enfiada para o atacante", .6], ["Cruzamento antecipado", .55], ["Inverter para o lado oposto", .68]]),
                 opcoesDrible("Progressão pela esquerda", "Há espaço para avançar com a bola.", [["Cortar para o meio e finalizar", .55], ["Driblar pela linha lateral", .61], ["Proteger e esperar a ultrapassagem", .75]]),
-                opcoesDefesa("Pressão no meio-campo", "O adversário tenta sair jogando pela sua faixa.", "defesa", [["Pressionar para forçar o erro", .61], ["Fechar o passe por dentro", .72], ["Tentar interceptar a bola", .64]])
+                penaltiComum("Pênalti para decidir", "Você é chamado para cobrar um pênalti. Qual escolha faz?", "esquerda"),
+                opcoesDefesa("Pressão no meio-campo", "O adversário tenta sair jogando pela sua faixa.", "defesa", [["Pressionar para forçar o erro", .61], ["Fechar o passe por dentro", .72], ["Tentar interceptar a bola", .64]]),
+                opcoesDefesa("Volta para recompor", "O adversário dispara em velocidade e seu time está em inferioridade numérica.", "velocidade", [["Acompanhar o corredor e bloquear o passe", .7], ["Voltar até a área e fechar o chute", .66], ["Pressionar junto do lateral para recuperar", .61]])
             ],
             MC: [
                 opcoesPasse("Passe entre linhas", "Você recebe de frente para a defesa adversária.", [["Enfiada para deixar o atacante na cara do gol", .59], ["Virar o jogo para o lado livre", .69], ["Tabela curta para avançar", .66]]),
                 opcoesDefesa("Disputa no círculo central", "O adversário tenta iniciar um contra-ataque.", "defesa", [["Antecipar o passe", .66], ["Pressionar o portador", .62], ["Recuar e proteger a defesa", .77]]),
-                opcoesDrible("Condução pelo centro", "Você encontra espaço para carregar a bola.", [["Avançar entre os marcadores", .57], ["Proteger a posse e girar o jogo", .76], ["Tentar uma tabela rápida", .65]])
+                penaltiComum("Pênalti para decidir", "Você é chamado para cobrar um pênalti. Qual escolha faz?", "meio"),
+                opcoesDrible("Condução pelo centro", "Você encontra espaço para carregar a bola.", [["Avançar entre os marcadores", .57], ["Proteger a posse e girar o jogo", .76], ["Tentar uma tabela rápida", .65]]),
+                opcoesDefesa("Cobertura dos zagueiros", "Um atacante recebe entre as linhas e ameaça avançar.", "defesa", [["Recuar e fechar o espaço à frente da área", .74], ["Desarmar sem fazer falta", .58], ["Interceptar o passe para o centroavante", .65]])
             ],
             MD: [
                 opcoesPasse("Criação pelo lado direito", "Você recebe aberto com espaço para avançar.", [["Lançar o ponta em profundidade", .59], ["Cruzar na área", .56], ["Inverter a jogada", .68]]),
                 opcoesDrible("Progressão pela direita", "O marcador fecha a linha lateral.", [["Cortar para dentro", .58], ["Passar em velocidade pela lateral", .62], ["Segurar a bola e buscar apoio", .75]]),
-                opcoesDefesa("Cobertura do meio", "O adversário tenta avançar pelo seu setor.", "defesa", [["Pressionar para recuperar", .62], ["Fechar o passe central", .73], ["Acompanhar a ultrapassagem", .68]])
+                penaltiComum("Pênalti para decidir", "Você é chamado para cobrar um pênalti. Qual escolha faz?", "direita"),
+                opcoesDefesa("Cobertura do meio", "O adversário tenta avançar pelo seu setor.", "defesa", [["Pressionar para recuperar", .62], ["Fechar o passe central", .73], ["Acompanhar a ultrapassagem", .68]]),
+                opcoesDefesa("Recomposição pelo lado", "Seu lateral foi superado e o adversário acelera na sua direção.", "velocidade", [["Voltar e dobrar a marcação", .7], ["Cortar o passe para a área", .66], ["Pressionar para recuperar a bola", .6]])
             ],
             PE: [
                 opcoesDrible("Um contra um pela esquerda", "Você encara o lateral perto da área.", [["Cortar para dentro e chutar", .57], ["Ganhar na velocidade pela linha", .62], ["Fingir o chute e buscar o passe", .56]]),
                 opcoesPasse("Ataque pela ponta esquerda", "Um companheiro entra na área enquanto você avança.", [["Cruzar no primeiro poste", .55], ["Tocar rasteiro para trás", .7], ["Enfiar a bola entre lateral e zagueiro", .6]]),
-                opcoesAtaque("Finalização de ponta", "A defesa abre espaço para você finalizar.", "finalizacao")
+                penaltiComum("Pênalti para decidir", "Você é chamado para cobrar um pênalti. Qual escolha faz?", "esquerda"),
+                opcoesAtaque("Finalização de ponta", "A defesa abre espaço para você finalizar.", "finalizacao"),
+                opcoesDefesa("Volta para ajudar o lateral", "O adversário inicia um contra-ataque pelo seu lado.", "velocidade", [["Acompanhar o ponta até a defesa", .7], ["Fechar a linha de passe e recuperar", .64], ["Pressionar para forçar o erro", .58]])
             ],
             CA: [
                 opcoesAtaque("Bola na área", "O cruzamento chega e você precisa finalizar sob pressão.", "finalizacao"),
                 opcoesDrible("Disputa com o zagueiro", "Você recebe de costas para o gol, marcado de perto.", [["Girar rápido e chutar", .55], ["Proteger a bola até chegar apoio", .76], ["Tocar de primeira para a infiltração", .68]]),
-                opcoesDrible("Ataque à profundidade", "A defesa sobe e aparece espaço nas costas.", [["Disparar para receber em velocidade", .64], ["Fazer o pivô para o meia", .74], ["Atacar o primeiro poste", .61]])
+                penaltiComum("Pênalti para decidir", "Você é chamado para cobrar um pênalti. Qual escolha faz?", "meio"),
+                opcoesDrible("Ataque à profundidade", "A defesa sobe e aparece espaço nas costas.", [["Disparar para receber em velocidade", .64], ["Fazer o pivô para o meia", .74], ["Atacar o primeiro poste", .61]]),
+                opcoesDefesa("Pressão na saída de bola", "Os zagueiros adversários trocam passes e seu time precisa recuperar a bola.", "fisico", [["Pressionar o portador e fechar o passe", .63], ["Perseguir a devolução para o goleiro", .57], ["Fechar a saída curta e forçar o lançamento", .7]])
             ],
             PD: [
                 opcoesDrible("Um contra um pela direita", "Você encara o lateral perto da área.", [["Cortar para dentro e chutar", .57], ["Ganhar na velocidade pela linha", .62], ["Fingir o chute e buscar o passe", .56]]),
                 opcoesPasse("Ataque pela ponta direita", "Um companheiro invade a área enquanto você avança.", [["Cruzar no segundo poste", .56], ["Tocar rasteiro para trás", .7], ["Enfiar a bola entre lateral e zagueiro", .6]]),
-                opcoesAtaque("Finalização de ponta", "A defesa abre espaço para você finalizar.", "finalizacao")
+                penaltiComum("Pênalti para decidir", "Você é chamado para cobrar um pênalti. Qual escolha faz?", "direita"),
+                opcoesAtaque("Finalização de ponta", "A defesa abre espaço para você finalizar.", "finalizacao"),
+                opcoesDefesa("Recomposição pelo lado direito", "O time perde a bola e o adversário avança pela sua faixa.", "velocidade", [["Voltar em velocidade e fechar o corredor", .7], ["Acompanhar a ultrapassagem", .66], ["Tentar o desarme por trás com cuidado", .55]])
             ]
         };
         const pool = posicoes[posicao] || [finalizacao, passe, drible];
-        const quantidade = 1 + Math.floor(Math.random() * 3);
-        const embaralhados = [...pool];
+        const penaltiExtra = (() => {
+            if (Math.random() > 0.18) return null;
+            if (posicao === "GOL") {
+                return penaltiGoleiro("Pênalti defendido", "O árbitro marca pênalti. Você precisa escolher o lado e a forma de defender.");
+            }
+            return penaltiComum("Pênalti para decidir", "Você é chamado para cobrar um pênalti. Qual escolha faz?", ["esquerda", "meio", "direita"][Math.floor(Math.random() * 3)]);
+        })();
+        const poolComPenalti = penaltiExtra && !pool.some(lance => lance?.opcoes?.some(opcao => ["penalti", "penalti-defesa"].includes(opcao.tipo)))
+            ? [penaltiExtra, ...pool]
+            : pool;
+        const quantidade = 2 + Math.floor(Math.random() * 2);
+        const embaralhados = [...poolComPenalti];
         for (let indice = embaralhados.length - 1; indice > 0; indice--) {
             const troca = Math.floor(Math.random() * (indice + 1));
             [embaralhados[indice], embaralhados[troca]] = [embaralhados[troca], embaralhados[indice]];
         }
-        return embaralhados.slice(0, quantidade);
+        return embaralhados.slice(0, Math.min(quantidade, embaralhados.length));
     }
     function exibirLanceDecisao() {
         const lance = fluxoDecisao.lances[fluxoDecisao.indiceLance];
@@ -926,7 +1054,39 @@
         const atributo = Number(estado.atributos?.[opcao.atributo]) || Number(estado.overall) || 50;
         const chance = Math.max(.2, Math.min(.92, opcao.chance + (Number(estado.overall) - 70) * .003 + (atributo - 60) * .004));
         const sucesso = Math.random() < chance;
+        const posicao = typeof chavePosicaoCampo === "function"
+            ? chavePosicaoCampo(estado.posicao)
+            : String(estado.posicao || "").toUpperCase();
+        const ehGoleiro = posicao === "GOL";
         registrarAcaoPosicional(opcao, sucesso);
+
+        if (opcao.tipo === "penalti") {
+            const lado = String(opcao.direcao || "meio").toLowerCase();
+            const variacaoDirecao = { esquerda: 0.08, meio: 0.0, direita: -0.08 }[lado] || 0;
+            const chancePenalti = Math.max(.42, Math.min(.9, chance + variacaoDirecao));
+            const converteu = Math.random() < chancePenalti;
+            if (converteu) {
+                fluxoDecisao.resultado.gols++;
+                return lado === "meio"
+                    ? "Pênalti convertido no meio do gol! Você marcou com categoria."
+                    : `Pênalti convertido para o ${lado}! O goleiro não conseguiu chegar.`;
+            }
+            return lado === "meio"
+                ? "O goleiro adivinhou e defendeu o pênalti no centro."
+                : `O goleiro chegou no lado ${lado} e falhou a sua escolha.`;
+        }
+
+        if (opcao.tipo === "penalti-defesa") {
+            const lado = ["esquerdo", "direito", "centro"][Math.floor(Math.random() * 3)];
+            const defesa = Math.random() < Math.max(.46, Math.min(.88, chance + 0.12));
+            if (defesa) {
+                fluxoDecisao.resultado.golsEvitados++;
+                fluxoDecisao.resultado.defesas++;
+                return `Defesa! Você antecipou a direção ${lado} e segurou o pênalti.`;
+            }
+            return `O atacante marcou para o ${lado}. Você não conseguiu impedir a cobrança.`;
+        }
+
         if (!sucesso) {
             return ["defesa", "reflexos", "fisico", "velocidade"].includes(opcao.atributo)
                 ? "O adversário conseguiu passar. A jogada continua perigosa."
@@ -937,6 +1097,7 @@
             return "GOL! Sua finalização encontrou o caminho da rede.";
         }
         if (opcao.tipo === "passe") {
+            fluxoDecisao.resultado.jogadasCriadas++;
             if (Math.random() < .68) {
                 fluxoDecisao.resultado.assistencias++;
                 return "Passe perfeito! A jogada terminou em gol e você deu a assistência.";
@@ -944,6 +1105,7 @@
             return "Seu passe encontrou o companheiro e criou uma boa chance.";
         }
         if (opcao.tipo === "reposicao") {
+            fluxoDecisao.resultado.jogadasCriadas++;
             if (Math.random() < .3) {
                 fluxoDecisao.resultado.assistencias++;
                 return "Reposição precisa! O contra-ataque terminou em gol e você deu a assistência.";
@@ -951,6 +1113,7 @@
             return "Sua reposição encontrou um companheiro e iniciou o contra-ataque.";
         }
         if (opcao.tipo === "drible") {
+            fluxoDecisao.resultado.driblesCompletos++;
             const recompensa = Math.random();
             if (recompensa < .3) {
                 fluxoDecisao.resultado.gols++;
@@ -962,13 +1125,20 @@
             }
             return "Você venceu o marcador e manteve a posse no ataque.";
         }
+        if (ehGoleiro && !opcao.contaComoDesarme) fluxoDecisao.resultado.defesas++;
+        else fluxoDecisao.resultado.desarmes++;
         fluxoDecisao.resultado.golsEvitados++;
-        const chanceContraAtaque = String(estado.posicao).toUpperCase() === "GOL" ? .25 : .15;
+        const acoesDefensivasBemSucedidas = fluxoDecisao.resultado.defesas + fluxoDecisao.resultado.desarmes;
+        const chanceContraAtaqueBase = ehGoleiro ? .25 : .15;
+        const chanceContraAtaque = Math.min(.65, chanceContraAtaqueBase + acoesDefensivasBemSucedidas * .1);
         if (Math.random() < chanceContraAtaque) {
             fluxoDecisao.resultado.golsEquipeCriados++;
+            fluxoDecisao.resultado.jogadasCriadas++;
+            if (opcao.contaComoDesarme) return "Você saiu da área, afastou a bola e ainda iniciou um contra-ataque perigoso.";
             if (opcao.atributo === "reflexos") return "Defesaça! Você evitou o gol e iniciou um contra-ataque que terminou em gol.";
             return "Ação defensiva perfeita! Você interrompeu o ataque e iniciou um contra-ataque que terminou em gol.";
         }
+        if (opcao.contaComoDesarme) return "Boa saída! Você chegou antes do atacante e afastou o perigo para contar como desarme.";
         if (opcao.atributo === "reflexos") return "Defesaça! Você evitou o gol e manteve sua equipe na partida.";
         if (opcao.atributo === "fisico") return "Você ganhou a disputa e afastou o perigo da área.";
         if (opcao.atributo === "velocidade") return "Recuperação decisiva! Você chegou a tempo e cortou a jogada.";
@@ -1059,17 +1229,26 @@
             indiceLance: 0,
             escolhaConfirmada: false,
             decisaoRespondida: false,
-            resultado: { gols: 0, assistencias: 0, golsEvitados: 0, golsEquipeCriados: 0 }
+            resultado: { gols: 0, assistencias: 0, golsEvitados: 0, golsEquipeCriados: 0, driblesCompletos: 0, desarmes: 0, defesas: 0, jogadasCriadas: 0 }
         };
         decisaoEmAndamento = true;
         renderizar();
         exibirLanceDecisao();
     }
   
-    function simularRestantes(simulacaoAutomatica = false, comLoading = false) {
+    async function simularRestantes(simulacaoAutomatica = false, comLoading = false) {
         if (decisaoEmAndamento || (bloqueioAcoesPartida && !simulacaoAutomatica)) return;
         if (!estado) { informar("Inicie sua carreira primeiro.", true); return; }
         if (!estado.partidas.some(p => p.status === "agendada")) { informar("A temporada já foi concluída."); return; }
+
+        if (!simulacaoAutomatica && typeof confirmarAcao === "function") {
+            const confirmado = await confirmarAcao(
+                "A temporada será concluída automaticamente e todos os jogos restantes serão simulados.\n\nDeseja continuar?",
+                "Confirmar simulação da temporada"
+            );
+            if (!confirmado) return;
+        }
+
         if (!simulacaoAutomatica) bloquearAcoesPartida();
         let indice;
         while ((indice = estado.partidas.findIndex(p => p.status === "agendada")) >= 0) {
@@ -1111,6 +1290,10 @@
             temporada.jogosSelecaoPorCompeticao = e.jogosSelecaoPorCompeticao || {};
             temporada.golsSelecaoPorCompeticao = e.golsSelecaoPorCompeticao || {};
             temporada.cartaoAmarelo = e.amarelos; temporada.cartaoVermelho = e.vermelhos; temporada.motm = Number(e.motm) || 0;
+            temporada.driblesCompletos = Number(e.driblesCompletos) || 0;
+            temporada.desarmes = Number(e.desarmes) || 0;
+            temporada.defesas = Number(e.defesas) || 0;
+            temporada.jogadasCriadas = Number(e.jogadasCriadas) || 0;
             temporada.eventos = estado.eventos || [];
             temporada.lesaoGrave = temporada.eventos.some(evento => evento.tipo === "lesao-grave");
             temporada.lesaoCarreira = !!estado.disponibilidade?.lesaoCarreira;
@@ -1282,11 +1465,27 @@
         const equipeSelecao = typeof SELECOES !== "undefined" ? SELECOES.find(s => s.id === estado.nacionalidade) : null;
         const nomeMeuTime = proxima?.tipo === "selecao" ? equipeSelecao?.nome || "Seleção" : clube?.nome || "Clube";
         const nomeAdversario = proxima ? (clubesDisponiveis().find(c=>c.id===proxima.adversarioId)?.nome || proxima.adversarioNome || "Adversário") : "";
+        const estatisticasTemporada = estado.estatisticas || {};
+        const posicao = typeof chavePosicaoCampo === "function"
+            ? chavePosicaoCampo(estado.posicao)
+            : String(estado.posicao || "").toUpperCase();
+        const estatisticaTemporadaHtml = `<p>Defesas: ${Number(estatisticasTemporada.defesas) || 0} · Desarmes: ${Number(estatisticasTemporada.desarmes) || 0} · Dribles completos: ${Number(estatisticasTemporada.driblesCompletos) || 0} · Jogadas criadas: ${Number(estatisticasTemporada.jogadasCriadas) || 0}</p>`;
         $("jja-proximo").innerHTML = proxima
             ? `<div class="jja-proximo-topo"><span>PRÓXIMA PARTIDA · ${escapar(proxima.competicao)}</span><span>${proxima.data ? new Date(proxima.data).toLocaleDateString("pt-BR") : `Temporada ${estado.ano}`}</span></div><div class="jja-confronto"><strong>${escapar(proxima.casa?nomeMeuTime:nomeAdversario)}</strong><span>VS</span><strong>${escapar(proxima.casa?nomeAdversario:nomeMeuTime)}</strong></div><p>${proxima.casa?"Jogo em casa":"Jogo fora de casa"} · Temporada ${estado.ano}</p>`
-            : `<div class="jja-concluida"><h3>Temporada encerrada</h3><p>Todos os jogos deste calendário foram concluídos.</p></div>`;
+            : `<div class="jja-concluida"><h3>Temporada encerrada</h3><p>Todos os jogos deste calendário foram concluídos.</p>${estatisticaTemporadaHtml}</div>`;
         const e=estado.estatisticas;
-        $("jja-ultima").innerHTML=estado.ultima?`<div class="jja-placar">${escapar(estado.ultima.resumo)}</div><p>${escapar(estado.ultima.detalhes)}</p>`:"Nenhuma partida disputada.";
+        const ultimaPartida = estado.ultima;
+        const partidaSalva = ultimaPartida
+            ? estado.partidas.find(partida => Number(partida.numero) === Number(ultimaPartida.rodada))
+            : null;
+        const ultimaDribles = Number(ultimaPartida?.driblesCompletos ?? partidaSalva?.driblesCompletos) || 0;
+        const ultimaDesarmes = Number(ultimaPartida?.desarmes ?? partidaSalva?.desarmes) || 0;
+        const ultimaDefesas = Number(ultimaPartida?.defesas ?? partidaSalva?.defesas) || 0;
+        const ultimaJogadas = Number(ultimaPartida?.jogadasCriadas ?? partidaSalva?.jogadasCriadas) || 0;
+        const estatisticaUltimaPartida = `<p><strong>Defesas:</strong> ${ultimaDefesas} · <strong>Desarmes:</strong> ${ultimaDesarmes} · <strong>Dribles completos:</strong> ${ultimaDribles} · <strong>Jogadas criadas:</strong> ${ultimaJogadas}</p>`;
+        $("jja-ultima").innerHTML=ultimaPartida
+            ? `<div class="jja-placar">${escapar(ultimaPartida.resumo)}</div><p>${escapar(ultimaPartida.detalhes)}</p>${ultimaPartida.participou ? estatisticaUltimaPartida : ""}`
+            : "Nenhuma partida disputada.";
         $("jogos").textContent = String(Number(e.jogos) || 0);
         $("gols").textContent = String(Number(e.gols) || 0);
         $("assi").textContent = String(Number(e.assistencias) || 0);
@@ -1300,6 +1499,10 @@
         $("jja-amarelos").textContent = String(Number(e.amarelos) || 0);
         $("jja-vermelhos").textContent = String(Number(e.vermelhos) || 0);
         $("jja-hattricks").textContent = String(estado.partidas.filter(p => Number(p.golsJogador) >= 3).length);
+        $("jja-dribles").textContent = String(Number(e.driblesCompletos) || 0);
+        $("jja-desarmes").textContent = String(Number(e.desarmes) || 0);
+        $("jja-defesas").textContent = String(Number(e.defesas) || 0);
+        $("jja-jogadas-criadas").textContent = String(Number(e.jogadasCriadas) || 0);
         const tabela=estado.tabela.filter(t=>!t.id.startsWith("__rodada__")).sort((a,b)=>b.pts-a.pts||(b.gp-b.gc)-(a.gp-a.gc)||b.gp-a.gp);
         $("jja-tabela").innerHTML=`<div class="jja-tabela-wrap"><table class="jja-tabela"><thead><tr><th>#</th><th>Clube</th><th>J</th><th>SG</th><th>Pts</th></tr></thead><tbody>${tabela.map((t,i)=>`<tr class="${t.id===estado.clubeId?"meu-clube":""}"><td>${i+1}</td><td>${escapar(t.nome)}</td><td>${t.j}</td><td>${t.gp-t.gc}</td><td><strong>${t.pts}</strong></td></tr>`).join("")}</tbody></table></div>${renderizarProgressoCompeticoes()}`;
         $("jja-calendario").innerHTML=`<div class="jja-lista-jogos">${estado.partidas.map(p=>{const adv=clubesDisponiveis().find(c=>c.id===p.adversarioId);const nomeCasa=p.casa?(p.tipo==="selecao"?equipeSelecao?.nome:clube?.nome):(adv?.nome||p.adversarioNome);const nomeFora=p.casa?(adv?.nome||p.adversarioNome):(p.tipo==="selecao"?equipeSelecao?.nome:clube?.nome);const status=p.status==="concluida"?`${p.golsCasa}–${p.golsFora}${p.motmJogador?" · MOTM":""}${p.motivoAusencia?` · Ausente: ${p.motivoAusencia}`:""}`:p.status==="cancelada"?"Eliminado":p.status==="bloqueada"?"Aguardando classificação":"Agendado";return `<div class="jja-jogo ${p.status==="concluida"?"jja-jogo--feito":""}"><span class="jja-jogo-num">${p.data?new Date(p.data).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"}):String(p.numero).padStart(2,"0")}</span><span class="jja-jogo-adversario">${escapar(p.competicao)} · ${escapar(nomeCasa || "Equipe")} × ${escapar(nomeFora || "Adversário")}</span><span class="jja-jogo-resultado">${escapar(status)}</span></div>`}).join("")}</div>`;
@@ -1326,6 +1529,10 @@
         put("jja-amarelos", temporada.cartaoAmarelo);
         put("jja-vermelhos", temporada.cartaoVermelho);
         put("jja-hattricks", hatTricks);
+        put("jja-dribles", temporada.driblesCompletos);
+        put("jja-desarmes", temporada.desarmes);
+        put("jja-defesas", temporada.defesas);
+        put("jja-jogadas-criadas", temporada.jogadasCriadas);
         if (typeof atualizarTitulosResultados === "function") atualizarTitulosResultados(temporada);
         if (typeof atualizarMercadoResultados === "function") atualizarMercadoResultados(temporada);
     }
@@ -1412,8 +1619,8 @@
         configurarDecisoesPartida();
         $("jja-iniciar")?.addEventListener("click", iniciarOuAvancar);
         $("jja-jogar")?.addEventListener("click", simularProxima);
-        $("jja-simular-restantes")?.addEventListener("click", simularRestantes);
-        $("jja-simular-carreira")?.addEventListener("click", simularFimCarreira);
+        $("jja-simular-restantes")?.addEventListener("click", () => simularRestantes(false));
+        $("jja-simular-carreira")?.addEventListener("click", () => simularFimCarreira());
         $("jja-aposentar")?.addEventListener("click", aposentarJogador);
         if (estado) {
             estado.trofeusClube = estado.trofeusClube || [];

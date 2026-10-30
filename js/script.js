@@ -1,5 +1,7 @@
 const STORAGE_KEY = "footmain_temporadas";
 const STORAGE_KEY_RANKING = "footmain_ranking";
+const ANO_BASE_COPA_DO_MUNDO_SELECOES = 2026;
+const CICLO_COPA_DO_MUNDO_SELECOES = 4;
 const STORAGE_KEY_CARREIRA_ATUAL = "footmain_carreira_atual";
 const REGIOES_SELECOES = {
     africa: "África",
@@ -437,6 +439,10 @@ function validarTemporada(temporada) {
         cleanSheets: Math.max(0, Math.floor(Number(temporada.cleanSheets) || 0)),
         penaltisDefendidos: Math.max(0, Math.floor(Number(temporada.penaltisDefendidos) || 0)),
         penaltisCometidos: Math.max(0, Math.floor(Number(temporada.penaltisCometidos) || 0)),
+        driblesCompletos: Math.max(0, Math.floor(Number(temporada.driblesCompletos) || 0)),
+        desarmes: Math.max(0, Math.floor(Number(temporada.desarmes) || 0)),
+        defesas: Math.max(0, Math.floor(Number(temporada.defesas) || 0)),
+        jogadasCriadas: Math.max(0, Math.floor(Number(temporada.jogadasCriadas) || 0)),
         minutosJogados: Math.max(0, Math.floor(Number(temporada.minutosJogados) || jogos * 90)),
         jogosSelecaoPorCompeticao: temporada.jogosSelecaoPorCompeticao && typeof temporada.jogosSelecaoPorCompeticao === "object" ? temporada.jogosSelecaoPorCompeticao : {},
         golsSelecaoPorCompeticao: temporada.golsSelecaoPorCompeticao && typeof temporada.golsSelecaoPorCompeticao === "object" ? temporada.golsSelecaoPorCompeticao : {},
@@ -832,16 +838,20 @@ function sortearPremio(chance) {
 
 function gerarTrofeusSelecao(nacionalidade, ano, multiplicadorTitulos) {
     const selecao = SELECOES.find((item) => item.id === nacionalidade);
-    const ciclo = Math.max(1, Number(getConfig().titulos.cicloCopaDoMundo) || 4);
-    const anoCopaDoMundo = ano >= ANO_INICIAL && (ano - ANO_INICIAL) % ciclo === 0;
-    const anoInicioContinental = ANO_INICIAL + 2;
-    const anoTorneioRegional = ano >= anoInicioContinental && (ano - anoInicioContinental) % ciclo === 0;
+    const anoCopaDoMundo = ano >= ANO_BASE_COPA_DO_MUNDO_SELECOES
+        && (ano - ANO_BASE_COPA_DO_MUNDO_SELECOES) % CICLO_COPA_DO_MUNDO_SELECOES === 0;
+    const anoInicioContinental = ANO_BASE_COPA_DO_MUNDO_SELECOES + 2;
+    const anoTorneioRegional = ano >= anoInicioContinental
+        && (ano - anoInicioContinental) % CICLO_COPA_DO_MUNDO_SELECOES === 0;
     if (!selecao || (!anoCopaDoMundo && !anoTorneioRegional)) {
         return [];
     }
 
     const competicoes = [];
-    if (anoTorneioRegional) competicoes.push({
+    if (anoTorneioRegional) {
+        const regioesAmerica = ["americaSul", "americaNorte"];
+        const regioesElegiveis = regioesAmerica.includes(selecao.regiao) ? regioesAmerica : [selecao.regiao];
+        competicoes.push({
             nome: {
                 americaSul: "Copa América",
                 europa: "Eurocopa",
@@ -850,8 +860,9 @@ function gerarTrofeusSelecao(nacionalidade, ano, multiplicadorTitulos) {
                 asia: "Copa da Ásia",
                 oceania: "Copa das Nações da OFC"
             }[selecao.regiao],
-            participantes: SELECOES.filter((item) => item.regiao === selecao.regiao)
+            participantes: SELECOES.filter((item) => regionesElegiveis.includes(item.regiao))
         });
+    }
     if (anoTorneioRegional) competicoes.push({ nome: "Olimpíadas", participantes: SELECOES });
     const configPotencias = getConfig().selecao.potencias;
     const obterPotencia = (item) => Math.min(100, Math.max(1, Number(configPotencias[item.id]) || 1));
@@ -885,7 +896,8 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
     const trofeusIndividuais = [];
     const temporadaAtual = Number(ano) || ANO_INICIAL;
     const ciclo = Math.max(1, Number(t.cicloCopaDoMundo) || 4);
-    const cicloCopaDoMundo = temporadaAtual >= ANO_INICIAL && (temporadaAtual - ANO_INICIAL) % ciclo === 0;
+    const cicloCopaDoMundo = temporadaAtual >= ANO_BASE_COPA_DO_MUNDO_SELECOES
+        && (temporadaAtual - ANO_BASE_COPA_DO_MUNDO_SELECOES) % CICLO_COPA_DO_MUNDO_SELECOES === 0;
     const anoInicioMundial = Number(t.anoInicioMundialClubes) || 2029;
     const anoCopaDoMundoDeClubes = temporadaAtual >= anoInicioMundial && (temporadaAtual - anoInicioMundial) % ciclo === 0;
     const competicao = determinarCompeticaoContinental(clubeId);
@@ -1231,6 +1243,12 @@ function renderDetalhesCarreira(carreira) {
                     <span><strong>${hatTricks}</strong> hat-tricks</span>
                     <span><strong>${Number(temporada.motm) || 0}</strong> MOTM</span>
                 </div>
+                <div class="trajetoria-stats">
+                    <span><strong>${Number(temporada.defesas) || 0}</strong> defesas</span>
+                    <span><strong>${Number(temporada.desarmes) || 0}</strong> desarmes</span>
+                    <span><strong>${Number(temporada.driblesCompletos) || 0}</strong> dribles completos</span>
+                    <span><strong>${Number(temporada.jogadasCriadas) || 0}</strong> jogadas criadas</span>
+                </div>
                 <div class="trajetoria-stats-split">
                     <span class="split-pill split-pill--clube">🏟️ ${temporada.jogosClube ?? temporada.jogos}j · ${temporada.golsClube ?? temporada.gols}g · ${temporada.assistenciasClube ?? temporada.assistencias}a</span>
                     <span class="split-pill split-pill--selecao${(temporada.jogosSelecao || 0) === 0 ? " split-pill--vazio" : ""}">🌍 ${temporada.jogosSelecao || 0}j · ${temporada.golsSelecao || 0}g · ${temporada.assistenciasSelecao || 0}a</span>
@@ -1396,6 +1414,10 @@ function obterMetricasCarreira(carreira) {
         temporadas: temporadas.length,
         hatTricks: contarHatTricks(temporadas),
         motmTotal: temporadas.reduce((n,t)=>n+(Number(t.motm)||0),0),
+        driblesCompletos: temporadas.reduce((n, t) => n + (Number(t.driblesCompletos) || 0), 0) || Number(carreira.driblesCompletos) || 0,
+        desarmes: temporadas.reduce((n, t) => n + (Number(t.desarmes) || 0), 0) || Number(carreira.desarmes) || 0,
+        defesas: temporadas.reduce((n, t) => n + (Number(t.defesas) || 0), 0) || Number(carreira.defesas) || 0,
+        jogadasCriadas: temporadas.reduce((n, t) => n + (Number(t.jogadasCriadas) || 0), 0) || Number(carreira.jogadasCriadas) || 0,
         cartoesTotais: { amarelos: temporadas.reduce((n,t)=>n+(Number(t.cartaoAmarelo)||0),0), vermelhos: temporadas.reduce((n,t)=>n+(Number(t.cartaoVermelho)||0),0) },
         caps: temporadas.reduce((n,t)=>n+(Number(t.jogosSelecao)||0),0),
         cleanSheets: temporadas.reduce((n,t)=>n+(Number(t.cleanSheets)||0),0),
@@ -1590,6 +1612,7 @@ function renderRanking() {
                 if (criterio === "hattricks") return contarHatTricks(carreira.temporadas || []);
                 if (criterio === "motm") return obterMetricasCarreira(carreira).motmTotal;
                 if (criterio === "caps") return obterMetricasCarreira(carreira).caps;
+                if (["driblesCompletos", "desarmes", "defesas", "jogadasCriadas"].includes(criterio)) return obterMetricasCarreira(carreira)[criterio];
                 return Number(carreira[criterio]) || 0;
             };
             const valorA = valorOrdenacao(a);
@@ -1620,6 +1643,7 @@ function renderRanking() {
 
       const reputacaoMax = Math.max(0, ...(carreira.temporadas || []).map(t => Number(t.reputacao) || 0));
       const ganhosTotais = (carreira.temporadas || []).reduce((s, t) => s + (Number(t.rendaTemporada ?? t.salario) || 0), 0);
+      const metricasCarreira = obterMetricasCarreira(carreira);
   
       const renderTrofeus = (trofeus, tipo) => {
           if (!trofeus.length) {
@@ -1662,6 +1686,10 @@ function renderRanking() {
                   <div class="stat-card"><span class="stat-label">Prêmios</span><strong class="stat-value stat-value--premio">${premios}</strong></div>
                   <div class="stat-card"><span class="stat-label">Maior OVR</span><strong class="stat-value">${maiorOver}</strong></div>
                   <div class="stat-card"><span class="stat-label">MOTM</span><strong class="stat-value">${obterMetricasCarreira(carreira).motmTotal}</strong></div>
+                  <div class="stat-card"><span class="stat-label">Dribles completos</span><strong class="stat-value">${metricasCarreira.driblesCompletos}</strong></div>
+                  <div class="stat-card"><span class="stat-label">Desarmes</span><strong class="stat-value">${metricasCarreira.desarmes}</strong></div>
+                  <div class="stat-card"><span class="stat-label">Defesas</span><strong class="stat-value">${metricasCarreira.defesas}</strong></div>
+                  <div class="stat-card"><span class="stat-label">Jogadas criadas</span><strong class="stat-value">${metricasCarreira.jogadasCriadas}</strong></div>
                   <div class="stat-card"><span class="stat-label">Reputação</span><strong class="stat-value">${reputacaoMax}</strong></div>
                   <div class="stat-card"><span class="stat-label">Ganhos</span><strong class="stat-value">${formatarValorCompacto(ganhosTotais)}</strong></div>
               </div>
@@ -1887,6 +1915,10 @@ function renderHistorico() {
                   <div class="temporada-stats temporada-stats--secundaria">
                       <div class="stat-card"><span class="stat-label">Hat-tricks</span><strong class="stat-value">${hatTricks}</strong></div>
                       <div class="stat-card"><span class="stat-label">MOTM</span><strong class="stat-value">${Number(temporada.motm) || 0}</strong></div>
+                      <div class="stat-card"><span class="stat-label">Dribles completos</span><strong class="stat-value">${Number(temporada.driblesCompletos) || 0}</strong></div>
+                      <div class="stat-card"><span class="stat-label">Desarmes</span><strong class="stat-value">${Number(temporada.desarmes) || 0}</strong></div>
+                      <div class="stat-card"><span class="stat-label">Defesas</span><strong class="stat-value">${Number(temporada.defesas) || 0}</strong></div>
+                      <div class="stat-card"><span class="stat-label">Jogadas criadas</span><strong class="stat-value">${Number(temporada.jogadasCriadas) || 0}</strong></div>
                       <div class="stat-card"><span class="stat-label">Cartões 🟨/🟥</span><strong class="stat-value">${Number(temporada.cartaoAmarelo) || 0} / ${Number(temporada.cartaoVermelho) || 0}</strong></div>
                       <div class="stat-card"><span class="stat-label">Prêmios</span><strong class="stat-value stat-value--premio">${premios}</strong></div>
                       <div class="stat-card"><span class="stat-label">Salário</span><strong class="stat-value">${formatarValorCompacto(temporada.salario || 0)}</strong></div>
@@ -2009,8 +2041,9 @@ function somarTotaisHistorico(historico) {
         a.jogosSelecao += Number(t.jogosSelecao) || 0; a.golsSelecao += Number(t.golsSelecao) || 0; a.assistenciasSelecao += Number(t.assistenciasSelecao) || 0;
         a.caps += Number(t.jogosSelecao) || 0; a.motm += Number(t.motm) || 0; a.cartaoAmarelo += Number(t.cartaoAmarelo) || 0; a.cartaoVermelho += Number(t.cartaoVermelho) || 0;
         a.cleanSheets += Number(t.cleanSheets) || 0; a.penaltisDefendidos += Number(t.penaltisDefendidos) || 0; a.penaltisCometidos += Number(t.penaltisCometidos) || 0; a.minutosJogados += Number(t.minutosJogados) || 0;
+        a.driblesCompletos += Number(t.driblesCompletos) || 0; a.desarmes += Number(t.desarmes) || 0; a.defesas += Number(t.defesas) || 0; a.jogadasCriadas += Number(t.jogadasCriadas) || 0;
         a.premios += contarPremios(t); return a;
-    }, { jogos:0,gols:0,assistencias:0,jogosClube:0,golsClube:0,assistenciasClube:0,jogosSelecao:0,golsSelecao:0,assistenciasSelecao:0,caps:0,motm:0,cartaoAmarelo:0,cartaoVermelho:0,cleanSheets:0,penaltisDefendidos:0,penaltisCometidos:0,minutosJogados:0,premios:0 });
+    }, { jogos:0,gols:0,assistencias:0,jogosClube:0,golsClube:0,assistenciasClube:0,jogosSelecao:0,golsSelecao:0,assistenciasSelecao:0,caps:0,motm:0,cartaoAmarelo:0,cartaoVermelho:0,cleanSheets:0,penaltisDefendidos:0,penaltisCometidos:0,driblesCompletos:0,desarmes:0,defesas:0,jogadasCriadas:0,minutosJogados:0,premios:0 });
 }
 
 function contarHatTricks(temporadas) {
@@ -2046,6 +2079,7 @@ function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao, opc
         jogos: totais.jogos, gols: totais.gols, assistencias: totais.assistencias,
         jogosClube: totais.jogosClube, golsClube: totais.golsClube, assistenciasClube: totais.assistenciasClube,
         jogosSelecao: totais.jogosSelecao, golsSelecao: totais.golsSelecao, assistenciasSelecao: totais.assistenciasSelecao,
+        driblesCompletos: totais.driblesCompletos, desarmes: totais.desarmes, defesas: totais.defesas, jogadasCriadas: totais.jogadasCriadas,
         motmTotal: totais.motm, cartoesTotais: { amarelos: totais.cartaoAmarelo, vermelhos: totais.cartaoVermelho },
         premios: totais.premios,
         trofeusColetivos: trofeus.coletivos,
@@ -2089,6 +2123,10 @@ function mostrarResumoFinal(nome, idadeLimite, anoAtual, historico, posicao, opc
     const setResumo=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
     setResumo("resumo-caps",totais.caps); setResumo("resumo-gols-selecao",totais.golsSelecao); setResumo("resumo-assistencias-selecao",totais.assistenciasSelecao);
     setResumo("resumo-jogos-clube",totais.jogosClube); setResumo("resumo-motm",totais.motm); setResumo("resumo-cartoes",`${totais.cartaoAmarelo} amarelos / ${totais.cartaoVermelho} vermelhos`);
+    setResumo("resumo-dribles-completos", totais.driblesCompletos);
+    setResumo("resumo-desarmes", totais.desarmes);
+    setResumo("resumo-defesas", totais.defesas);
+    setResumo("resumo-jogadas-criadas", totais.jogadasCriadas);
     document.getElementById("resumo-coletivos").textContent = formatarTrofeus(trofeus.coletivos);
     document.getElementById("resumo-individuais").textContent = formatarTrofeus(trofeus.individuais);
 
@@ -2536,8 +2574,9 @@ function simularTemporadaPorJogo(posicao, atributos, idade, jogosForaInicioTempo
     let jogosSelecao=0,golsSelecao=0,assistenciasSelecao=0;const jogosSelecaoPorCompeticao={},golsSelecaoPorCompeticao={};
     if(convocado){
       const ano=Number(temporadasAnteriores.length?temporadasAnteriores[temporadasAnteriores.length-1].ano+1:ANO_INICIAL);
-      const cicloSelecoes = Math.max(1, Number(cfg.titulos?.cicloCopaDoMundo) || 4);
-      const anoTorneio=(ano >= ANO_INICIAL + 2) && (ano - (ANO_INICIAL + 2)) % cicloSelecoes === 0, maxSelecao=(8+Math.floor(Math.random()*5)+(anoTorneio?4:0));
+      const anoTorneio = ano >= ANO_BASE_COPA_DO_MUNDO_SELECOES + 2
+        && (ano - (ANO_BASE_COPA_DO_MUNDO_SELECOES + 2)) % CICLO_COPA_DO_MUNDO_SELECOES === 0;
+      const maxSelecao=(8+Math.floor(Math.random()*5)+(anoTorneio?4:0));
       for(let i=0;i<maxSelecao;i++){if(Math.random()>Math.min(.98,probParticipar+.08))continue;jogosSelecao++;
         const competicao=anoTorneio&&i>=8?(selecao.regiao==="europa"?"Continental":"Copa"):i%3===0?"Eliminatórias":"Amistoso";
         jogosSelecaoPorCompeticao[competicao]=(jogosSelecaoPorCompeticao[competicao]||0)+1;
