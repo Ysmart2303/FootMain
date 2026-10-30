@@ -1,0 +1,61 @@
+/* ==============================
+   Overlay de carregamento
+   ============================== */
+
+.footmain-loading-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 12000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    padding: 24px;
+    background: rgba(2, 8, 23, 0.72);
+    backdrop-filter: blur(3px);
+    color: #e2e8f0;
+    font-weight: 700;
+    text-align: center;
+    animation: footmainLoadingFade .15s ease;
+}
+
+.footmain-loading-overlay[hidden] { display: none; }
+
+@keyframes footmainLoadingFade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.footmain-loading-spinner {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    border: 4px solid rgba(148, 163, 184, 0.25);
+    border-top-color: #4ade80;
+    animation: footmainLoadingSpin .8s linear infinite;
+}
+
+@keyframes footmainLoadingSpin {
+    to { transform: rotate(360deg); }
+}
+
+.footmain-loading-texto {
+    max-width: 90vw;
+    font-size: 0.98rem;
+    line-height: 1.45;
+    color: #dcfce7;
+}
+
+/* Tema claro: mantém contraste escuro para o overlay não parecer "site branco" */
+html[data-theme="light"] .footmain-loading-overlay {
+    background: rgba(15, 23, 42, 0.55);
+    color: #f0fdf4;
+}
+html[data-theme="light"] .footmain-loading-spinner {
+    border-color: rgba(255, 255, 255, 0.25);
+    border-top-color: #22c55e;
+}
+html[data-theme="light"] .footmain-loading-texto {
+    color: #f0fdf4;
+}
