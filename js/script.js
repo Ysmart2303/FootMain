@@ -17,14 +17,41 @@ const OVERALL_PADRAO = 50;
 /* ========== Competições secundárias e estaduais ========== */
 
 const ESTADUAIS_BRASIL = {
+    // Carioca
     flamengo: "Carioca", fluminense: "Carioca", vasco: "Carioca", botafogo: "Carioca",
+    "portuguesa-rj": "Carioca", bangu: "Carioca", madureira: "Carioca", "nova-iguacu": "Carioca",
+
+    // Paulistão
     corinthians: "Paulistão", palmeiras: "Paulistão", "sao-paulo": "Paulistão", santos: "Paulistão",
     bragantino: "Paulistão", mirassol: "Paulistão",
+    "portuguesa-sp": "Paulistão", ferroviaria: "Paulistão",
+    "inter-limeira": "Paulistão", "xv-piracicaba": "Paulistão", "aguas-santa": "Paulistão",
+
+    // Gauchão
     gremio: "Gauchão", internacional: "Gauchão", juventude: "Gauchão",
+    ypiranga: "Gauchão", caxias: "Gauchão", "brasil-pelotas": "Gauchão",
+    "sao-luiz": "Gauchão", "novo-hamburgo": "Gauchão",
+
+    // Mineiro
     "atletico-mg": "Mineiro", cruzeiro: "Mineiro",
+    tombense: "Mineiro", caldense: "Mineiro", "boa-esporte": "Mineiro",
+    uberlandia: "Mineiro", "democrata-gv": "Mineiro", "villa-nova": "Mineiro",
+
+    // Baianão
     bahia: "Baianão", vitoria: "Baianão",
+    jacuipense: "Baianão", juazeirense: "Baianão", "vitoria-conquista": "Baianão",
+    "atletico-alagoinhas": "Baianão", "barcelona-ilheus": "Baianão", jacobina: "Baianão",
+
+    // Pernambucano
     sport: "Pernambucano",
-    fortaleza: "Cearense", ceara: "Cearense"
+    "santa-cruz": "Pernambucano", nautico: "Pernambucano", retro: "Pernambucano",
+    "central-pe": "Pernambucano", salgueiro: "Pernambucano", petrolina: "Pernambucano",
+    afogados: "Pernambucano",
+
+    // Cearense
+    fortaleza: "Cearense", ceara: "Cearense",
+    "ferroviario-ce": "Cearense", floresta: "Cearense", icasa: "Cearense",
+    "guarany-sobral": "Cearense", horizonte: "Cearense", "maracana-ce": "Cearense"
 };
 
 const LIGAS_EUROPA_FORTES = ["Premier League", "La Liga", "Serie A", "Bundesliga", "Ligue 1"];
