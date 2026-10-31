@@ -263,10 +263,20 @@
     function clubesDisponiveis() {
         return (typeof CLUBES !== "undefined" ? CLUBES : []).filter(c => c && c.id && c.nome && c.liga);
     }
+  
     function forcaClube(clube) {
         const cfg = typeof getConfig === "function" ? getConfig() : {};
-        return Math.max(35, Math.min(99, Number(cfg.clubes?.potencias?.[clube.id]) || 65));
+        const forcaConfig = Number(cfg.clubes?.potencias?.[clube.id]);
+        if (Number.isFinite(forcaConfig) && forcaConfig > 0) {
+            return Math.max(35, Math.min(99, forcaConfig));
+        }
+        // Clubes regionais usam a tabela dedicada, fora do config editável.
+        if (typeof FORCAS_CLUBES_REGIONAIS !== "undefined" && FORCAS_CLUBES_REGIONAIS[clube.id]) {
+            return Math.max(35, Math.min(99, FORCAS_CLUBES_REGIONAIS[clube.id]));
+        }
+        return 65;
     }
+  
     function disponibilidadeInicial(jogosLesao = 0) {
         return {
             jogosLesao: Math.max(0, Math.floor(Number(jogosLesao) || 0)),
@@ -557,11 +567,13 @@
         
         const estadual = typeof ESTADUAIS_BRASIL !== "undefined" ? ESTADUAIS_BRASIL[clube.id] : null;
         adicionarEliminatoria(partidas, times, clube.id, nomes.copa || "Copa Nacional", ano, 2, 4, "clube");
+       
         if (estadual) {
-            // Limita os adversários aos clubes do mesmo estadual (Carioca, Paulistão,
-            // Gauchão, Mineiro, Baianão, Pernambucano ou Cearense).
-            const clubesEstaduais = (typeof CLUBES !== "undefined" ? CLUBES : [])
-                .filter(t => ESTADUAIS_BRASIL[t.id] === estadual);
+            const todosClubes = [
+                ...(typeof CLUBES !== "undefined" ? CLUBES : []),
+                ...(typeof CLUBES_REGIONAIS !== "undefined" ? CLUBES_REGIONAIS : [])
+            ];
+            const clubesEstaduais = todosClubes.filter(t => ESTADUAIS_BRASIL[t.id] === estadual);
             const timesEstaduais = clubesEstaduais.length >= 2 ? clubesEstaduais : times;
             adicionarEliminatoria(partidas, timesEstaduais, clube.id, estadual, ano, 0, 3, "estadual");
         }
@@ -920,11 +932,16 @@
         const meuClube = pelaSelecao
             ? (typeof SELECOES !== "undefined" ? SELECOES.find(s => s.id === estado.nacionalidade) : null)
             : times.find(c => c.id === estado.clubeId);
+       
         const adversario = partida.adversarioId
-            ? pelaSelecao
-                ? (typeof SELECOES !== "undefined" ? SELECOES.find(s => s.id === partida.adversarioId) : null)
-                : times.find(c => c.id === partida.adversarioId)
-            : null;
+          ? pelaSelecao
+              ? (typeof SELECOES !== "undefined" ? SELECOES.find(s => s.id === partida.adversarioId) : null)
+              : times.find(c => c.id === partida.adversarioId)
+                || (typeof CLUBES_REGIONAIS !== "undefined"
+                    ? CLUBES_REGIONAIS.find(c => c.id === partida.adversarioId)
+                    : null)
+          : null;
+      
         if (!meuClube || (!pelaSelecao && !adversario)) { informar("Não foi possível localizar uma equipe do calendário.", true); return; }
         const visitante = adversario || { id: `${meuClube.id}-adversario`, nome: partida.adversarioNome || "Seleção adversária" };
         const casa = partida.casa ? meuClube : visitante, fora = partida.casa ? visitante : meuClube;
