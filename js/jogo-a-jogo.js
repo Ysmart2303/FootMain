@@ -1,6 +1,210 @@
 /* FootMain — carreira principal jogo a jogo. */
 (() => {
     "use strict";
+
+    /* ============================================================
+       CALENDÁRIO CENTRALIZADO — FootMain 2.1.4+
+       ============================================================ */
+    
+    const CALENDARIO_LIGAS = {
+        // Europa — agosto a maio (atravessa o ano)
+        "Premier League":             { mesInicio: 8, mesFim: 5 },
+        "La Liga":                    { mesInicio: 8, mesFim: 5 },
+        "Serie A":                    { mesInicio: 8, mesFim: 5 },
+        "Bundesliga":                 { mesInicio: 8, mesFim: 5 },
+        "Ligue 1":                    { mesInicio: 8, mesFim: 5 },
+        "Primeira Liga":              { mesInicio: 8, mesFim: 5 },
+        "Eredivisie":                 { mesInicio: 8, mesFim: 5 },
+        "Süper Lig":                  { mesInicio: 8, mesFim: 5 },
+        "Belgian Pro League":         { mesInicio: 7, mesFim: 5 },
+        "Scottish Premiership":       { mesInicio: 8, mesFim: 5 },
+        "Swiss Super League":         { mesInicio: 7, mesFim: 5 },
+        "Austrian Bundesliga":        { mesInicio: 7, mesFim: 5 },
+        "Russian Premier League":     { mesInicio: 7, mesFim: 5 },
+        "Ukrainian Premier League":   { mesInicio: 7, mesFim: 5 },
+        "Greek Super League":         { mesInicio: 8, mesFim: 5 },
+    
+        // Brasil — abril a dezembro
+        "Brasileirão":                { mesInicio: 4, mesFim: 12 },
+    
+        // Sul-americanas — fevereiro a novembro/dezembro
+        "Argentine Primera División": { mesInicio: 1, mesFim: 12 },
+        "Colombian Primera A":        { mesInicio: 1, mesFim: 12 },
+        "Chilean Primera División":   { mesInicio: 2, mesFim: 11 },
+        "Uruguayan Primera División": { mesInicio: 2, mesFim: 12 },
+        "Ecuadorian Serie A":         { mesInicio: 2, mesFim: 12 },
+        "Paraguayan Primera División":{ mesInicio: 1, mesFim: 12 },
+    
+        // Américas (EUA/México/Canadá) — fevereiro a dezembro
+        "MLS":                        { mesInicio: 2, mesFim: 12 },
+        "Liga MX":                    { mesInicio: 1, mesFim: 12 },
+    
+        // Ásia — fevereiro a novembro/dezembro
+        "Saudi Pro League":           { mesInicio: 8, mesFim: 5 },
+        "J1 League":                  { mesInicio: 2, mesFim: 12 },
+        "K League 1":                 { mesInicio: 2, mesFim: 12 },
+        "Chinese Super League":       { mesInicio: 3, mesFim: 11 },
+    
+        // África — agosto a maio
+        "Egyptian Premier League":    { mesInicio: 8, mesFim: 5 },
+        "South African Premier Division": { mesInicio: 8, mesFim: 5 },
+        "Moroccan Botola":            { mesInicio: 8, mesFim: 5 },
+    
+        // Oceania — outubro a maio
+        "Australian A-League":        { mesInicio: 10, mesFim: 5 }
+    };
+    
+    const CALENDARIO_COPAS = {
+        // Europa
+        "Carabao Cup":        { mesInicio: 8,  mesFim: 2 },
+        "Copa del Rey":       { mesInicio: 10, mesFim: 4 },
+        "Coppa Italia":       { mesInicio: 8,  mesFim: 5 },
+        "DFB-Pokal":          { mesInicio: 8,  mesFim: 5 },
+        "Coupe de France":    { mesInicio: 11, mesFim: 5 },
+        "Taça de Portugal":   { mesInicio: 10, mesFim: 5 },
+        "KNVB Beker":         { mesInicio: 9,  mesFim: 4 },
+        "Türkiye Kupası":     { mesInicio: 10, mesFim: 5 },
+        "Belgian Cup":        { mesInicio: 8,  mesFim: 4 },
+        "Scottish Cup":       { mesInicio: 1,  mesFim: 5 },
+        "Schweizer Cup":      { mesInicio: 8,  mesFim: 5 },
+        "ÖFB-Cup":            { mesInicio: 7,  mesFim: 5 },
+        "Russian Cup":        { mesInicio: 7,  mesFim: 5 },
+        "Ukrainian Cup":      { mesInicio: 8,  mesFim: 5 },
+        "Greek Cup":          { mesInicio: 9,  mesFim: 5 },
+    
+        // Sul-americanas
+        "Copa do Brasil":     { mesInicio: 2, mesFim: 11 },
+        "Copa Argentina":     { mesInicio: 1, mesFim: 12 },
+        "Copa Colombia":      { mesInicio: 2, mesFim: 11 },
+        "Copa Chile":         { mesInicio: 4, mesFim: 11 },
+        "Copa Uruguay":       { mesInicio: 3, mesFim: 11 },
+        "Copa Ecuador":       { mesInicio: 3, mesFim: 11 },
+        "Copa Paraguay":      { mesInicio: 3, mesFim: 12 },
+    
+        // Outras
+        "US Open Cup":        { mesInicio: 3, mesFim: 9 },
+        "Copa MX":            { mesInicio: 1, mesFim: 12 },
+        "King's Cup":         { mesInicio: 9, mesFim: 5 },
+        "Emperor's Cup":      { mesInicio: 5, mesFim: 12 },
+        "Korean FA Cup":      { mesInicio: 3, mesFim: 12 },
+        "Chinese FA Cup":     { mesInicio: 3, mesFim: 11 },
+        "Egypt Cup":          { mesInicio: 9, mesFim: 6 },
+        "Nedbank Cup":        { mesInicio: 1, mesFim: 5 },
+        "Coupe du Trône":     { mesInicio: 8, mesFim: 11 },
+        "Australia Cup":      { mesInicio: 7, mesFim: 10 },
+    
+        // Estaduais brasileiros (jan-abr)
+        "Carioca":            { mesInicio: 1, mesFim: 4 },
+        "Paulistão":          { mesInicio: 1, mesFim: 4 },
+        "Gauchão":            { mesInicio: 1, mesFim: 4 },
+        "Mineiro":            { mesInicio: 1, mesFim: 4 },
+        "Baianão":            { mesInicio: 1, mesFim: 4 },
+        "Pernambucano":       { mesInicio: 1, mesFim: 4 },
+        "Cearense":           { mesInicio: 1, mesFim: 4 }
+    };
+    
+    const CALENDARIO_COMPETICOES = {
+        // Torneios de seleção — concentrados
+        "Copa do Mundo":               { tipo: "concentrado", mesInicio: 6, diaInicio: 11, intervaloDias: 4 },
+        "Eurocopa":                    { tipo: "concentrado", mesInicio: 6, diaInicio: 14, intervaloDias: 4 },
+        "Copa América":                { tipo: "concentrado", mesInicio: 6, diaInicio: 20, intervaloDias: 4 },
+        "Copa Ouro":                   { tipo: "concentrado", mesInicio: 6, diaInicio: 15, intervaloDias: 4 },
+        "Copa das Nações Africanas":   { tipo: "concentrado", mesInicio: 1, diaInicio: 9,  intervaloDias: 4 },
+        "Copa da Ásia":                { tipo: "concentrado", mesInicio: 1, diaInicio: 12, intervaloDias: 4 },
+        "Copa das Nações da OFC":      { tipo: "concentrado", mesInicio: 6, diaInicio: 15, intervaloDias: 4 },
+        "Olimpíadas":                  { tipo: "concentrado", mesInicio: 7, diaInicio: 24, intervaloDias: 3 },
+        "Mundial Sub-20":              { tipo: "concentrado", mesInicio: 5, diaInicio: 20, intervaloDias: 3 },
+        "Mundial Sub-17":              { tipo: "concentrado", mesInicio: 10, diaInicio: 15, intervaloDias: 3 },
+        "Copa do Mundo de Clubes":     { tipo: "concentrado", mesInicio: 6, diaInicio: 15, intervaloDias: 4 },
+        "Intercontinental":            { tipo: "concentrado", mesInicio: 12, diaInicio: 10, intervaloDias: 5 },
+        "Supercopa Nacional":          { tipo: "concentrado", mesInicio: 8, diaInicio: 10, intervaloDias: 2 },
+        "Supercopa Continental":       { tipo: "concentrado", mesInicio: 8, diaInicio: 12, intervaloDias: 2 },
+    
+        // Continentais europeias — setembro a maio
+        "Champions League":    { tipo: "continental", mesInicio: 9, mesFim: 5, fasesMeses: [9, 10, 11, 2, 3, 4, 5] },
+        "Europa League":       { tipo: "continental", mesInicio: 9, mesFim: 5, fasesMeses: [9, 10, 11, 2, 3, 4, 5] },
+        "Conference League":   { tipo: "continental", mesInicio: 9, mesFim: 5, fasesMeses: [9, 10, 11, 2, 3, 4, 5] },
+    
+        // Continentais sul-americanas — fevereiro a novembro
+        "Libertadores":        { tipo: "continental", mesInicio: 2, mesFim: 11, fasesMeses: [2, 4, 5, 7, 8, 9, 11] },
+        "Copa Sul-Americana":  { tipo: "continental", mesInicio: 3, mesFim: 11, fasesMeses: [3, 4, 6, 7, 9, 10, 11] },
+    
+        // Outras continentais
+        "CONCACAF Champions Cup": { tipo: "continental", mesInicio: 2, mesFim: 6, fasesMeses: [2, 3, 4, 5, 6] },
+        "AFC Champions League":   { tipo: "continental", mesInicio: 2, mesFim: 11, fasesMeses: [2, 4, 6, 8, 10, 11] },
+        "AFC Champions League 2": { tipo: "continental", mesInicio: 2, mesFim: 11, fasesMeses: [2, 4, 6, 8, 10, 11] },
+        "CAF Champions League":   { tipo: "continental", mesInicio: 2, mesFim: 11, fasesMeses: [2, 4, 6, 8, 10, 11] },
+        "CAF Confederation Cup":  { tipo: "continental", mesInicio: 2, mesFim: 11, fasesMeses: [2, 4, 6, 8, 10, 11] }
+    };
+    
+    /* Janelas FIFA — usadas para eliminatórias, amistosos e torneios curtos de seleção. */
+    const JANELAS_FIFA = [
+        { mes: 3,  dia: 20, tipo: "Eliminatórias" },
+        { mes: 6,  dia: 5,  tipo: "Amistoso" },
+        { mes: 9,  dia: 5,  tipo: "Eliminatórias" },
+        { mes: 10, dia: 10, tipo: "Eliminatórias" },
+        { mes: 11, dia: 14, tipo: "Amistoso" },
+        { mes: 11, dia: 18, tipo: "Eliminatórias" }
+    ];
+
+    /* Cria timestamp UTC ao meio-dia. Meses podem passar de 12 e virar o ano. */
+    function criarDataUTC(ano, mes, dia) {
+        return Date.UTC(ano, mes - 1, dia, 12);
+    }
+    
+    /* Retorna quantos dias há entre dois meses (considerando virada de ano). */
+    function mesesParaDias(mesInicio, mesFim) {
+        return mesFim >= mesInicio ? (mesFim - mesInicio) * 30 : (12 - mesInicio + mesFim) * 30;
+    }
+    
+    /* Datas das fases de uma competição, com base no calendário central. */
+    function calcularDatasFases(competicao, ano, quantidadeFases, mesInicialFallback = 2) {
+        const calComp = CALENDARIO_COMPETICOES[competicao];
+        const calCopa = CALENDARIO_COPAS[competicao];
+        const calLiga = CALENDARIO_LIGAS[competicao];
+        const cal = calComp || calCopa || calLiga;
+    
+        // Sem calendário específico → fallback antigo, mas sem estourar o ano.
+        if (!cal) {
+            return Array.from({ length: quantidadeFases }, (_, i) =>
+                criarDataUTC(ano, Math.min(11, mesInicialFallback + i * 2), 8)
+            );
+        }
+    
+        // Torneio concentrado: dias consecutivos dentro do período.
+        if (cal.tipo === "concentrado") {
+            const inicio = criarDataUTC(ano, cal.mesInicio, cal.diaInicio || 10);
+            return Array.from({ length: quantidadeFases }, (_, i) =>
+                inicio + i * (cal.intervaloDias || 4) * 86400000
+            );
+        }
+    
+        // Continental: distribui fases entre os meses listados.
+        if (cal.tipo === "continental" && Array.isArray(cal.fasesMeses)) {
+            const meses = cal.fasesMeses;
+            return Array.from({ length: quantidadeFases }, (_, i) => {
+                const idx = quantidadeFases === 1
+                    ? 0
+                    : Math.floor(i * (meses.length - 1) / (quantidadeFases - 1));
+                const mes = meses[Math.min(idx, meses.length - 1)];
+                const anoFase = mes < cal.mesInicio ? ano + 1 : ano;
+                return criarDataUTC(anoFase, mes, 10 + (i % 3) * 5);
+            });
+        }
+    
+        // Copa/liga nacional: distribui fases ao longo dos meses do período.
+        const totalMeses = mesesParaDias(cal.mesInicio, cal.mesFim) / 30;
+        return Array.from({ length: quantidadeFases }, (_, i) => {
+            const offset = quantidadeFases === 1
+                ? 0
+                : Math.round(i * totalMeses / (quantidadeFases - 1));
+            let mes = cal.mesInicio + offset;
+            let anoFase = ano;
+            while (mes > 12) { mes -= 12; anoFase++; }
+            return criarDataUTC(anoFase, mes, 10 + (i % 3) * 5);
+        });
+    }
+  
     const KEY = "footmain_jogo_a_jogo_carreira_v2";
     const ANO_BASE_COPA_DO_MUNDO_SELECOES = 2026;
     const CICLO_COPA_DO_MUNDO_SELECOES = 4;
@@ -243,16 +447,33 @@
         const volta = ida.map((jogos) => jogos.map(j => ({ casaId: j.foraId, foraId: j.casaId, status: "agendado" })));
         return [...ida, ...volta];
     }
+  
     function gerarCalendario(times, clubeUsuario, rodadas, ano) {
         const jogos = [];
+        const cal = CALENDARIO_LIGAS[clubeUsuario.liga] || { mesInicio: 2, mesFim: 11 };
+    
+        // Datas de início e fim do campeonato (podem atravessar o ano).
+        const dataInicio = criarDataUTC(ano, cal.mesInicio, 15);
+        const anoFim = cal.mesFim < cal.mesInicio ? ano + 1 : ano;
+        const dataFim = criarDataUTC(anoFim, cal.mesFim, 20);
+        const intervalo = (dataFim - dataInicio) / Math.max(1, rodadas.length - 1);
+    
         rodadas.forEach((confrontos, r) => {
             const jogo = confrontos.find(j => j.casaId === clubeUsuario.id || j.foraId === clubeUsuario.id);
             if (!jogo) return;
-            const diaDaTemporada = Math.round(r * 330 / Math.max(1, rodadas.length - 1));
-            jogos.push({ rodadaLiga: r, data: Date.UTC(ano, 1, 1 + diaDaTemporada, 12), adversarioId: jogo.casaId === clubeUsuario.id ? jogo.foraId : jogo.casaId, casa: jogo.casaId === clubeUsuario.id, competicao: clubeUsuario.liga, tipo: "liga", status: "agendada" });
+            jogos.push({
+                rodadaLiga: r,
+                data: dataInicio + Math.round(r * intervalo),
+                adversarioId: jogo.casaId === clubeUsuario.id ? jogo.foraId : jogo.casaId,
+                casa: jogo.casaId === clubeUsuario.id,
+                competicao: clubeUsuario.liga,
+                tipo: "liga",
+                status: "agendada"
+            });
         });
         return jogos;
     }
+  
     function obterSelecoesAdversarias(competicao, selecaoId) {
         const selecao = (typeof SELECOES !== "undefined" ? SELECOES : []).find(item => item.id === selecaoId);
         const todas = (typeof SELECOES !== "undefined" ? SELECOES : []).filter(item => item.id !== selecaoId);
@@ -270,14 +491,16 @@
         const elegiveis = todas.filter(item => regioes.includes(item.regiao));
         return elegiveis.length ? elegiveis : todas;
     }
+  
     function adicionarEliminatoria(partidas, times, clubeId, competicao, ano, mesInicial, quantidadeRodadas, prefixo, selecao = null, statusInicial = "agendada") {
         const adversarios = selecao && !times.length ? obterSelecoesAdversarias(competicao, clubeId) : times;
         const oponentes = adversarios.filter(t => t.id !== clubeId);
-        const fases = [];
+        const datas = calcularDatasFases(competicao, ano, quantidadeRodadas, mesInicial);
+    
         for (let fase = 0; fase < quantidadeRodadas; fase++) {
             const adversario = oponentes[Math.floor(Math.random() * oponentes.length)];
-            const fixture = {
-                data: Date.UTC(ano, Math.min(11, mesInicial + fase * 2), 8, 12),
+            partidas.push({
+                data: datas[fase],
                 adversarioId: adversario?.id || "",
                 adversarioNome: adversario?.nome || "Adversário",
                 casa: Math.random() < 0.5,
@@ -288,11 +511,10 @@
                 totalFases: quantidadeRodadas,
                 selecao: selecao || null,
                 status: statusInicial
-            };
-            fases.push(fixture);
+            });
         }
-        partidas.push(...fases);
     }
+  
     function obterConvocacao(estadoTemporada, carreira, historico) {
         const selecao = (typeof SELECOES !== "undefined" ? SELECOES : []).find(s => s.id === estadoTemporada.nacionalidade);
         if (!selecao || carreira.aposentadoriaSelecao === true) return null;
@@ -358,14 +580,16 @@
         const convocada = obterConvocacao({ ...perfil, ano }, carreira, historico);
         const jogosSelecao = [];
         if (convocada) {
+          
             const adversariosPorCompeticao = {};
-            for (let i = 0; i < 6; i++) {
-                const competicao = i % 2 === 0 ? "Eliminatórias" : "Amistoso";
-                const adversarios = adversariosPorCompeticao[competicao] ||= obterSelecoesAdversarias(competicao, convocada.id);
+            JANELAS_FIFA.forEach((janela, i) => {
+                const competicao = janela.tipo;
+                const adversarios = adversariosPorCompeticao[competicao]
+                    ||= obterSelecoesAdversarias(competicao, convocada.id);
                 const indiceAdversario = Math.floor(Math.random() * adversarios.length);
                 const [adversario] = adversarios.splice(indiceAdversario, 1);
                 jogosSelecao.push({
-                    data: Date.UTC(ano, [2, 3, 5, 8, 9, 10][i], 12),
+                    data: criarDataUTC(ano, janela.mes, janela.dia),
                     adversarioId: adversario.id,
                     adversarioNome: adversario.nome,
                     casa: i % 2 === 0,
@@ -374,7 +598,8 @@
                     selecao: "amistoso",
                     status: "agendada"
                 });
-            }
+            });
+          
             const anoCopaDoMundo = ano >= ANO_BASE_COPA_DO_MUNDO_SELECOES
                 && (ano - ANO_BASE_COPA_DO_MUNDO_SELECOES) % CICLO_COPA_DO_MUNDO_SELECOES === 0;
             const anoInicioContinental = ANO_BASE_COPA_DO_MUNDO_SELECOES + 2;
