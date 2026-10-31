@@ -3,7 +3,7 @@
  */
 
 const STORAGE_KEY_CONFIG = "footmain_config_v1";
-const VERSAO_APP = "2.1.6";
+const VERSAO_APP = "2.1.7";
 
 /* ---------- Definições base (as "de fábrica") ---------- */
 const POSICOES_PADRAO = {
@@ -792,6 +792,64 @@ const CLUBES = [
 ];
 
 /*
+ * Clubes regionais
+ */
+const CLUBES_REGIONAIS = [
+    // ─── Pernambuco (Pernambucano) ───
+    { id: "santa-cruz",       nome: "Santa Cruz",              liga: "Pernambucano" },
+    { id: "nautico",          nome: "Náutico",                 liga: "Pernambucano" },
+    { id: "retro",            nome: "Retrô",                   liga: "Pernambucano" },
+    { id: "central-pe",       nome: "Central",                 liga: "Pernambucano" },
+    { id: "salgueiro",        nome: "Salgueiro",               liga: "Pernambucano" },
+    { id: "petrolina",        nome: "Petrolina",               liga: "Pernambucano" },
+    { id: "afogados",         nome: "Afogados da Ingazeira",   liga: "Pernambucano" },
+
+    // ─── Ceará (Cearense) ───
+    { id: "ferroviario-ce",   nome: "Ferroviário",             liga: "Cearense" },
+    { id: "floresta",         nome: "Floresta",                liga: "Cearense" },
+    { id: "icasa",            nome: "Icasa",                   liga: "Cearense" },
+    { id: "guarany-sobral",   nome: "Guarany de Sobral",       liga: "Cearense" },
+    { id: "horizonte",        nome: "Horizonte",               liga: "Cearense" },
+    { id: "maracana-ce",      nome: "Maracanã",                liga: "Cearense" },
+
+    // ─── Bahia (Baianão) ───
+    { id: "jacuipense",       nome: "Jacuipense",              liga: "Baianão" },
+    { id: "juazeirense",      nome: "Juazeirense",             liga: "Baianão" },
+    { id: "vitoria-conquista",nome: "Vitória da Conquista",    liga: "Baianão" },
+    { id: "atletico-alagoinhas", nome: "Atlético de Alagoinhas", liga: "Baianão" },
+    { id: "barcelona-ilheus", nome: "Barcelona de Ilhéus",     liga: "Baianão" },
+    { id: "jacobina",         nome: "Jacobina",                liga: "Baianão" },
+
+    // ─── Minas Gerais (Mineiro) ───
+    { id: "tombense",         nome: "Tombense",                liga: "Mineiro" },
+    { id: "caldense",         nome: "Caldense",                liga: "Mineiro" },
+    { id: "boa-esporte",      nome: "Boa Esporte",             liga: "Mineiro" },
+    { id: "uberlandia",       nome: "Uberlândia",              liga: "Mineiro" },
+    { id: "democrata-gv",     nome: "Democrata GV",            liga: "Mineiro" },
+    { id: "villa-nova",       nome: "Villa Nova",              liga: "Mineiro" },
+
+    // ─── Rio Grande do Sul (Gauchão) ───
+    { id: "ypiranga",         nome: "Ypiranga",                liga: "Gauchão" },
+    { id: "caxias",           nome: "Caxias",                  liga: "Gauchão" },
+    { id: "brasil-pelotas",   nome: "Brasil de Pelotas",       liga: "Gauchão" },
+    { id: "sao-luiz",         nome: "São Luiz",                liga: "Gauchão" },
+    { id: "novo-hamburgo",    nome: "Novo Hamburgo",           liga: "Gauchão" },
+
+    // ─── Rio de Janeiro (Carioca) ───
+    { id: "portuguesa-rj",    nome: "Portuguesa-RJ",           liga: "Carioca" },
+    { id: "bangu",            nome: "Bangu",                   liga: "Carioca" },
+    { id: "madureira",        nome: "Madureira",               liga: "Carioca" },
+    { id: "nova-iguacu",      nome: "Nova Iguaçu",             liga: "Carioca" },
+
+    // ─── São Paulo (Paulistão) ───
+    { id: "portuguesa-sp",    nome: "Portuguesa",              liga: "Paulistão" },
+    { id: "ferroviaria",      nome: "Ferroviária",             liga: "Paulistão" },
+    { id: "inter-limeira",    nome: "Inter de Limeira",        liga: "Paulistão" },
+    { id: "xv-piracicaba",    nome: "XV de Piracicaba",        liga: "Paulistão" },
+    { id: "aguas-santa",      nome: "Águas de Santa Bárbara",  liga: "Paulistão" }
+];
+
+/*
  * Forças padrão em faixas equivalentes entre ligas: os clubes na mesma posição
  * relativa da lista de cada liga começam com a mesma força aproximada.
  */
@@ -805,6 +863,42 @@ const FORCAS_CLUBES_PADRAO = (() => {
         return resultado;
     }, {});
 })();
+
+/*
+ * Forças fixas dos clubes regionais. Referência:
+ *  - Sport Recife = 65 (vem do FORCAS_CLUBES_PADRAO)
+ *  - Fortaleza = 69, Ceará = 67, Bahia = 71, Vitória = 63
+ *  - Cruzeiro = 79, Atlético-MG = 81, Grêmio = 85, Inter = 83
+ *  - Flamengo = 96, Palmeiras = 94, Corinthians = 92
+ */
+const FORCAS_CLUBES_REGIONAIS = {
+    // Pernambuco
+    "santa-cruz": 62, "nautico": 60, "retro": 57, "central-pe": 52,
+    "salgueiro": 50, "petrolina": 48, "afogados": 47,
+
+    // Ceará
+    "ferroviario-ce": 62, "floresta": 58, "icasa": 55,
+    "guarany-sobral": 50, "horizonte": 48, "maracana-ce": 46,
+
+    // Bahia
+    "jacuipense": 58, "juazeirense": 56, "vitoria-conquista": 54,
+    "atletico-alagoinhas": 52, "barcelona-ilheus": 50, "jacobina": 48,
+
+    // Minas Gerais
+    "tombense": 62, "caldense": 56, "boa-esporte": 54,
+    "uberlandia": 52, "democrata-gv": 50, "villa-nova": 50,
+
+    // Rio Grande do Sul
+    "ypiranga": 58, "caxias": 56, "brasil-pelotas": 54,
+    "sao-luiz": 52, "novo-hamburgo": 50,
+
+    // Rio de Janeiro
+    "portuguesa-rj": 58, "bangu": 55, "madureira": 54, "nova-iguacu": 52,
+
+    // São Paulo
+    "portuguesa-sp": 62, "ferroviaria": 60, "inter-limeira": 54,
+    "xv-piracicaba": 52, "aguas-santa": 48
+};
 
 /* Lesoes */
 
