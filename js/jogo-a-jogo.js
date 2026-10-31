@@ -4,6 +4,11 @@
 
     /* ============================================================
        CALENDÁRIO CENTRALIZADO — FootMain 2.1.4+
+       Define os períodos reais de cada competição.
+       - concentrado  → datas consecutivas (Copa do Mundo, etc.)
+       - continental  → fases distribuídas em meses específicos
+       - janelas FIFA → datas fixas de convocação
+       Ligas/copas nacionais têm períodos próprios por região.
        ============================================================ */
     
     const CALENDARIO_LIGAS = {
@@ -549,10 +554,18 @@
     function montarCalendarioTemporada(times, clube, rodadas, ano, carreira, historico, perfil) {
         const partidas = gerarCalendario(times, clube, rodadas, ano);
         const nomes = typeof obterNomesTrofeusClube === "function" ? obterNomesTrofeusClube(clube.id) : { liga: clube.liga, copa: "Copa Nacional" };
+        
         const estadual = typeof ESTADUAIS_BRASIL !== "undefined" ? ESTADUAIS_BRASIL[clube.id] : null;
         adicionarEliminatoria(partidas, times, clube.id, nomes.copa || "Copa Nacional", ano, 2, 4, "clube");
-        if (estadual) adicionarEliminatoria(partidas, times, clube.id, estadual, ano, 0, 3, "estadual");
-
+        if (estadual) {
+            // Limita os adversários aos clubes do mesmo estadual (Carioca, Paulistão,
+            // Gauchão, Mineiro, Baianão, Pernambucano ou Cearense).
+            const clubesEstaduais = (typeof CLUBES !== "undefined" ? CLUBES : [])
+                .filter(t => ESTADUAIS_BRASIL[t.id] === estadual);
+            const timesEstaduais = clubesEstaduais.length >= 2 ? clubesEstaduais : times;
+            adicionarEliminatoria(partidas, timesEstaduais, clube.id, estadual, ano, 0, 3, "estadual");
+        }
+      
         const qualificadas = carreira.clubeQualificado === clube.id && Array.isArray(carreira.competicoesQualificadas)
             ? carreira.competicoesQualificadas
             : [];
@@ -630,6 +643,7 @@
         }
         return partidas.sort((a, b) => a.data - b.data);
     }
+  
     async function iniciar() {
         const carreira = typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : {};
         if (!simulandoCarreira && temporadaEmAndamento(carreira)) {
@@ -1095,7 +1109,10 @@
         if (partida.tipo === "liga") simularOutrosJogosDaRodada(partida.rodadaLiga);
         salvar(); renderizar();
         if (!estado.partidas.some(p => p.status === "agendada") && !estado.salvaOficialmente) finalizarTemporadaOficial();
-        else if (mostrarResultado) informar(`Partida ${estado.rodada}/${estado.partidas.length} concluída. ${detalhes}`);
+        else if (mostrarResultado) {
+            const totalValidas = estado.rodada + estado.partidas.filter(p => p.status === "agendada").length;
+            informar(`Partida ${estado.rodada}/${totalValidas} concluída. ${detalhes}`);
+        }
     }
     function simularOutrosJogosDaRodada(indiceRodada) {
         const confrontos = estado.rodadas?.[indiceRodada] || [];
@@ -1818,10 +1835,19 @@
         const posicao = typeof chavePosicaoCampo === "function"
             ? chavePosicaoCampo(estado.posicao)
             : String(estado.posicao || "").toUpperCase();
+        
         const estatisticaTemporadaHtml = `<p>Defesas: ${Number(estatisticasTemporada.defesas) || 0} · Desarmes: ${Number(estatisticasTemporada.desarmes) || 0} · Dribles completos: ${Number(estatisticasTemporada.driblesCompletos) || 0} · Jogadas criadas: ${Number(estatisticasTemporada.jogadasCriadas) || 0}</p>`;
+        const faseProxima = proxima && Number(proxima.fase) > 0 && Number(proxima.totalFases) > 0
+            ? nomeFaseCompeticao(proxima.fase, proxima.totalFases)
+            : "";
+        const rotuloCompeticaoProxima = proxima
+            ? `PRÓXIMA PARTIDA · ${escapar(proxima.competicao)}${faseProxima ? ` · ${escapar(faseProxima)}` : ""}`
+            : "";
+        
         $("jja-proximo").innerHTML = proxima
-            ? `<div class="jja-proximo-topo"><span>PRÓXIMA PARTIDA · ${escapar(proxima.competicao)}</span><span>${proxima.data ? new Date(proxima.data).toLocaleDateString("pt-BR") : `Temporada ${estado.ano}`}</span></div><div class="jja-confronto"><strong>${escapar(proxima.casa?nomeMeuTime:nomeAdversario)}</strong><span>VS</span><strong>${escapar(proxima.casa?nomeAdversario:nomeMeuTime)}</strong></div><p>${proxima.casa?"Jogo em casa":"Jogo fora de casa"} · Temporada ${estado.ano}</p>`
+            ? `<div class="jja-proximo-topo"><span>${rotuloCompeticaoProxima}</span><span>${proxima.data ? new Date(proxima.data).toLocaleDateString("pt-BR") : `Temporada ${estado.ano}`}</span></div><div class="jja-confronto"><strong>${escapar(proxima.casa?nomeMeuTime:nomeAdversario)}</strong><span>VS</span><strong>${escapar(proxima.casa?nomeAdversario:nomeMeuTime)}</strong></div><p>${proxima.casa?"Jogo em casa":"Jogo fora de casa"} · Temporada ${estado.ano}</p>`
             : `<div class="jja-concluida"><h3>Temporada encerrada</h3><p>Todos os jogos deste calendário foram concluídos.</p>${estatisticaTemporadaHtml}</div>`;
+        
         const e=estado.estatisticas;
         const ultimaPartida = estado.ultima;
         const partidaSalva = ultimaPartida
