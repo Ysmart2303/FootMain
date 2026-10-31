@@ -1019,7 +1019,7 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
     }
 
     // ====== Prêmios individuais existentes ======
-    if (posicao !== "Goleiro" && trofeusColetivos.length >= 2 && (gols >= 20 || assistencias >= 15 || gols + assistencias >= 25) && sortearPremio(t.chanceBolaDeOuro * multIndividuais)) {
+    if (categoriaPosicao(posicao) !== "go" && trofeusColetivos.length >= 2 && (gols >= 20 || assistencias >= 15 || gols + assistencias >= 25) && sortearPremio(t.chanceBolaDeOuro * multIndividuais)) {
         trofeusIndividuais.push("Bola de Ouro");
     }
 
@@ -1032,13 +1032,13 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
         ["contra-ataque-desarmado", "interceptacao-decisiva"].includes(e.tipo)
     ).length;
     
-    if (posicao === "Zagueiro" && ["ZCE","ZCD","LE","LD"].includes(posicaoDetalhe) && jogos >= 25 &&
+    if (categoriaPosicao(posicao) === "zag" && ["ZCE","ZCD","LE","LD"].includes(normalizarPosicaoDetalhada(posicaoDetalhe)) && jogos >= 25 &&
         (acoesDefensivasDecisivas >= 1 || overall >= 82) &&
         sortearPremio(t.chanceBolaDeOuroZagueiro * multIndividuais)) {
         trofeusIndividuais.push("Defender of the Year");
     }
     
-    if (posicao === "Goleiro" && jogos >= 20 &&
+    if (categoriaPosicao(posicao) === "go" && jogos >= 20 &&
         (defesasDecisivas >= 1 || overall >= 80) &&
         sortearPremio(t.chanceBolaDeOuroGoleiro * multIndividuais)) {
         trofeusIndividuais.push("GoalKeeper of the year");
@@ -1054,7 +1054,7 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
     if (gols > jogos && sortearPremio(t.chanceChuteiraDeOuro * multIndividuais)) {
         trofeusIndividuais.push("Chuteira de Ouro");
     }
-    if (posicao === "Goleiro" && jogos >= 30 && sortearPremio(t.chanceLuvaDeOuro * multIndividuais)) {
+    if (categoriaPosicao(posicao) === "go" && jogos >= 30 && sortearPremio(t.chanceLuvaDeOuro * multIndividuais)) {
         trofeusIndividuais.push("Luva de Ouro");
     }
 
