@@ -4,11 +4,6 @@
 
     /* ============================================================
        CALENDÁRIO CENTRALIZADO — FootMain 2.1.4+
-       Define os períodos reais de cada competição.
-       - concentrado  → datas consecutivas (Copa do Mundo, etc.)
-       - continental  → fases distribuídas em meses específicos
-       - janelas FIFA → datas fixas de convocação
-       Ligas/copas nacionais têm períodos próprios por região.
        ============================================================ */
     
     const CALENDARIO_LIGAS = {
@@ -399,6 +394,217 @@
         const motm = Math.random() < motmChance;
         return { participou: true, gols, assistencias, amarelo, vermelho, vermelhoDireto, motm };
     }
+
+    /* ============================================================
+       DISPUTA DE PÊNALTIS
+       ------------------------------------------------------------
+       - Resolve empates em mata-mata (substitui o sorteio aleatório).
+       - Cada cobrança é simulada individualmente e pode ser reproduzida
+         pela animação em animations.css.
+       - O jogador participa da primeira cobrança quando está em campo
+         (ou da primeira defesa, se for goleiro).
+       - Pênaltis NÃO entram nas estatísticas normais (gols, assist.).
+       ============================================================ */
+    
+    function obterChancePenaltiAproveitamento(forcaTime) {
+        // 72% base, ajusta ±10% pela força do time (força 35..99).
+        const forca = Math.max(35, Math.min(99, Number(forcaTime) || 65));
+        return Math.max(0.58, Math.min(0.86, 0.72 + (forca - 65) * 0.0035));
+    }
+    
+    function simularCobrancaPenalti(timeForca) {
+        return Math.random() < obterChancePenaltiAproveitamento(timeForca);
+    }
+    
+    function obterLancePenaltiInicial(ehGoleiro) {
+        if (ehGoleiro) {
+            return {
+                titulo: "Pênalti defendido",
+                contexto: "O árbitro marca pênalti. Você precisa escolher o lado e a forma de defender.",
+                opcoes: [
+                    { texto: "Defender para a esquerda", chance: .66, direcao: "esquerda", tipo: "penalti-defesa", atributo: "reflexos" },
+                    { texto: "Defender para a direita", chance: .66, direcao: "direita", tipo: "penalti-defesa", atributo: "reflexos" },
+                    { texto: "Esperar o chute e fechar o ângulo", chance: .62, direcao: "centro", tipo: "penalti-defesa", atributo: "reflexos" }
+                ]
+            };
+        }
+        const ladoChute = ["esquerda", "direita", "meio"][Math.floor(Math.random() * 3)];
+        const ladoOposto = ladoChute === "esquerda" ? "direita" : "esquerda";
+        return {
+            titulo: "Pênalti para decidir",
+            contexto: "Você é chamado para cobrar um pênalti. Qual escolha faz?",
+            opcoes: [
+                { texto: `Chutar para a ${ladoChute}`, chance: .72, direcao: ladoChute, tipo: "penalti", atributo: "finalizacao" },
+                { texto: "Mandar no centro do gol", chance: .68, direcao: "meio", tipo: "penalti", atributo: "finalizacao" },
+                { texto: `Tentar um chute rasteiro para a ${ladoOposto}`, chance: .62, direcao: ladoOposto, tipo: "penalti", atributo: "finalizacao" }
+            ]
+        };
+    }
+    
+    function calcularResultadoCobrancaJogador(opcao) {
+        const atributo = Number(estado.atributos?.[opcao.atributo]) || Number(estado.overall) || 50;
+        const chance = Math.max(.2, Math.min(.92,
+            opcao.chance + (Number(estado.overall) - 70) * .003 + (atributo - 60) * .004));
+    
+        if (opcao.tipo === "penalti") {
+            const lado = String(opcao.direcao || "meio").toLowerCase();
+            const variacao = { esquerda: 0.08, meio: 0.0, direita: -0.08 }[lado] || 0;
+            const chancePenalti = Math.max(.42, Math.min(.9, chance + variacao));
+            const converteu = Math.random() < chancePenalti;
+            return {
+                gol: converteu,
+                mensagem: converteu
+                    ? (lado === "meio"
+                        ? "Pênalti convertido no meio do gol! Você marcou com categoria."
+                        : `Pênalti convertido para o ${lado}! O goleiro não conseguiu chegar.`)
+                    : (lado === "meio"
+                        ? "O goleiro adivinhou e defendeu o pênalti no centro."
+                        : `O goleiro chegou no lado ${lado} e falhou a sua escolha.`)
+            };
+        }
+    
+        if (opcao.tipo === "penalti-defesa") {
+            const lado = ["esquerdo", "direito", "centro"][Math.floor(Math.random() * 3)];
+            const defesa = Math.random() < Math.max(.46, Math.min(.88, chance + 0.12));
+            return {
+                gol: !defesa,
+                defendeu: defesa,
+                mensagem: defesa
+                    ? `Defesa! Você antecipou a direção ${lado} e segurou o pênalti.`
+                    : `O atacante marcou para o ${lado}. Você não conseguiu impedir a cobrança.`
+            };
+        }
+    
+        return { gol: false, mensagem: "Cobrança não realizada." };
+    }
+    
+    function montarPlacarCobrancas(cobrancas) {
+        let golsCasa = 0, golsFora = 0;
+        cobrancas.forEach((cobranca) => {
+            if (!cobranca.gol) return;
+            if (cobranca.time === "casa") golsCasa++;
+            else golsFora++;
+        });
+        return { golsCasa, golsFora };
+    }
+    
+    /**
+     * Simula a disputa de pênaltis.
+     * - partida.casa define quem é "meu" time (casa ou fora).
+     * - Cobranças alternam; começa pelo time do jogador se for de linha,
+     *   ou pelo adversário se o jogador for goleiro (assim o jogador participa
+     *   da primeira defesa).
+     * - "primeiroGolJogador" pode ser pré-computado (via modal).
+     * - Se "primeiroGolJogador" for undefined, a cobrança do jogador é auto.
+     */
+    function simularDisputaPenaltis(partida, meuTime, adversario, opcoes = {}) {
+        const euSouCasa = !!partida.casa;
+        const meuLado = euSouCasa ? "casa" : "fora";
+        const advLado = euSouCasa ? "fora" : "casa";
+        const forcaMeu = forcaClube(meuTime);
+        const forcaAdv = forcaClube(adversario);
+    
+        const ehGoleiro = String(estado.posicao || "").toUpperCase() === "GOL"
+            || (typeof chavePosicaoCampo === "function" && chavePosicaoCampo(estado.posicao) === "GOL");
+        const jogadorParticipa = opcoes.jogadorParticipa !== false;
+        const primeiroGol = typeof opcoes.primeiroGolJogador === "boolean"
+            ? opcoes.primeiroGolJogador
+            : null;
+    
+        const cobrancas = [];
+        let golsCasa = 0, golsFora = 0;
+        let playerShotFeito = false;
+    
+        // Decide quem começa:
+        // - jogador de linha: meu time bate primeiro.
+        // - goleiro: adversário bate primeiro (jogador defende a 1ª).
+        let vezDoMeuLado = !ehGoleiro;
+    
+        const registrar = (time, gol, jogador = false) => {
+            cobrancas.push({ time, gol, jogador });
+            if (gol) {
+                if (time === "casa") golsCasa++;
+                else golsFora++;
+            }
+        };
+    
+        const simularCobranca = (time) => {
+            const ladoMeu = time === meuLado;
+            // Se for a vez do jogador (batedor de linha) e é a primeira cobrança dele:
+            if (!ehGoleiro && ladoMeu && !playerShotFeito && jogadorParticipa && primeiroGol !== null) {
+                playerShotFeito = true;
+                registrar(time, primeiroGol, true);
+                return;
+            }
+            // Se for a vez do adversário e o jogador é goleiro (defende a 1ª):
+            if (ehGoleiro && !ladoMeu && !playerShotFeito && jogadorParticipa && primeiroGol !== null) {
+                playerShotFeito = true;
+                // Para goleiro, "primeiroGol = true" significa que o jogador SOFREU o gol.
+                registrar(time, primeiroGol, true);
+                return;
+            }
+            registrar(time, simularCobrancaPenalti(ladoMeu ? forcaMeu : forcaAdv), false);
+        };
+    
+        // 5 rodadas padrão
+        for (let rodada = 0; rodada < 5; rodada++) {
+            // Cobrança 1 da rodada
+            simularCobranca(vezDoMeuLado ? meuLado : advLado);
+            // Verifica encerramento antecipado após cada cobrança (a partir da 3ª rodada)
+            if (rodada >= 2) {
+                const cobrancasRestantesMeu = 5 - rodada - (vezDoMeuLado ? 0 : 1);
+                const cobrancasRestantesAdv = 5 - rodada - (vezDoMeuLado ? 1 : 0);
+                const golsMeu = meuLado === "casa" ? golsCasa : golsFora;
+                const golsAdv = meuLado === "casa" ? golsFora : golsCasa;
+                if (golsMeu > golsAdv + cobrancasRestantesAdv) {
+                    return finalizarDisputa(cobrancas, golsCasa, golsFora, meuLado);
+                }
+                if (golsAdv > golsMeu + cobrancasRestantesMeu) {
+                    return finalizarDisputa(cobrancas, golsCasa, golsFora, meuLado);
+                }
+            }
+            vezDoMeuLado = !vezDoMeuLado;
+    
+            // Cobrança 2 da rodada
+            simularCobranca(vezDoMeuLado ? meuLado : advLado);
+            if (rodada >= 2) {
+                const cobrancasRestantesMeu = 5 - rodada - (vezDoMeuLado ? 1 : 0);
+                const cobrancasRestantesAdv = 5 - rodada - (vezDoMeuLado ? 0 : 1);
+                const golsMeu = meuLado === "casa" ? golsCasa : golsFora;
+                const golsAdv = meuLado === "casa" ? golsFora : golsCasa;
+                if (golsMeu > golsAdv + cobrancasRestantesAdv) {
+                    return finalizarDisputa(cobrancas, golsCasa, golsFora, meuLado);
+                }
+                if (golsAdv > golsMeu + cobrancasRestantesMeu) {
+                    return finalizarDisputa(cobrancas, golsCasa, golsFora, meuLado);
+                }
+            }
+            vezDoMeuLado = !vezDoMeuLado;
+        }
+    
+        // Morte súbita
+        let seguranca = 20;
+        while (golsCasa === golsFora && seguranca-- > 0) {
+            simularCobranca(meuLado);
+            simularCobranca(advLado);
+        }
+        return finalizarDisputa(cobrancas, golsCasa, golsFora, meuLado);
+    }
+    
+    function finalizarDisputa(cobrancas, golsCasa, golsFora, meuLado) {
+        const vencedor = golsCasa === golsFora
+            ? (Math.random() < 0.5 ? "casa" : "fora") // fallback de segurança
+            : (golsCasa > golsFora ? "casa" : "fora");
+        return {
+            cobrancas,
+            golsCasa,
+            golsFora,
+            vencedor,
+            vencedorCasa: vencedor === "casa",
+            vencedorEhMeuTime: vencedor === meuLado
+        };
+    }
+  
     function salvar() {
         try { localStorage.setItem(KEY, JSON.stringify(estado)); }
         catch (e) { console.error("Não foi possível salvar a carreira beta", e); }
@@ -432,12 +638,26 @@
                     suspensoes: { ...disponibilidade.suspensoes, ...(estado.disponibilidade?.suspensoes || {}) },
                     amarelos: { ...disponibilidade.amarelos, ...(estado.disponibilidade?.amarelos || {}) }
                 };
+              
                 estado.partidas.forEach((p, index) => {
                     if (!p.tipo) p.tipo = "liga";
                     if (!p.numero) p.numero = index + 1;
                     if (!Number.isFinite(p.rodadaLiga) && p.tipo === "liga") p.rodadaLiga = index;
                     if (!Number.isFinite(p.data)) p.data = Date.UTC(Number(estado.ano) || 2026, 1 + Math.floor(index / Math.max(1, estado.partidas.length) * 10), 4, 12);
+                    // Sanitiza dados de pênaltis antigos/parciais
+                    if (p.penaltis && typeof p.penaltis === "object") {
+                        const cobrancas = Array.isArray(p.penaltis.cobrancas) ? p.penaltis.cobrancas.filter(c => c && (c.time === "casa" || c.time === "fora")) : [];
+                        p.penaltis = {
+                            cobrancas,
+                            golsCasa: Math.max(0, Math.floor(Number(p.penaltis.golsCasa) || 0)),
+                            golsFora: Math.max(0, Math.floor(Number(p.penaltis.golsFora) || 0)),
+                            vencedorCasa: !!p.penaltis.vencedorCasa
+                        };
+                    } else {
+                        delete p.penaltis;
+                    }
                 });
+              
             }
         } catch (e) { console.warn("Save beta inválido; aguardando nova carreira.", e); }
     }
@@ -901,10 +1121,19 @@
     function processarEliminatoria(partida, golsCasa, golsFora) {
         if (partida.tipo !== "mata-mata" && !(partida.tipo === "selecao" && partida.fase)) return "";
         let vencedorCasa = golsCasa > golsFora;
+    
         if (golsCasa === golsFora) {
-            vencedorCasa = Math.random() < 0.5;
+            // Empate no tempo normal: a decisão vem da disputa de pênaltis.
             partida.decidePenaltis = true;
+            if (partida.penaltis && typeof partida.penaltis.vencedorCasa === "boolean") {
+                vencedorCasa = partida.penaltis.vencedorCasa;
+            } else {
+                // Fallback defensivo: só ocorre se um save antigo tiver empate sem penaltis.
+                console.warn("[FootMain] Empate em mata-mata sem dados de pênaltis; sorteio de segurança.");
+                vencedorCasa = Math.random() < 0.5;
+            }
         }
+    
         partida.vencedorCasa = vencedorCasa;
         const venceu = partida.casa === vencedorCasa;
         if (!venceu) {
@@ -924,7 +1153,149 @@
         }
         return `Classificado para a próxima fase de ${partida.competicao}.`;
     }
-    function simularPartida(indice, mostrarResultado = true, interacao = null) {
+
+    function exibirModalPenaltiInicial(lance) {
+      return new Promise((resolve) => {
+          const modal = $("jja-modal-penalti");
+          const opcoesEl = $("jja-penalti-opcoes");
+          const continuarBtn = $("jja-penalti-continuar");
+          const feedbackEl = $("jja-penalti-feedback");
+          if (!modal || !opcoesEl || !continuarBtn) { resolve(null); return; }
+  
+          $("jja-penalti-titulo").textContent = lance.titulo;
+          $("jja-penalti-contexto").textContent = lance.contexto;
+          feedbackEl.textContent = "";
+          opcoesEl.innerHTML = lance.opcoes.map((opcao, indice) =>
+              `<button type="button" class="jja-decisao-opcao" data-penalti-opcao="${indice}">${escapar(opcao.texto)}</button>`
+          ).join("");
+          opcoesEl.hidden = false;
+          continuarBtn.hidden = true;
+          modal.hidden = false;
+  
+          const aoEscolher = (evento) => {
+              const btn = evento.target.closest("[data-penalti-opcao]");
+              if (!btn) return;
+              const opcao = lance.opcoes[Number(btn.dataset.penaltiOpcao)];
+              if (!opcao) return;
+              const resultado = calcularResultadoCobrancaJogador(opcao);
+              feedbackEl.textContent = resultado.mensagem;
+              opcoesEl.hidden = true;
+              continuarBtn.hidden = false;
+              continuarBtn.focus();
+              // Pré-resolve para exibir a disputa sem esperar novo clique
+              const concluir = () => {
+                  modal.hidden = true;
+                  opcoesEl.removeEventListener("click", aoEscolher);
+                  continuarBtn.removeEventListener("click", concluir);
+                  resolve(resultado);
+              };
+              continuarBtn.addEventListener("click", concluir, { once: true });
+              // Mantém a escolha viva mesmo se o usuário pressionar Enter rapidamente
+              modal._penaltiConcluir = concluir;
+          };
+          opcoesEl.addEventListener("click", aoEscolher);
+      });
+  }
+  
+  async function executarDisputaPenaltisInterativa(partida, meuTime, adversario, jogadorDisponivel) {
+      const euSouCasa = !!partida.casa;
+      const meuLado = euSouCasa ? "casa" : "fora";
+      const adversarioLado = euSouCasa ? "fora" : "casa";
+      const ehGoleiro = chavePosicaoCampo(estado.posicao) === "GOL";
+  
+      let primeiroGolJogador = null;
+      if (jogadorDisponivel) {
+          const lance = obterLancePenaltiInicial(ehGoleiro);
+          const resultado = await exibirModalPenaltiInicial(lance);
+          if (resultado) primeiroGolJogador = !!resultado.gol;
+      }
+  
+      const resultado = simularDisputaPenaltis(partida, meuTime, adversario, {
+          jogadorParticipa: jogadorDisponivel,
+          primeiroGolJogador
+      });
+  
+      await animarDisputaPenaltis(resultado, meuTime, adversario, euSouCasa);
+  
+      return resultado;
+  }
+  
+  function animarDisputaPenaltis(resultado, meuTime, adversario, euSouCasa) {
+      return new Promise((resolve) => {
+          const modal = $("penaltis-modal");
+          const lista = $("penaltis-lista");
+          const placarCasa = $("penaltis-placar-casa");
+          const placarFora = $("penaltis-placar-fora");
+          const finalEl = $("penaltis-final");
+          if (!modal || !lista || !placarCasa || !placarFora || !finalEl) { resolve(); return; }
+  
+          $("penaltis-time-casa").textContent = euSouCasa ? meuTime.nome : adversario.nome;
+          $("penaltis-time-fora").textContent = euSouCasa ? adversario.nome : meuTime.nome;
+          placarCasa.textContent = "0";
+          placarFora.textContent = "0";
+          lista.innerHTML = "";
+          finalEl.hidden = true;
+          finalEl.innerHTML = "";
+          modal.hidden = false;
+  
+          let golsCasa = 0, golsFora = 0;
+          let indice = 0;
+  
+          const proximaCobranca = () => {
+              if (indice >= resultado.cobrancas.length) {
+                  const vencedorNome = resultado.vencedorCasa
+                      ? $("penaltis-time-casa").textContent
+                      : $("penaltis-time-fora").textContent;
+                  const perdedorNome = resultado.vencedorCasa
+                      ? $("penaltis-time-fora").textContent
+                      : $("penaltis-time-casa").textContent;
+                  finalEl.hidden = false;
+                  finalEl.innerHTML = `
+                      <div class="penaltis-vencedor">🏆 ${escapar(vencedorNome)} venceu!</div>
+                      <div class="penaltis-derrotado">${escapar(perdedorNome)} eliminado</div>
+                      <div class="penaltis-final-placar">Placar dos pênaltis: ${resultado.golsCasa} × ${resultado.golsFora}</div>
+                      <button type="button" class="penaltis-continuar" data-fechar-penaltis>Continuar</button>
+                  `;
+                  finalEl.querySelector("[data-fechar-penaltis]").addEventListener("click", () => {
+                      modal.hidden = true;
+                      resolve();
+                  });
+                  finalEl.querySelector("[data-fechar-penaltis]").focus();
+                  return;
+              }
+              const cobranca = resultado.cobrancas[indice];
+              const ehCasa = cobranca.time === "casa";
+              const nomeTime = ehCasa
+                  ? $("penaltis-time-casa").textContent
+                  : $("penaltis-time-fora").textContent;
+              const div = document.createElement("div");
+              div.className = `penaltis-cobranca ${cobranca.gol ? "gol" : "erro"}${cobranca.jogador ? " jogador" : ""}`;
+              div.innerHTML = `
+                  <span class="penaltis-icone" aria-hidden="true">${cobranca.gol ? "⚽" : "❌"}</span>
+                  <span class="penaltis-time-nome"><strong>${escapar(nomeTime)}</strong>${cobranca.jogador ? " (você)" : ""}</span>
+                  <span class="penaltis-resultado ${cobranca.gol ? "gol" : "erro"}">${cobranca.gol ? "GOL" : "ERROU"}</span>
+              `;
+              lista.appendChild(div);
+              lista.scrollTop = lista.scrollHeight;
+              if (cobranca.gol) {
+                  if (ehCasa) golsCasa++; else golsFora++;
+                  placarCasa.textContent = golsCasa;
+                  placarFora.textContent = golsFora;
+                  const alvo = ehCasa ? placarCasa : placarFora;
+                  alvo.classList.remove("penaltis-pulso");
+                  // força reflow para reiniciar a animação
+                  void alvo.offsetWidth;
+                  alvo.classList.add("penaltis-pulso");
+              }
+              indice++;
+              setTimeout(proximaCobranca, 550);
+          };
+  
+          setTimeout(proximaCobranca, 350);
+      });
+  }
+  
+    async function simularPartida(indice, mostrarResultado = true, interacao = null, opcoesPenaltis = null) {
         const partida = estado.partidas[indice];
         if (!partida || partida.status !== "agendada") return;
         const times = clubesDisponiveis();
@@ -932,16 +1303,16 @@
         const meuClube = pelaSelecao
             ? (typeof SELECOES !== "undefined" ? SELECOES.find(s => s.id === estado.nacionalidade) : null)
             : times.find(c => c.id === estado.clubeId);
-       
+    
         const adversario = partida.adversarioId
-          ? pelaSelecao
-              ? (typeof SELECOES !== "undefined" ? SELECOES.find(s => s.id === partida.adversarioId) : null)
-              : times.find(c => c.id === partida.adversarioId)
-                || (typeof CLUBES_REGIONAIS !== "undefined"
-                    ? CLUBES_REGIONAIS.find(c => c.id === partida.adversarioId)
-                    : null)
-          : null;
-      
+            ? pelaSelecao
+                ? (typeof SELECOES !== "undefined" ? SELECOES.find(s => s.id === partida.adversarioId) : null)
+                : times.find(c => c.id === partida.adversarioId)
+                  || (typeof CLUBES_REGIONAIS !== "undefined"
+                      ? CLUBES_REGIONAIS.find(c => c.id === partida.adversarioId)
+                      : null)
+            : null;
+    
         if (!meuClube || (!pelaSelecao && !adversario)) { informar("Não foi possível localizar uma equipe do calendário.", true); return; }
         const visitante = adversario || { id: `${meuClube.id}-adversario`, nome: partida.adversarioNome || "Seleção adversária" };
         const casa = partida.casa ? meuClube : visitante, fora = partida.casa ? visitante : meuClube;
@@ -1005,13 +1376,43 @@
             if (partida.casa) golsFora = Math.max(0, golsFora - golsEvitados);
             else golsCasa = Math.max(0, golsCasa - golsEvitados);
         }
-        // O jogador faz parte do placar: se sua participação gerar mais gols que
-        // o resultado inicialmente sorteado, o placar é ajustado para comportá-los.
         if (participou) {
             const golsNecessarios = golsJogador + assistJogador + golsEquipeCriados;
             if (partida.casa) golsCasa = Math.max(golsCasa, golsNecessarios);
             else golsFora = Math.max(golsFora, golsNecessarios);
         }
+    
+        // ---------- DISPUTA DE PÊNALTIS (se for mata-mata e empatar) ----------
+        let penaltis = null;
+      
+        const ehMataMata = partida.tipo === "mata-mata" || (partida.tipo === "selecao" && partida.fase);
+        
+        // DEV HOOK: força empate no próximo mata-mata para testar a disputa de pênaltis
+        if (ehMataMata && window.__footmainDevForcarPenaltis) {
+            window.__footmainDevForcarPenaltis = false;
+            golsCasa = 1;
+            golsFora = 1;
+        }
+        
+        if (ehMataMata && golsCasa === golsFora) {
+            const interativo = !!opcoesPenaltis?.interativo;
+            const jogadorDisponivel = participou && !motivoAusencia;
+            try {
+                if (interativo) {
+                    penaltis = await executarDisputaPenaltisInterativa(partida, meuClube, visitante, jogadorDisponivel);
+                } else {
+                    penaltis = simularDisputaPenaltis(partida, meuClube, visitante, {
+                        jogadorParticipa: jogadorDisponivel,
+                        primeiroGolJogador: null
+                    });
+                }
+                partida.penaltis = penaltis;
+            } catch (erro) {
+                console.error("[FootMain] Falha na disputa de pênaltis; usando fallback:", erro);
+                partida.penaltis = null;
+            }
+        }
+    
         if (!pelaSelecao && partida.tipo === "liga") registrarResultado(casa, fora, golsCasa, golsFora);
         if (participou) {
             const prefixo = pelaSelecao ? "Selecao" : "Clube";
@@ -1076,7 +1477,10 @@
         partida.casaNome = casa.nome; partida.foraNome = fora.nome;
         estado.rodada++;
         const resumoTorneio = processarEliminatoria(partida, golsCasa, golsFora);
-        const resumo = `${casa.nome} ${golsCasa} × ${golsFora} ${fora.nome}`;
+        let resumo = `${casa.nome} ${golsCasa} × ${golsFora} ${fora.nome}`;
+        if (partida.penaltis) {
+            resumo += ` (pênaltis ${partida.penaltis.golsCasa} × ${partida.penaltis.golsFora})`;
+        }
         const hatTrick = golsJogador >= 3;
         let detalheLesao = "";
         if (participou) {
@@ -1114,10 +1518,19 @@
                     : ` Lesão: ficará fora das próximas ${jogosLesao} partidas do calendário.`;
             }
         }
+        const penaltisTexto = partida.penaltis
+            ? ` Decisão por pênaltis: ${partida.penaltis.golsCasa} × ${partida.penaltis.golsFora}.`
+            : "";
         const detalhes = participou
-            ? `${estado.nome}: ${golsJogador} gol(s)${hatTrick ? " — HAT-TRICK!" : ""}, ${assistJogador} assistência(s)${motm ? ", MOTM (melhor em campo)" : ""}${amarelo ? ", cartão amarelo" : ""}${vermelho ? ", cartão vermelho" : ""}.${jogosSuspensaoCartao ? ` Suspenso por ${jogosSuspensaoCartao} próxima(s) partida(s)${suspensaoPorAmarelos ? " por acúmulo de amarelos" : ""}.` : ""}${detalheLesao}${resumoTorneio ? ` ${resumoTorneio}` : ""}`
-            : `${estado.nome} não entrou em campo${motivoAusencia ? ` (${motivoAusencia})` : ""}.${resumoTorneio ? ` ${resumoTorneio}` : ""}`;
-        estado.ultima = { resumo, detalhes, competicao: partida.competicao, rodada: partida.numero, participou, golsJogador, assistJogador, driblesCompletos: partida.driblesCompletos, desarmes: partida.desarmes, defesas: partida.defesas, jogadasCriadas: partida.jogadasCriadas, motm: !!motm, hatTrick, amarelo, vermelho };
+            ? `${estado.nome}: ${golsJogador} gol(s)${hatTrick ? " — HAT-TRICK!" : ""}, ${assistJogador} assistência(s)${motm ? ", MOTM (melhor em campo)" : ""}${amarelo ? ", cartão amarelo" : ""}${vermelho ? ", cartão vermelho" : ""}.${jogosSuspensaoCartao ? ` Suspenso por ${jogosSuspensaoCartao} próxima(s) partida(s)${suspensaoPorAmarelos ? " por acúmulo de amarelos" : ""}.` : ""}${detalheLesao}${penaltisTexto}${resumoTorneio ? ` ${resumoTorneio}` : ""}`
+            : `${estado.nome} não entrou em campo${motivoAusencia ? ` (${motivoAusencia})` : ""}.${penaltisTexto}${resumoTorneio ? ` ${resumoTorneio}` : ""}`;
+        estado.ultima = {
+            resumo, detalhes, competicao: partida.competicao, rodada: partida.numero, participou,
+            golsJogador, assistJogador, driblesCompletos: partida.driblesCompletos,
+            desarmes: partida.desarmes, defesas: partida.defesas, jogadasCriadas: partida.jogadasCriadas,
+            motm: !!motm, hatTrick, amarelo, vermelho,
+            penaltis: partida.penaltis || null
+        };
         estado.eventos = estado.eventos || [];
         if (hatTrick) estado.eventos.push({ tipo: "hat-trick", jogo: partida.numero });
         if (amarelo) estado.eventos.push({ tipo: "cartao-amarelo", jogo: partida.numero });
@@ -1131,6 +1544,7 @@
             informar(`Partida ${estado.rodada}/${totalValidas} concluída. ${detalhes}`);
         }
     }
+  
     function simularOutrosJogosDaRodada(indiceRodada) {
         const confrontos = estado.rodadas?.[indiceRodada] || [];
         const times = clubesDisponiveis();
@@ -1419,6 +1833,7 @@
         if (opcao.atributo === "velocidade") return "Recuperação decisiva! Você chegou a tempo e cortou a jogada.";
         return "Ação defensiva perfeita! Você interrompeu o ataque adversário.";
     }
+  
     function encerrarDecisoesPartida(jogarPartida) {
         const fluxo = fluxoDecisao;
         if (!fluxo || (!jogarPartida && fluxo.escolhaConfirmada)) return;
@@ -1428,9 +1843,17 @@
         renderizar();
         if (jogarPartida) {
             bloquearAcoesPartida();
-            simularPartida(fluxo.indice, true, { participou: fluxo.participou, ...fluxo.resultado });
+            // Executa assíncrono; usa interativo=true para o jogador bater/defender a 1ª cobrança
+            (async () => {
+                try {
+                    await simularPartida(fluxo.indice, true, { participou: fluxo.participou, ...fluxo.resultado }, { interativo: true });
+                } catch (erro) {
+                    console.error("[FootMain] Falha ao concluir partida com decisões:", erro);
+                }
+            })();
         }
     }
+  
     function configurarDecisoesPartida() {
         $("jja-decisao-opcoes")?.addEventListener("click", evento => {
             const botao = evento.target.closest("[data-opcao]");
@@ -1463,7 +1886,8 @@
             if (evento.key === "Escape" && fluxoDecisao && !fluxoDecisao.escolhaConfirmada) encerrarDecisoesPartida(false);
         });
     }
-    function simularProxima() {
+  
+    async function simularProxima() {
         if (bloqueioAcoesPartida || decisaoEmAndamento) return;
         if (!estado) { informar("Inicie sua carreira primeiro.", true); return; }
         const indice = estado.partidas.findIndex(p => p.status === "agendada");
@@ -1476,7 +1900,7 @@
             || Number(disponibilidade.suspensoes?.[chaveEquipe]) > 0;
         if (indisponivel) {
             bloquearAcoesPartida();
-            simularPartida(indice);
+            await simularPartida(indice, true, null, { interativo: false });
             return;
         }
         const times = clubesDisponiveis();
@@ -1486,7 +1910,7 @@
         const adversario = times.find(clube => clube.id === partida.adversarioId);
         if (!meuClube || (!pelaSelecao && !adversario)) {
             bloquearAcoesPartida();
-            simularPartida(indice);
+            await simularPartida(indice, true, null, { interativo: false });
             return;
         }
         const forcaTime = pelaSelecao ? Number(getConfig()?.selecao?.potencias?.[meuClube.id]) || 60 : forcaClube(meuClube);
@@ -1494,7 +1918,7 @@
         const participou = Math.random() < chanceJogar;
         if (!participou) {
             bloquearAcoesPartida();
-            simularPartida(indice, true, { participou: false });
+            await simularPartida(indice, true, { participou: false }, { interativo: false });
             return;
         }
         fluxoDecisao = {
@@ -1515,7 +1939,7 @@
         if (decisaoEmAndamento || (bloqueioAcoesPartida && !simulacaoAutomatica)) return;
         if (!estado) { informar("Inicie sua carreira primeiro.", true); return; }
         if (!estado.partidas.some(p => p.status === "agendada")) { informar("A temporada já foi concluída."); return; }
-
+    
         if (!simulacaoAutomatica && typeof confirmarAcao === "function") {
             const confirmado = await confirmarAcao(
                 "A temporada será concluída automaticamente e todos os jogos restantes serão simulados.\n\nDeseja continuar?",
@@ -1523,12 +1947,13 @@
             );
             if (!confirmado) return;
         }
-
+    
         if (!simulacaoAutomatica) bloquearAcoesPartida();
         let indice;
         while ((indice = estado.partidas.findIndex(p => p.status === "agendada")) >= 0) {
             const partida = estado.partidas[indice];
-            simularPartida(indice, false);
+            // Pênaltis em modo automático (sem interação e sem animação)
+            await simularPartida(indice, false, null, { interativo: false });
             if (partida.status === "agendada") {
                 informar("A simulação foi interrompida porque um jogo do calendário não pôde ser resolvido.", true);
                 return;
@@ -1825,6 +2250,7 @@
         }).join("");
         return `<section class="jja-competicoes"><h3>Outras competições da temporada</h3>${conteudo}</section>`;
     }
+  
     function renderizar() {
         const ativo = !!estado;
         const proxima = ativo ? estado.partidas.find(p => p.status === "agendada") : null;
@@ -1844,15 +2270,13 @@
         $("jja-simular-carreira").disabled = decisaoEmAndamento || bloqueioAcoesPartida || encerrada;
         botaoAposentar.disabled = decisaoEmAndamento || bloqueioAcoesPartida || !historicoCarreira.length || encerrada;
         if (!ativo) return;
-        const clube = clubesDisponiveis().find(c=>c.id===estado.clubeId);
+    
+        const clube = clubesDisponiveis().find(c => c.id === estado.clubeId);
         const equipeSelecao = typeof SELECOES !== "undefined" ? SELECOES.find(s => s.id === estado.nacionalidade) : null;
         const nomeMeuTime = proxima?.tipo === "selecao" ? equipeSelecao?.nome || "Seleção" : clube?.nome || "Clube";
-        const nomeAdversario = proxima ? (clubesDisponiveis().find(c=>c.id===proxima.adversarioId)?.nome || proxima.adversarioNome || "Adversário") : "";
+        const nomeAdversario = proxima ? (clubesDisponiveis().find(c => c.id === proxima.adversarioId)?.nome || proxima.adversarioNome || "Adversário") : "";
         const estatisticasTemporada = estado.estatisticas || {};
-        const posicao = typeof chavePosicaoCampo === "function"
-            ? chavePosicaoCampo(estado.posicao)
-            : String(estado.posicao || "").toUpperCase();
-        
+    
         const estatisticaTemporadaHtml = `<p>Defesas: ${Number(estatisticasTemporada.defesas) || 0} · Desarmes: ${Number(estatisticasTemporada.desarmes) || 0} · Dribles completos: ${Number(estatisticasTemporada.driblesCompletos) || 0} · Jogadas criadas: ${Number(estatisticasTemporada.jogadasCriadas) || 0}</p>`;
         const faseProxima = proxima && Number(proxima.fase) > 0 && Number(proxima.totalFases) > 0
             ? nomeFaseCompeticao(proxima.fase, proxima.totalFases)
@@ -1860,12 +2284,12 @@
         const rotuloCompeticaoProxima = proxima
             ? `PRÓXIMA PARTIDA · ${escapar(proxima.competicao)}${faseProxima ? ` · ${escapar(faseProxima)}` : ""}`
             : "";
-        
+    
         $("jja-proximo").innerHTML = proxima
-            ? `<div class="jja-proximo-topo"><span>${rotuloCompeticaoProxima}</span><span>${proxima.data ? new Date(proxima.data).toLocaleDateString("pt-BR") : `Temporada ${estado.ano}`}</span></div><div class="jja-confronto"><strong>${escapar(proxima.casa?nomeMeuTime:nomeAdversario)}</strong><span>VS</span><strong>${escapar(proxima.casa?nomeAdversario:nomeMeuTime)}</strong></div><p>${proxima.casa?"Jogo em casa":"Jogo fora de casa"} · Temporada ${estado.ano}</p>`
+            ? `<div class="jja-proximo-topo"><span>${rotuloCompeticaoProxima}</span><span>${proxima.data ? new Date(proxima.data).toLocaleDateString("pt-BR") : `Temporada ${estado.ano}`}</span></div><div class="jja-confronto"><strong>${escapar(proxima.casa ? nomeMeuTime : nomeAdversario)}</strong><span>VS</span><strong>${escapar(proxima.casa ? nomeAdversario : nomeMeuTime)}</strong></div><p>${proxima.casa ? "Jogo em casa" : "Jogo fora de casa"} · Temporada ${estado.ano}</p>`
             : `<div class="jja-concluida"><h3>Temporada encerrada</h3><p>Todos os jogos deste calendário foram concluídos.</p>${estatisticaTemporadaHtml}</div>`;
-        
-        const e=estado.estatisticas;
+    
+        const e = estado.estatisticas;
         const ultimaPartida = estado.ultima;
         const partidaSalva = ultimaPartida
             ? estado.partidas.find(partida => Number(partida.numero) === Number(ultimaPartida.rodada))
@@ -1875,9 +2299,25 @@
         const ultimaDefesas = Number(ultimaPartida?.defesas ?? partidaSalva?.defesas) || 0;
         const ultimaJogadas = Number(ultimaPartida?.jogadasCriadas ?? partidaSalva?.jogadasCriadas) || 0;
         const estatisticaUltimaPartida = `<p><strong>Defesas:</strong> ${ultimaDefesas} · <strong>Desarmes:</strong> ${ultimaDesarmes} · <strong>Dribles completos:</strong> ${ultimaDribles} · <strong>Jogadas criadas:</strong> ${ultimaJogadas}</p>`;
-        $("jja-ultima").innerHTML=ultimaPartida
-            ? `<div class="jja-placar">${escapar(ultimaPartida.resumo)}</div><p>${escapar(ultimaPartida.detalhes)}</p>${ultimaPartida.participou ? estatisticaUltimaPartida : ""}`
+    
+        // ---------- NOVO: bloco de pênaltis na última partida ----------
+        const penaltisUltima = ultimaPartida?.penaltis || partidaSalva?.penaltis || null;
+        let blocoPenaltisUltima = "";
+        if (penaltisUltima) {
+            const venceuCasa = !!penaltisUltima.vencedorCasa;
+            const partidaReferencia = partidaSalva || ultimaPartida;
+            const euSouCasa = !!partidaReferencia?.casa;
+            const meuVenceu = (euSouCasa && venceuCasa) || (!euSouCasa && !venceuCasa);
+            const resultadoTexto = meuVenceu
+                ? "✅ Vitória nos pênaltis"
+                : "❌ Derrota nos pênaltis";
+            blocoPenaltisUltima = `<p class="jja-penaltis-resumo"><strong>Pênaltis:</strong> ${penaltisUltima.golsCasa} × ${penaltisUltima.golsFora} · ${resultadoTexto}</p>`;
+        }
+    
+        $("jja-ultima").innerHTML = ultimaPartida
+            ? `<div class="jja-placar">${escapar(ultimaPartida.resumo)}</div><p>${escapar(ultimaPartida.detalhes)}</p>${ultimaPartida.participou ? estatisticaUltimaPartida : ""}${blocoPenaltisUltima}`
             : "Nenhuma partida disputada.";
+    
         $("jogos").textContent = String(Number(e.jogos) || 0);
         $("gols").textContent = String(Number(e.gols) || 0);
         $("assi").textContent = String(Number(e.assistencias) || 0);
@@ -1895,8 +2335,11 @@
         $("jja-desarmes").textContent = String(Number(e.desarmes) || 0);
         $("jja-defesas").textContent = String(Number(e.defesas) || 0);
         $("jja-jogadas-criadas").textContent = String(Number(e.jogadasCriadas) || 0);
-        const tabela=estado.tabela.filter(t=>!t.id.startsWith("__rodada__")).sort((a,b)=>b.pts-a.pts||(b.gp-b.gc)-(a.gp-a.gc)||b.gp-a.gp);
-      
+    
+        const tabela = estado.tabela
+            .filter(t => !t.id.startsWith("__rodada__"))
+            .sort((a, b) => b.pts - a.pts || (b.gp - b.gc) - (a.gp - a.gc) || b.gp - a.gp);
+    
         const ligaParaZonas = estado.liga || clubesDisponiveis().find(c => c.id === estado.clubeId)?.liga || "";
         const zonasClassificacao = obterZonasClassificacao(ligaParaZonas);
         const totalTimesTabela = tabela.length;
@@ -1915,7 +2358,7 @@
                 <td><strong>${t.pts}</strong></td>
             </tr>`;
         }).join("");
-        
+    
         $("jja-tabela").innerHTML = `
             <div class="jja-tabela-wrap">
                 <table class="jja-tabela">
@@ -1925,8 +2368,33 @@
             </div>
             ${renderizarLegendaZonas(zonasClassificacao)}
             ${renderizarProgressoCompeticoes()}`;
-      
-        $("jja-calendario").innerHTML=`<div class="jja-lista-jogos">${estado.partidas.map(p=>{const adv=clubesDisponiveis().find(c=>c.id===p.adversarioId);const nomeCasa=p.casa?(p.tipo==="selecao"?equipeSelecao?.nome:clube?.nome):(adv?.nome||p.adversarioNome);const nomeFora=p.casa?(adv?.nome||p.adversarioNome):(p.tipo==="selecao"?equipeSelecao?.nome:clube?.nome);const status=p.status==="concluida"?`${p.golsCasa}–${p.golsFora}${p.motmJogador?" · MOTM":""}${p.motivoAusencia?` · Ausente: ${p.motivoAusencia}`:""}`:p.status==="cancelada"?"Eliminado":p.status==="bloqueada"?"Aguardando classificação":"Agendado";return `<div class="jja-jogo ${p.status==="concluida"?"jja-jogo--feito":""}"><span class="jja-jogo-num">${p.data?new Date(p.data).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"}):String(p.numero).padStart(2,"0")}</span><span class="jja-jogo-adversario">${escapar(p.competicao)} · ${escapar(nomeCasa || "Equipe")} × ${escapar(nomeFora || "Adversário")}</span><span class="jja-jogo-resultado">${escapar(status)}</span></div>`}).join("")}</div>`;
+    
+        // ---------- NOVO: calendário com pênaltis ----------
+        $("jja-calendario").innerHTML = `<div class="jja-lista-jogos">${estado.partidas.map(p => {
+            const adv = clubesDisponiveis().find(c => c.id === p.adversarioId);
+            const nomeCasa = p.casa
+                ? (p.tipo === "selecao" ? equipeSelecao?.nome : clube?.nome)
+                : (adv?.nome || p.adversarioNome);
+            const nomeFora = p.casa
+                ? (adv?.nome || p.adversarioNome)
+                : (p.tipo === "selecao" ? equipeSelecao?.nome : clube?.nome);
+    
+            // Pênaltis aparecem no status da partida concluída
+            const penaltisInfo = (p.status === "concluida" && p.penaltis)
+                ? ` · Pên. ${p.penaltis.golsCasa}–${p.penaltis.golsFora}`
+                : "";
+            const status = p.status === "concluida"
+                ? `${p.golsCasa}–${p.golsFora}${penaltisInfo}${p.motmJogador ? " · MOTM" : ""}${p.motivoAusencia ? ` · Ausente: ${p.motivoAusencia}` : ""}`
+                : p.status === "cancelada" ? "Eliminado"
+                : p.status === "bloqueada" ? "Aguardando classificação"
+                : "Agendado";
+    
+            return `<div class="jja-jogo ${p.status === "concluida" ? "jja-jogo--feito" : ""}">
+                <span class="jja-jogo-num">${p.data ? new Date(p.data).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : String(p.numero).padStart(2, "0")}</span>
+                <span class="jja-jogo-adversario">${escapar(p.competicao)} · ${escapar(nomeCasa || "Equipe")} × ${escapar(nomeFora || "Adversário")}</span>
+                <span class="jja-jogo-resultado">${escapar(status)}</span>
+            </div>`;
+        }).join("")}</div>`;
     }
     function mostrarDesempenhoTemporada(temporada) {
         const resultados = $("resultados");
@@ -2019,6 +2487,95 @@
             simulandoCarreira = false;
         }
     }
+
+    function criarCarreiraTesteRapida(opcoes = {}) {
+        const {
+            nome = "Dev Tester",
+            idade = 18,
+            posicao = "CA",
+            nacionalidade = "brasil",
+            clubeId = "flamengo",
+            idadeLimite = 40,
+            anosContrato = 3
+        } = opcoes;
+    
+        try { localStorage.removeItem(KEY); } catch {}
+    
+        const clube = clubesDisponiveis().find(c => c.id === clubeId);
+        if (!clube) throw new Error("Clube inválido: " + clubeId);
+    
+        // Carreira
+        const carreira = typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : {};
+        carreira.id = (typeof gerarIdRanking === "function" ? gerarIdRanking() : `dev-${Date.now()}`);
+        carreira.nome = nome;
+        carreira.posicaoDetalhe = posicao;
+        carreira.posicao = POSICOES_CAMPO[posicao]?.nome || posicao;
+        carreira.nacionalidade = nacionalidade;
+        carreira.clube = clubeId;
+        carreira.idadeLimite = idadeLimite;
+        carreira.anosContratoRestantes = anosContrato;
+        carreira.rompimentosContratoUsados = 0;
+        carreira.salarioAtual = 500000;
+        carreira.saldo = 0;
+        carreira.aposentadoriaSelecao = false;
+        carreira.aposentadoriaVoluntaria = false;
+        carreira.clubeQualificado = "";
+        carreira.competicoesQualificadas = [];
+        delete carreira.potencial;
+        if (typeof salvarCarreiraAtual === "function") salvarCarreiraAtual(carreira);
+    
+        // Histórico desta carreira: limpo. Outras carreiras preservadas.
+        const historicoAtual = typeof lerHistorico === "function" ? lerHistorico() : [];
+        const outrosHistoricos = historicoAtual.filter(t => t.carreiraId !== carreira.id);
+        if (typeof salvarHistorico === "function") salvarHistorico(outrosHistoricos);
+    
+        // Estado direto, sem modais
+        const times = clubesDisponiveis().filter(c => c.liga === clube.liga);
+        const ano = (typeof ANO_INICIAL !== "undefined" ? ANO_INICIAL : 2026);
+        const tabela = times.map(t => ({ id: t.id, nome: t.nome, forca: forcaClube(t), j: 0, v: 0, e: 0, d: 0, gp: 0, gc: 0, pts: 0 }));
+        const rodadas = gerarRodadasLiga(times);
+        const perfil = { overall: 65, idade, nacionalidade, posicao };
+        const partidas = montarCalendarioTemporada(times, clube, rodadas, ano, carreira, outrosHistoricos, perfil);
+        partidas.forEach((partida, indice) => { partida.numero = indice + 1; });
+    
+        estado = {
+            versao: 4, integrado: true, carreiraId: carreira.id,
+            nome, posicao, nacionalidade, overall: 65, atributos: null,
+            idade, idadeLimite, ano, clubeId, liga: clube.liga,
+            rodada: 0, rodadas, partidas, tabela,
+            disponibilidade: disponibilidadeInicial(0),
+            desempenhoPosicional: desempenhoPosicionalInicial(),
+            estatisticas: {
+                jogos: 0, gols: 0, assistencias: 0,
+                jogosClube: 0, golsClube: 0, assistenciasClube: 0,
+                jogosSelecao: 0, golsSelecao: 0, assistenciasSelecao: 0,
+                jogosSelecaoPorCompeticao: {}, golsSelecaoPorCompeticao: {},
+                convocado: partidas.some(p => p.tipo === "selecao"),
+                amarelos: 0, vermelhos: 0, motm: 0,
+                vitorias: 0, empates: 0, derrotas: 0,
+                driblesCompletos: 0, desarmes: 0, defesas: 0, jogadasCriadas: 0
+            },
+            eventos: [], competicoes: {},
+            trofeusClube: [], trofeusSelecao: [], trofeusColetivos: [], trofeusIndividuais: [],
+            ultima: null, feed: [], salvaOficialmente: false
+        };
+        salvar();
+        renderizar();
+    
+        // Preenche o formulário para bater com o estado
+        const nomeInput = document.getElementById("nome");
+        const idadeInput = document.getElementById("idade");
+        const idadeLimiteInput = document.getElementById("idade-limite");
+        const nacionalidadeInput = document.getElementById("nacionalidade");
+        if (nomeInput) nomeInput.value = nome;
+        if (idadeInput) idadeInput.value = idade;
+        if (idadeLimiteInput) idadeLimiteInput.value = idadeLimite;
+        if (nacionalidadeInput) nacionalidadeInput.value = nacionalidade;
+        const radio = document.querySelector(`input[name="posicao"]#${posicao}`);
+        if (radio) radio.checked = true;
+    
+        return { ok: true, clube: clube.nome, liga: clube.liga, partidas: partidas.length };
+    }
   
     function inicializar() {
         carregar();
@@ -2055,4 +2612,119 @@
         }
     }
     if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", inicializar); else inicializar();
+
+    /* ============================================================
+       API DE DESENVOLVIMENTO (FootMain Dev Tools)
+       Ativada apenas quando js/dev-tools.js define window.__FOOTMAIN_DEV__ = true
+       (via ?dev=1 na URL). Nada é exposto em produção.
+       ============================================================ */
+    if (window.__FOOTMAIN_DEV__) {
+        window.FMD = {
+            // ---- Estado ----
+            getEstado: () => estado,
+            setEstado: (novo) => { estado = novo; salvar(); renderizar(); },
+            salvar: () => salvar(),
+            carregar: () => carregar(),
+            renderizar: () => renderizar(),
+    
+            // ---- Simulação ----
+            simularPartida: (indice, mostrar = false, interacao = null, opcoes = null) =>
+                simularPartida(indice, mostrar, interacao, opcoes),
+            simularRestantesAuto: () => simularRestantes(true, false),
+    
+            async simularFimCarreiraAuto() {
+                const original = window.confirmarAcao;
+                window.confirmarAcao = async () => true;
+                try { return await simularFimCarreira(); }
+                finally { window.confirmarAcao = original; }
+            },
+    
+            // ---- Penalidades ----
+            forcarEmpateProximoMataMata: () => { window.__footmainDevForcarPenaltis = true; },
+    
+            async irParaProximoMataMata() {
+                if (!estado) return { ok: false, msg: "Nenhuma carreira ativa. Crie uma carreira de teste primeiro." };
+                for (let tentativa = 0; tentativa < 300; tentativa++) {
+                    const idx = estado.partidas.findIndex(p =>
+                        p.status === "agendada" &&
+                        (p.tipo === "mata-mata" || (p.tipo === "selecao" && p.fase))
+                    );
+                    if (idx < 0) return { ok: false, msg: "Não há mais mata-mata nesta temporada. Use 'Simular carreira' para avançar." };
+    
+                    let simulou = 0;
+                    while (true) {
+                        const nextIdx = estado.partidas.findIndex(p => p.status === "agendada");
+                        if (nextIdx < 0 || nextIdx === idx) break;
+                        await simularPartida(nextIdx, false, null, { interativo: false });
+                        simulou++;
+                    }
+                    if (estado.partidas[idx]?.status === "agendada") {
+                        const p = estado.partidas[idx];
+                        return {
+                            ok: true,
+                            msg: `Chegamos ao ${p.competicao} (fase ${p.fase}/${p.totalFases}). ${simulou} jogo(s) simulado(s).`
+                        };
+                    }
+                }
+                return { ok: false, msg: "Não foi possível chegar a um mata-mata (limite de tentativas)." };
+            },
+    
+            animarPenaltisMock(resultado = null) {
+                const mock = resultado || {
+                    cobrancas: [
+                        { time: "casa", gol: true,  jogador: true  },
+                        { time: "fora", gol: true,  jogador: false },
+                        { time: "casa", gol: true,  jogador: false },
+                        { time: "fora", gol: false, jogador: false },
+                        { time: "casa", gol: false, jogador: false },
+                        { time: "fora", gol: true,  jogador: false },
+                        { time: "casa", gol: true,  jogador: false },
+                        { time: "fora", gol: true,  jogador: false },
+                        { time: "casa", gol: true,  jogador: false },
+                        { time: "fora", gol: false, jogador: false }
+                    ],
+                    golsCasa: 5,
+                    golsFora: 3,
+                    vencedor: "casa",
+                    vencedorCasa: true
+                };
+                return animarDisputaPenaltis(mock, { nome: "Time do Jogador" }, { nome: "Adversário FC" }, true);
+            },
+    
+            // ---- Setup rápido ----
+            criarCarreiraTesteRapida: (opcoes) => criarCarreiraTesteRapida(opcoes),
+    
+            async iniciarAuto() {
+                const origEscolher = window.escolherContratoParaTemporada;
+                const origAcao = window.escolherAcaoContrato;
+                window.escolherAcaoContrato = async () => "manter";
+                window.escolherContratoParaTemporada = async (clubeAtual, temporadaInicial, idade, idadeLimite, carreira) => {
+                    if (carreira.clube) {
+                        return {
+                            clube: carreira.clube,
+                            anosContrato: Math.max(1, Math.min(2, idadeLimite - idade + 1)),
+                            rompeContrato: false,
+                            salarioProposto: carreira.salarioAtual || 500000,
+                            valorMercado: 0
+                        };
+                    }
+                    const lista = clubesDisponiveis();
+                    const clubeFallback = lista[Math.floor(Math.random() * lista.length)];
+                    return {
+                        clube: clubeFallback.id,
+                        anosContrato: 2,
+                        rompeContrato: false,
+                        salarioProposto: 500000,
+                        valorMercado: 0
+                    };
+                };
+                try { return await iniciar(); }
+                finally {
+                    window.escolherContratoParaTemporada = origEscolher;
+                    window.escolherAcaoContrato = origAcao;
+                }
+            }
+        };
+        console.info("[FootMain Dev] API exposta em window.FMD. Painel: botão 🛠️ no canto inferior direito.");
+    }
 })();
