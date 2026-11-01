@@ -1,0 +1,173 @@
+/* ============================================================
+   FootMain — Ferramentas de Desenvolvedor
+   Estilo propositalmente "fora do tema" para não confundir.
+   ============================================================ */
+
+.dev-toggle {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    z-index: 99998;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 2px solid #f59e0b;
+    background: #1a1a2e;
+    color: #fbbf24;
+    font-size: 22px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    display: grid;
+    place-items: center;
+    transition: background 0.15s, transform 0.15s;
+}
+
+.dev-toggle:hover {
+    background: #f59e0b;
+    color: #1a1a2e;
+    transform: scale(1.05);
+}
+
+.dev-panel {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    z-index: 99999;
+    width: min(320px, calc(100vw - 32px));
+    max-height: 80vh;
+    overflow-y: auto;
+    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+    border: 2px solid #f59e0b;
+    border-radius: 12px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(245, 158, 11, 0.3);
+    color: #f8fafc;
+    font-family: ui-monospace, "Cascadia Code", Menlo, monospace;
+    font-size: 12px;
+    animation: devPanelIn 0.2s ease;
+}
+
+.dev-panel[hidden] { display: none; }
+
+@keyframes devPanelIn {
+    from { opacity: 0; transform: translateY(10px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+.dev-panel__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background: rgba(245, 158, 11, 0.15);
+    border-bottom: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 10px 10px 0 0;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.dev-panel__header strong {
+    color: #fbbf24;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+}
+
+.dev-panel__header button {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    border-radius: 6px;
+    background: transparent;
+    color: #fbbf24;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.dev-panel__header button:hover {
+    background: rgba(245, 158, 11, 0.25);
+}
+
+.dev-panel__section {
+    padding: 8px 10px 4px;
+    color: #94a3b8;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dev-panel__section:first-of-type { border-top: 0; }
+
+.dev-panel__body {
+    padding: 6px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.dev-panel__body button {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-radius: 6px;
+    background: rgba(245, 158, 11, 0.08);
+    color: #fde68a;
+    font-size: 11px;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.dev-panel__body button:hover {
+    background: rgba(245, 158, 11, 0.22);
+    border-color: #fbbf24;
+}
+
+.dev-panel__body button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.dev-panel__body button.dev-danger {
+    border-color: rgba(239, 68, 68, 0.5);
+    background: rgba(239, 68, 68, 0.1);
+    color: #fecaca;
+}
+
+.dev-panel__body button.dev-danger:hover {
+    background: rgba(239, 68, 68, 0.25);
+}
+
+.dev-panel__status {
+    padding: 8px 12px;
+    border-top: 1px solid rgba(245, 158, 11, 0.2);
+    color: #86efac;
+    font-size: 10px;
+    min-height: 22px;
+    max-height: 120px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.4;
+}
+
+.dev-panel__status:empty::before {
+    content: "Pronto para testar.";
+    color: #64748b;
+    font-style: italic;
+}
+
+.dev-panel__status.dev-erro { color: #fecaca; }
+
+@media (max-width: 480px) {
+    .dev-panel {
+        width: calc(100vw - 20px);
+        right: 10px;
+        bottom: 10px;
+        max-height: 70vh;
+    }
+    .dev-toggle { right: 10px; bottom: 10px; }
+}
