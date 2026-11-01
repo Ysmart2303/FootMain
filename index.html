@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/loading.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/dev.css">
     <script src="js/theme-menu.js" defer></script>
     <title>FootMain</title>
 </head>
@@ -55,6 +57,7 @@
                 <summary>Histórico de atualização</summary>
                 <p class="update-history__intro">Principais mudanças registradas entre as versões:</p>
                 <ol class="update-history__list">
+                    <lu><strong>v2.1.8</strong> — Novas animações de pênaltis.</lu>
                     <lu><strong>v2.1.7</strong> — Mais clubes estaduais.</lu>
                     <lu><strong>v2.1.6</strong> — Bug do campeonatoa estaduais.</lu>
                     <lu><strong>v2.1.5</strong> — Calendário corrigido.</lu>
@@ -557,9 +560,44 @@
         </div>
     </div>
 
+    <div id="penaltis-modal" class="penaltis-overlay" hidden>
+        <div class="penaltis-container" role="dialog" aria-modal="true" aria-labelledby="penaltis-titulo">
+            <h2 id="penaltis-titulo" class="penaltis-titulo">Disputa de Pênaltis</h2>
+            <div class="penaltis-placar">
+                <div class="penaltis-time">
+                    <strong id="penaltis-time-casa">Casa</strong>
+                    <span class="penaltis-placar-numero" id="penaltis-placar-casa">0</span>
+                </div>
+                <span class="penaltis-placar-separador">×</span>
+                <div class="penaltis-time">
+                    <strong id="penaltis-time-fora">Fora</strong>
+                    <span class="penaltis-placar-numero" id="penaltis-placar-fora">0</span>
+                </div>
+            </div>
+            <div class="penaltis-cobrancas" id="penaltis-lista" aria-live="polite"></div>
+            <div class="penaltis-final" id="penaltis-final" hidden></div>
+        </div>
+    </div>  
+
+    <div id="jja-modal-penalti" class="modal-overlay jja-modal-decisao" hidden>
+        <div class="jja-decisao-caixa" role="dialog" aria-modal="true" aria-labelledby="jja-penalti-titulo" tabindex="-1">
+            <span class="jja-decisao-progresso">Disputa de pênaltis</span>
+            <span class="jja-decisao-icone" aria-hidden="true">⚽</span>
+            <h3 id="jja-penalti-titulo">Primeira cobrança</h3>
+            <p id="jja-penalti-contexto"></p>
+            <p class="jja-decisao-aviso">Você decide a primeira cobrança antes de ver a disputa completa.</p>
+            <div id="jja-penalti-opcoes" class="jja-decisao-opcoes"></div>
+            <p id="jja-penalti-feedback" class="jja-decisao-feedback" aria-live="polite"></p>
+            <div class="jja-decisao-acoes">
+                <button type="button" id="jja-penalti-continuar" class="jja-decisao-continuar" hidden>Ver disputa</button>
+            </div>
+        </div>
+    </div>
+
 <script src="js/config.js"></script>
 <script src="js/select-modal.js" defer></script>
 <script src="js/script.js" defer></script>
+<script src="js/dev-tools.js" defer></script>
 <script src="js/jogo-a-jogo.js" defer></script>
 </body>
 </html>
