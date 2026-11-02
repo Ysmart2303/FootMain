@@ -5011,3 +5011,127 @@ html[data-theme="light"] .jja-decisao-voltar:hover { background: rgba(67, 126, 8
     .jja-decisao-caixa { padding: 20px 16px; }
     .jja-decisao-acoes { flex-direction: column-reverse; }
 }
+
+.jja-grupo-resumo {
+    margin: 8px 0 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: rgba(74, 145, 105, .08);
+    border-left: 3px solid rgba(74, 145, 105, .55);
+    font-size: .85rem;
+    color: #cbd5e1;
+}
+html[data-theme="light"] .jja-grupo-resumo {
+    background: #dcfce7;
+    border-left-color: #4b8155;
+    color: #14532d;
+}
+
+.jja-competicao__vazio {
+    margin: 10px 0;
+    font-size: .82rem;
+    color: #94a3b8;
+    font-style: italic;
+}
+html[data-theme="light"] .jja-competicao__vazio {
+    color: #64748b;
+}
+
+.jja-tabela-grupo-container {
+    margin: 14px 0;
+    border: 1px solid #273449;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+/* Container do card da competição para não vazar */
+.jja-competicao {
+    overflow: hidden; /* Impede que qualquer coisa saia do card */
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Tabela de grupos */
+.jja-tabela-grupo-container {
+    margin: 14px 0;
+    border: 1px solid #273449;
+    border-radius: 10px;
+    overflow-x: auto; /* Permite rolagem se ainda precisar, mas não vai vazar */
+    max-width: 100%;
+}
+
+.jja-tabela-grupo {
+    margin: 0;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    white-space: nowrap; /* Impede quebra de linha no nome do clube */
+}
+
+.jja-tabela-grupo th, .jja-tabela-grupo td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #263449;
+    text-align: center;
+}
+
+.jja-tabela-grupo th:nth-child(2), .jja-tabela-grupo td:nth-child(2) {
+    text-align: left;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.jja-tabela-grupo th {
+    background: #111c2e;
+    color: #9fb0c5;
+    font-weight: 800;
+    font-size: 0.75rem;
+}
+
+.jja-tabela-grupo tr:last-child td {
+    border-bottom: none;
+}
+
+.jja-tabela-grupo tr.qualificado td:nth-child(1) {
+    border-left: 3px solid #22c55e;
+}
+
+.jja-tabela-grupo tr.meu-clube {
+    background: rgba(34, 197, 94, 0.1);
+    font-weight: 700;
+}
+
+/* Esconde as colunas detalhadas no celular */
+@media (max-width: 600px) {
+    .jja-tabela-grupo .hide-mobile {
+        display: none;
+    }
+    
+    .jja-tabela-grupo th, .jja-tabela-grupo td {
+        padding: 8px 6px; /* Diminui o espaçamento no celular */
+        font-size: 0.8rem;
+    }
+    
+    .jja-tabela-grupo th:nth-child(2), .jja-tabela-grupo td:nth-child(2) {
+        max-width: 110px; /* Ajusta o nome do clube para caber na tela */
+    }
+}
+
+/* Tema claro */
+html[data-theme="light"] .jja-tabela-grupo-container { border-color: #b7cfbb; }
+html[data-theme="light"] .jja-tabela-grupo th { background: #eaf2e8; color: #42604a; }
+html[data-theme="light"] .jja-tabela-grupo td { border-bottom-color: #d0dfd0; }
+html[data-theme="light"] .jja-tabela-grupo tr.meu-clube { background: #e1f0e2; color: #285d39; }
+
+.jja-tabela-grupo-container {
+    overflow-x: auto;
+    margin: 14px 0;
+    border: 1px solid #273449;
+    border-radius: 10px;
+}
+
+.jja-tabela-grupo {
+    width: 100%;
+    min-width: 600px; /* Garante que as colunas não fiquem esmagadas */
+    white-space: nowrap;
+}
