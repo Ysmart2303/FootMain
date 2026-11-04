@@ -3237,7 +3237,7 @@
                 if (!estado.salvaOficialmente) {
                     await mostrarCarregamento(`Simulando a temporada ${estado.ano}...`);
                     try {
-                        simularRestantes(true);
+                        await simularRestantes(true);
                     } finally {
                         ocultarCarregamento();
                     }
