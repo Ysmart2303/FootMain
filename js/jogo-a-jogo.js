@@ -3050,13 +3050,38 @@
         botaoIniciar.textContent = encerrada ? "Iniciar nova carreira" : historicoCarreira.length ? "Próxima temporada" : "Iniciar carreira";
         botaoIniciar.disabled = bloqueioAcoesPartida || emAndamento || (!!estado && !estado.salvaOficialmente && !proxima);
         const botaoAposentar = $("jja-aposentar");
+        const proximoCard = $("jja-proximo");
+        if (proximoCard) proximoCard.classList.toggle("tem-proxima-partida", !!proxima);
         botaoAposentar.hidden = !historicoCarreira.length || encerrada;
         botaoAposentar.disabled = !historicoCarreira.length || encerrada;
-        $("jja-iniciar").disabled = decisaoEmAndamento;
+        botaoIniciar.disabled = bloqueioAcoesPartida || emAndamento || (!!estado && !estado.salvaOficialmente && !proxima) || decisaoEmAndamento;
         $("jja-jogar").disabled = decisaoEmAndamento || bloqueioAcoesPartida || !ativo || !proxima;
         $("jja-simular-restantes").disabled = decisaoEmAndamento || bloqueioAcoesPartida || !ativo || !proxima;
         $("jja-simular-carreira").disabled = decisaoEmAndamento || bloqueioAcoesPartida || encerrada;
         botaoAposentar.disabled = decisaoEmAndamento || bloqueioAcoesPartida || !historicoCarreira.length || encerrada;
+
+        // A barra mobile deve espelhar o estado FINAL dos botões originais.
+        // Esta sincronização fica depois de todas as regras de disabled acima.
+        const mobileBar = $("mobile-action-bar");
+        const mobileActive = $("mobile-action-active");
+        const mobileStart = $("mobile-action-start");
+        const mobileIsActive = !!estado || (historicoCarreira.length > 0 && !encerrada);
+        if (mobileBar) mobileBar.hidden = false;
+        if (mobileActive) mobileActive.hidden = !mobileIsActive;
+        if (mobileStart) {
+            mobileStart.hidden = mobileIsActive;
+            mobileStart.textContent = botaoIniciar.textContent;
+            mobileStart.disabled = botaoIniciar.disabled;
+        }
+        const mobilePlay = $("mobile-action-play");
+        const mobileSimulate = $("mobile-action-simulate");
+        const mobileCareer = $("mobile-action-career");
+        const mobileRetire = $("mobile-action-retire");
+        if (mobilePlay) mobilePlay.disabled = $("jja-jogar").disabled;
+        if (mobileSimulate) mobileSimulate.disabled = $("jja-simular-restantes").disabled;
+        if (mobileCareer) mobileCareer.disabled = $("jja-simular-carreira").disabled;
+        if (mobileRetire) mobileRetire.disabled = botaoAposentar.disabled;
+
         if (!ativo) return;
     
         const clube = clubesDisponiveis().find(c => c.id === estado.clubeId);
@@ -3382,6 +3407,24 @@
             $("nacionalidade").value = estado?.nacionalidade || carreira.nacionalidade || "";
         }
         configurarDecisoesPartida();
+        $("mobile-action-start")?.addEventListener("click", () => $("jja-iniciar").click());
+        $("mobile-action-play")?.addEventListener("click", () => $("jja-jogar").click());
+        $("mobile-action-simulate")?.addEventListener("click", () => $("jja-simular-restantes").click());
+        $("mobile-action-career")?.addEventListener("click", () => { $("jja-simular-carreira").click(); $("mobile-action-menu").hidden = true; $("mobile-action-more").setAttribute("aria-expanded", "false"); });
+        $("mobile-action-retire")?.addEventListener("click", () => { $("jja-aposentar").click(); $("mobile-action-menu").hidden = true; $("mobile-action-more").setAttribute("aria-expanded", "false"); });
+        $("mobile-action-more")?.addEventListener("click", () => {
+            const menu = $("mobile-action-menu");
+            menu.hidden = !menu.hidden;
+            $("mobile-action-more").setAttribute("aria-expanded", String(!menu.hidden));
+        });
+        const ajustarAccordionsMobile = () => {
+            const mobile = window.matchMedia("(max-width: 600px)").matches;
+            document.querySelectorAll(".mobile-accordion").forEach(el => { el.open = !mobile; });
+            const desempenho = document.querySelector(".jja-desempenho-painel");
+            if (desempenho) desempenho.open = !mobile;
+        };
+        ajustarAccordionsMobile();
+        window.matchMedia("(max-width: 600px)").addEventListener?.("change", ajustarAccordionsMobile);
         $("jja-iniciar")?.addEventListener("click", iniciarOuAvancar);
         $("jja-jogar")?.addEventListener("click", simularProxima);
         $("jja-simular-restantes")?.addEventListener("click", () => simularRestantes(false));
