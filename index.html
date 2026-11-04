@@ -57,7 +57,8 @@
                 <summary>Histórico de atualização</summary>
                 <p class="update-history__intro">Principais mudanças registradas entre as versões:</p>
                 <ol class="update-history__list">
-                    <lu><strong>v2.2.1</strong> — Simular fil de carreira corrigido.</lu>
+                    <lu><strong>v2.2.2</strong> — botões auxiliares no modo mobile.</lu>
+                    <lu><strong>v2.2.1</strong> — Simular fim de carreira corrigido.</lu>
                     <lu><strong>v2.2.0</strong> — Fase de grupo em todas as competições continentais.</lu>
                     <lu><strong>v2.1.8</strong> — Novas animações de pênaltis.</lu>
                     <lu><strong>v2.1.7</strong> — Mais clubes estaduais.</lu>
@@ -168,7 +169,9 @@
                     <h2>Crie seu jogador e comece a carreira</h2>
                     <p>Defina o perfil e escolha como avançar: jogue partida por partida com decisões durante os lances, simule o restante da temporada ou acompanhe a carreira completa.</p>
                 </div> -->
-                <div id="inputs">
+                <details class="mobile-accordion mobile-setup" open>
+                    <summary>Configuração do jogador</summary>
+                    <div id="inputs">
                     <div class="input-field">
                         <label for="nome">Nome:</label>
                         <input placeholder="Ex: Marcos" id="nome">
@@ -198,7 +201,7 @@
                         <button id="clube-alvo" class="clube-alvo-btn" type="button">Escolher clube-alvo</button>
                     </div>
                 </div>
-                <div id="posi">
+                    <div id="posi">
                     <h3>Escolha sua posição</h3>
                     <p class="campo-instrucao">Toque em uma das 11 posições do esquema 4-3-3.</p>
                     <div class="campo-futebol" role="group" aria-label="Campo de futebol, formação 4-3-3">
@@ -223,10 +226,11 @@
                         </div>
                     </div>
                     <p id="posicao-selecionada" class="posicao-selecionada" aria-live="polite" aria-atomic="true">Nenhuma posição selecionada</p>
-                </div>
+                    </div>
+                </details>
                 <div class="jja-botoes">
                     <button type="button" id="jja-iniciar">Iniciar carreira</button>
-                    <button type="button" id="jja-jogar" disabled>Jogar jogo a jogo</button>
+                    <button type="button" id="jja-jogar" disabled>Jogar próximo</button>
                     <button type="button" id="jja-simular-restantes" disabled>Simular restante da temporada</button>
                     <button type="button" id="jja-simular-carreira" disabled>Simular fim de carreira</button>
                     <button type="button" id="jja-aposentar" class="btn-aposentar" hidden>Aposentar jogador</button>
@@ -372,10 +376,10 @@
             </div>
 
           
-            <section id="atributos-jogador" class="atributos-painel">
-                <div class="atributos-titulo"><div><h3>Atributos do jogador</h3><p>Os atributos evoluem durante a juventude e caem com o avanço da idade.</p></div><span class="atributos-status">Evolução da carreira</span></div>
+            <details id="atributos-jogador" class="atributos-painel mobile-accordion" open>
+                <summary class="atributos-titulo"><div><h3>Atributos do jogador</h3><p>Os atributos evoluem durante a juventude e caem com o avanço da idade.</p></div><span class="atributos-status">Evolução da carreira</span></summary>
                 <div id="painel-atributos"><p class="atributos-vazio">Gere uma temporada para acompanhar a evolução do jogador.</p></div>
-            </section>
+            </details>
 
             
         </section>
@@ -527,6 +531,21 @@
           
             <span class="versao-app" data-versao-app>v—</span>
         </footer>
+
+        <div class="mobile-action-bar" id="mobile-action-bar" aria-label="Ações da carreira" hidden>
+            <button type="button" class="mobile-action-primary" id="mobile-action-start">Iniciar carreira</button>
+            <div class="mobile-action-active" id="mobile-action-active" hidden>
+                <button type="button" id="mobile-action-play">Jogar próxima</button>
+                <button type="button" id="mobile-action-simulate">Simular restante</button>
+                <div class="mobile-action-more-wrap">
+                    <button type="button" id="mobile-action-more" aria-label="Mais ações" aria-expanded="false">⋯</button>
+                    <div class="mobile-action-menu" id="mobile-action-menu" hidden>
+                        <button type="button" id="mobile-action-career">Simular fim de carreira</button>
+                        <button type="button" id="mobile-action-retire">Aposentar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
       
     <div id="jja-modal-decisao" class="modal-overlay jja-modal-decisao" hidden>
         <div class="jja-decisao-caixa" role="dialog" aria-modal="true" aria-labelledby="jja-decisao-titulo" aria-describedby="jja-decisao-contexto" tabindex="-1">
