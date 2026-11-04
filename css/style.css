@@ -5135,3 +5135,95 @@ html[data-theme="light"] .jja-tabela-grupo tr.meu-clube { background: #e1f0e2; c
     min-width: 600px; /* Garante que as colunas não fiquem esmagadas */
     white-space: nowrap;
 }
+/* Melhorias de navegação mobile — FootMain */
+.mobile-action-bar { display: none; }
+.mobile-accordion > summary { cursor: pointer; }
+
+@media (max-width: 600px) {
+    main { padding-bottom: 112px; }
+
+    .mobile-action-bar {
+        position: fixed;
+        inset: auto 0 0;
+        z-index: 1200;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 76px;
+        padding: 10px max(12px, env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+        background: rgba(8, 15, 28, .97);
+        border-top: 1px solid rgba(148, 163, 184, .25);
+        box-shadow: 0 -8px 24px rgba(0, 0, 0, .28);
+        backdrop-filter: blur(12px);
+    }
+    .mobile-action-bar[hidden], .mobile-action-active[hidden] { display: none !important; }
+    .mobile-action-primary, .mobile-action-active > button,
+    .mobile-action-more-wrap > button {
+        min-height: 48px;
+        border: 1px solid rgba(74, 222, 128, .45);
+        border-radius: 12px;
+        padding: 0 12px;
+        background: #166534;
+        color: #f0fdf4;
+        font-weight: 800;
+        font-size: .84rem;
+    }
+    .mobile-action-primary { width: 100%; }
+    .mobile-action-active { display: flex; width: 100%; gap: 8px; }
+    .mobile-action-active > button { flex: 1 1 0; min-width: 0; }
+    .mobile-action-bar button:disabled { opacity: .45; }
+    .mobile-action-more-wrap { position: relative; flex: 0 0 48px; }
+    .mobile-action-more-wrap > button { width: 48px; padding: 0; font-size: 1.5rem; background: #1e293b; }
+    .mobile-action-menu {
+        position: absolute;
+        right: 0;
+        bottom: calc(100% + 10px);
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        width: max-content;
+        min-width: 205px;
+        padding: 8px;
+        border: 1px solid #475569;
+        border-radius: 12px;
+        background: #0f172a;
+        box-shadow: 0 10px 30px rgba(0,0,0,.4);
+    }
+    .mobile-action-menu[hidden] { display: none; }
+    .mobile-action-menu button {
+        min-height: 44px;
+        padding: 8px 12px;
+        border: 0;
+        border-radius: 8px;
+        background: #1e293b;
+        color: #f8fafc;
+        text-align: left;
+        font-weight: 700;
+    }
+
+    .mobile-accordion {
+        border: 1px solid rgba(148, 163, 184, .22);
+        border-radius: 14px;
+        padding: 12px;
+        background: rgba(15, 23, 42, .42);
+    }
+    .mobile-accordion > summary { min-height: 44px; display: flex; align-items: center; gap: 10px; font-weight: 800; }
+    .mobile-setup > summary { color: #86efac; }
+    .mobile-setup #inputs { margin-top: 12px; }
+    .mobile-setup #posi { margin-top: 16px; }
+    .jja-desempenho-painel > summary { min-height: 44px; }
+
+    #jja-proximo.tem-proxima-partida {
+        position: sticky;
+        top: 60px;
+        z-index: 30;
+        max-height: min(34vh, 230px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        box-shadow: 0 8px 20px rgba(0,0,0,.28);
+    }
+
+    .player-chip { min-height: 44px; align-items: center; padding: 8px 12px; }
+    #clube-alvo.clube-alvo-btn { min-height: 44px; }
+    #posi .jogador-campo { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
+}
