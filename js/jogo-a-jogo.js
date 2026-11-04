@@ -2950,6 +2950,16 @@
             const faseEliminacao = fasesMataMata.find(partida =>
                 partida.status === "concluida" && !venceuFaseCompeticao(partida, fasesMataMata)
             );
+            const nomeEliminador = faseEliminacao
+                ? clubesDisponiveis().find(clube => clube.id === faseEliminacao.adversarioId)?.nome
+                    || (typeof CLUBES_REGIONAIS !== "undefined"
+                        ? CLUBES_REGIONAIS.find(clube => clube.id === faseEliminacao.adversarioId)?.nome
+                        : "")
+                    || (typeof SELECOES !== "undefined"
+                        ? SELECOES.find(selecao => selecao.id === faseEliminacao.adversarioId)?.nome
+                        : "")
+                    || faseEliminacao.adversarioNome
+                : "";
             const campeao = fasesMataMata.some(partida =>
                 partida.status === "concluida"
                 && partida.fase === totalFases
@@ -2968,7 +2978,7 @@
             } else if (campeao) {
                 resumo = "Campeão";
             } else if (faseEliminacao) {
-                resumo = `Eliminado na ${nomeFaseCompeticao(faseEliminacao.fase, totalFases)}`;
+                resumo = `Eliminado na ${nomeFaseCompeticao(faseEliminacao.fase, totalFases)}${nomeEliminador ? ` por ${nomeEliminador}` : ""}`;
             } else if (proximaFase) {
                 resumo = `${nomeFaseCompeticao(proximaFase.fase, totalFases)} em andamento`;
             } else if (bloqueada) {

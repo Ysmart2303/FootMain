@@ -57,7 +57,8 @@
                 <summary>Histórico de atualização</summary>
                 <p class="update-history__intro">Principais mudanças registradas entre as versões:</p>
                 <ol class="update-history__list">
-                    <lu><strong>v2.2.2</strong> — botões auxiliares no modo mobile.</lu>
+                    <lu><strong>v2.2.3</strong> — Correção da responsividade no modo PC.</lu>
+                    <lu><strong>v2.2.2</strong> — Botões auxiliares no modo mobile.</lu>
                     <lu><strong>v2.2.1</strong> — Simular fim de carreira corrigido.</lu>
                     <lu><strong>v2.2.0</strong> — Fase de grupo em todas as competições continentais.</lu>
                     <lu><strong>v2.1.8</strong> — Novas animações de pênaltis.</lu>
@@ -78,7 +79,7 @@
                     <lu><strong>v1.19.9</strong> — Adição do Histórico de atualizações.</lu>
                     <lu><strong>v1.19.8</strong> — Substituição de “caps” por “jogos” nas estatísticas da seleção.</lu>
                     <lu><strong>v1.19.7</strong> — Reorganização dos botões de ação da carreira.</lu>
-                    <lu><strong>v1.19.6</strong> — Correções de bugs.</lu>
+                    <lu><strong>v1.19.6</strong> — Correções" de bugs.</lu>
                     <lu><strong>v1.19.5</strong> — Estante de troféus para exibir as conquistas da carreira.</lu>
                     <lu><strong>v1.19.4</strong> — Eventos narrativos durante a carreira.</lu>
                     <lu><strong>v1.19.3</strong> — Ajustes na exibição dos troféus.</lu>
@@ -171,7 +172,8 @@
                 </div> -->
                 <details class="mobile-accordion mobile-setup" open>
                     <summary>Configuração do jogador</summary>
-                    <div id="inputs">
+                    <div class="mobile-setup__layout">
+                        <div id="inputs">
                     <div class="input-field">
                         <label for="nome">Nome:</label>
                         <input placeholder="Ex: Marcos" id="nome">
@@ -200,7 +202,7 @@
                         <label for="clube-alvo">Clube-alvo</label>
                         <button id="clube-alvo" class="clube-alvo-btn" type="button">Escolher clube-alvo</button>
                     </div>
-                </div>
+                    </div>
                     <div id="posi">
                     <h3>Escolha sua posição</h3>
                     <p class="campo-instrucao">Toque em uma das 11 posições do esquema 4-3-3.</p>
@@ -226,6 +228,7 @@
                         </div>
                     </div>
                     <p id="posicao-selecionada" class="posicao-selecionada" aria-live="polite" aria-atomic="true">Nenhuma posição selecionada</p>
+                    </div>
                     </div>
                 </details>
                 <div class="jja-botoes">
