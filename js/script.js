@@ -2005,8 +2005,8 @@ function renderHistorico() {
                         <div class="titulo-tags">${renderTrofeus(trofeusIndividuais, "individual")}</div>
                     </div>
                 </div>
-                ${(Array.isArray(temporada.competicoesQualificadas) && temporada.competicoesQualificadas.length)
-                    ? `<div class="temporada-eventos"><span class="titulos-grupo-label">🌍 Competições da seleção</span><div class="titulo-tags">${renderTrofeus(temporada.competicoesQualificadas, "coletivo")}</div></div>`
+                ${(Array.isArray(temporada.trofeusSelecao) && temporada.trofeusSelecao.length)
+                    ? `<div class="temporada-eventos"><span class="titulos-grupo-label">🌍 Títulos da seleção</span><div class="titulo-tags">${renderTrofeus(temporada.trofeusSelecao, "coletivo")}</div></div>`
                     : ""}
                 <div class="temporada-eventos">
                     <span class="titulos-grupo-label">⚡ Eventos da temporada</span>

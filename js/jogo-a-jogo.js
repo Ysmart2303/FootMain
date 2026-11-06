@@ -137,6 +137,19 @@
         "CAF Confederation Cup":  { tipo: "continental", mesInicio: 2, mesFim: 11, fasesMeses: [2, 4, 6, 8, 10, 11] }
     };
 
+    const FASES_GRUPOS_SELECOES = {
+        "Copa do Mundo": { regioes: ["africa", "americaNorte", "americaSul", "asia", "europa", "oceania"], grupos: 12, timesPorGrupo: 4, classificadosPorGrupo: 2, melhoresTerceiros: 8, fasesMataMata: 5 },
+        "Copa América": { regioes: ["americaSul", "americaNorte"], grupos: 4, timesPorGrupo: 4, classificadosPorGrupo: 2, melhoresTerceiros: 0, fasesMataMata: 3 },
+        "Eurocopa": { regioes: ["europa"], grupos: 6, timesPorGrupo: 4, classificadosPorGrupo: 2, melhoresTerceiros: 4, fasesMataMata: 4 },
+        "Copa Ouro": { regioes: ["americaNorte"], grupos: 4, timesPorGrupo: 4, classificadosPorGrupo: 2, melhoresTerceiros: 0, fasesMataMata: 3 },
+        "Copa das Nações Africanas": { regioes: ["africa"], grupos: 6, timesPorGrupo: 4, classificadosPorGrupo: 2, melhoresTerceiros: 4, fasesMataMata: 4 },
+        "Copa da Ásia": { regioes: ["asia"], grupos: 6, timesPorGrupo: 4, classificadosPorGrupo: 2, melhoresTerceiros: 4, fasesMataMata: 4 },
+        "Copa das Nações da OFC": { regioes: ["oceania"], grupos: 2, timesPorGrupo: 4, classificadosPorGrupo: 2, melhoresTerceiros: 0, fasesMataMata: 2 },
+        "Olimpíadas": { regioes: ["africa", "americaNorte", "americaSul", "asia", "europa", "oceania"], grupos: 4, timesPorGrupo: 4, classificadosPorGrupo: 2, melhoresTerceiros: 0, fasesMataMata: 3 },
+        "Mundial Sub-20": { regioes: ["africa", "americaNorte", "americaSul", "asia", "europa", "oceania"], grupos: 6, timesPorGrupo: 4, classificadosPorGrupo: 2, melhoresTerceiros: 4, fasesMataMata: 4 },
+        "Mundial Sub-17": { regioes: ["africa", "americaNorte", "americaSul", "asia", "europa", "oceania"], grupos: 12, timesPorGrupo: 4, classificadosPorGrupo: 2, melhoresTerceiros: 8, fasesMataMata: 5 }
+    };
+
     /* ============================================================
        LIGAS POR CONTINENTE
        ============================================================ */
@@ -696,7 +709,11 @@
     function temporadaEmAndamento(carreira) {
         return !!estado && String(estado.carreiraId) === String(carreira.id)
             && !estado.salvaOficialmente
-            && estado.partidas.some(partida => partida.status === "agendada" && partida.tipo !== "grupo-ia");
+            && estado.partidas.some(partida => partida.status === "agendada" && !ehPartidaDeIA(partida));
+    }
+
+    function ehPartidaDeIA(partida) {
+        return partida?.tipo === "grupo-ia" || partida?.tipo === "selecao-grupo-ia";
     }
   
     function sortearEstatisticasJogador(partida, meuClube, golsCasa, golsFora, participacaoForcada = null) {
@@ -1064,6 +1081,148 @@
         return elegiveis.length ? elegiveis : todas;
     }
 
+    function forcaSelecao(selecaoId) {
+        const potencia = Number(getConfig()?.selecao?.potencias?.[selecaoId]);
+        return Math.max(1, Math.min(100, Number.isFinite(potencia) && potencia > 0 ? potencia : 50));
+    }
+
+    function sortearResultadoSelecao(timeCasaId, timeForaId) {
+        const delta = (forcaSelecao(timeCasaId) - forcaSelecao(timeForaId)) / 25;
+        return {
+            golsCasa: sortearPoisson(Math.max(.25, 1.3 + delta * .48)),
+            golsFora: sortearPoisson(Math.max(.25, 1.2 - delta * .42))
+        };
+    }
+
+    function adicionarFaseGruposSelecao(partidas, competicao, selecaoId, ano) {
+        const conf = FASES_GRUPOS_SELECOES[competicao];
+        const selecao = (typeof SELECOES !== "undefined" ? SELECOES : []).find(item => item.id === selecaoId);
+        if (!conf || !selecao) return;
+
+        const elegiveis = SELECOES.filter(item => conf.regioes.includes(item.regiao) && item.id !== selecaoId);
+        for (let i = elegiveis.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [elegiveis[i], elegiveis[j]] = [elegiveis[j], elegiveis[i]];
+        }
+        const grupo = [selecaoId, ...elegiveis.slice(0, conf.timesPorGrupo - 1).map(item => item.id)];
+        const torneioId = `selecao:${selecaoId}:${competicao}:${ano}`;
+        const jogosGrupo = grupo.length - 1;
+        const datas = calcularDatasFases(competicao, ano, jogosGrupo + conf.fasesMataMata, 5);
+        const confrontos = [
+            { adversario: grupo[1], casa: true, iaCasa: grupo[2], iaFora: grupo[3] },
+            { adversario: grupo[2], casa: false, iaCasa: grupo[1], iaFora: grupo[3] },
+            { adversario: grupo[3], casa: true, iaCasa: grupo[1], iaFora: grupo[2] }
+        ];
+
+        confrontos.slice(0, jogosGrupo).forEach((confronto, indice) => {
+            const adversario = SELECOES.find(item => item.id === confronto.adversario);
+            partidas.push({
+                data: datas[indice], adversarioId: confronto.adversario,
+                adversarioNome: adversario?.nome || "Seleção adversária",
+                casa: confronto.casa, competicao, tipo: "selecao", faseGrupo: true,
+                torneioId, grupo, rodadaGrupo: indice + 1, totalFasesGrupo: jogosGrupo,
+                status: "agendada"
+            });
+            if (confronto.iaCasa && confronto.iaFora) {
+                partidas.push({
+                    data: datas[indice] - 86400000, casaId: confronto.iaCasa,
+                    foraId: confronto.iaFora, competicao, tipo: "selecao-grupo-ia",
+                    torneioId, grupo, rodadaGrupo: indice + 1, status: "agendada"
+                });
+            }
+        });
+
+        adicionarEliminatoria(
+            partidas, [], selecaoId, competicao, ano, 5, conf.fasesMataMata,
+            `selecao:${selecaoId}`, competicao, "agendada", datas.slice(jogosGrupo), torneioId
+        );
+    }
+
+    function simularPartidaGrupoSelecaoIA(partida) {
+        if (!partida || partida.status !== "agendada") return;
+        const placar = sortearResultadoSelecao(partida.casaId, partida.foraId);
+        Object.assign(partida, placar, { status: "concluida" });
+    }
+
+    function calcularTabelaGrupoSelecao(torneioId, selecoesGrupo) {
+        const tabela = selecoesGrupo.map(id => ({
+            id, nome: SELECOES.find(item => item.id === id)?.nome || "Seleção",
+            pts: 0, pj: 0, gm: 0, gc: 0, sg: 0
+        }));
+        const partidasGrupo = estado.partidas.filter(partida =>
+            partida.torneioId === torneioId && partida.status === "concluida"
+            && (partida.faseGrupo || partida.tipo === "selecao-grupo-ia")
+        );
+
+        partidasGrupo.forEach(partida => {
+            const casaId = partida.tipo === "selecao-grupo-ia"
+                ? partida.casaId
+                : partida.casa ? estado.nacionalidade : partida.adversarioId;
+            const foraId = partida.tipo === "selecao-grupo-ia"
+                ? partida.foraId
+                : partida.casa ? partida.adversarioId : estado.nacionalidade;
+            const casa = tabela.find(time => time.id === casaId);
+            const fora = tabela.find(time => time.id === foraId);
+            if (!casa || !fora) return;
+            casa.pj++;
+            fora.pj++;
+            casa.gm += partida.golsCasa || 0;
+            casa.gc += partida.golsFora || 0;
+            fora.gm += partida.golsFora || 0;
+            fora.gc += partida.golsCasa || 0;
+            if (partida.golsCasa > partida.golsFora) casa.pts += 3;
+            else if (partida.golsFora > partida.golsCasa) fora.pts += 3;
+            else { casa.pts++; fora.pts++; }
+        });
+
+        tabela.forEach(time => { time.sg = time.gm - time.gc; });
+        return tabela.sort((a, b) => b.pts - a.pts || b.sg - a.sg || b.gm - a.gm);
+    }
+
+    function renderizarTabelaGrupoSelecao(torneioId, selecoesGrupo, competicao) {
+        const tabela = calcularTabelaGrupoSelecao(torneioId, selecoesGrupo);
+        const conf = FASES_GRUPOS_SELECOES[competicao];
+        const notaTerceiros = conf?.melhoresTerceiros
+            ? `<p class="jja-grupo-resumo">Os melhores terceiros também podem avançar (${conf.melhoresTerceiros} vaga(s) no torneio).</p>`
+            : "";
+
+        return `<div class="jja-tabela-grupo-container">
+            <table class="jja-tabela jja-tabela-grupo">
+                <thead><tr><th>#</th><th>Seleção</th><th>Pts</th><th>J</th><th class="hide-mobile">GF</th><th class="hide-mobile">GA</th><th>SG</th></tr></thead>
+                <tbody>${tabela.map((time, indice) => `<tr class="${time.id === estado.nacionalidade ? "meu-clube" : ""} ${indice < (conf?.classificadosPorGrupo || 0) ? "qualificado" : ""}">
+                    <td>${indice + 1}</td><td>${escapar(time.nome)}</td><td><strong>${time.pts}</strong></td><td>${time.pj}</td>
+                    <td class="hide-mobile">${time.gm}</td><td class="hide-mobile">${time.gc}</td><td>${time.sg > 0 ? "+" : ""}${time.sg}</td>
+                </tr>`).join("")}</tbody>
+            </table>
+            ${notaTerceiros}
+        </div>`;
+    }
+
+    function verificarClassificacaoGrupoSelecao(partida) {
+        const jogosGrupo = estado.partidas.filter(item => item.torneioId === partida.torneioId && item.faseGrupo);
+        if (jogosGrupo.some(item => item.status === "agendada")) return "";
+
+        const conf = FASES_GRUPOS_SELECOES[partida.competicao];
+        const tabela = calcularTabelaGrupoSelecao(partida.torneioId, partida.grupo);
+        const posicao = tabela.findIndex(time => time.id === estado.nacionalidade) + 1;
+        const meuTime = tabela[posicao - 1];
+        if (!conf || !meuTime) return "";
+
+        const classificadoDireto = posicao <= conf.classificadosPorGrupo;
+        const classificaComoTerceiro = posicao === conf.classificadosPorGrupo + 1
+            && conf.melhoresTerceiros > 0
+            && Math.random() < conf.melhoresTerceiros / conf.grupos;
+        if (classificadoDireto || classificaComoTerceiro) {
+            const criterio = classificadoDireto ? `${posicao}º lugar` : "melhor terceiro";
+            return `${estado.nome} avançou na ${partida.competicao} (${criterio}, ${meuTime.pts} pts, saldo ${meuTime.sg >= 0 ? "+" : ""}${meuTime.sg}).`;
+        }
+
+        estado.partidas
+            .filter(item => item.torneioId === partida.torneioId && item.fase && item.status === "agendada")
+            .forEach(item => { item.status = "cancelada"; });
+        return `${estado.nome} foi eliminado na fase de grupos da ${partida.competicao} (${posicao}º lugar, ${meuTime.pts} pts).`;
+    }
+
     function ehCompeticaoComFaseContinental(competicao) {
         return Object.prototype.hasOwnProperty.call(CONTINENTAL_CONFS, competicao);
     }
@@ -1361,10 +1520,10 @@
         return `${estado.nome} foi eliminado (${descricao}, ${meuTime.pts} pts).`;
     }
    
-    function adicionarEliminatoria(partidas, times, clubeId, competicao, ano, mesInicial, quantidadeRodadas, prefixo, selecao = null, statusInicial = "agendada") {
+    function adicionarEliminatoria(partidas, times, clubeId, competicao, ano, mesInicial, quantidadeRodadas, prefixo, selecao = null, statusInicial = "agendada", datasPersonalizadas = null, torneioIdPersonalizado = "") {
         const adversarios = selecao && !times.length ? obterSelecoesAdversarias(competicao, clubeId) : times;
         const oponentes = adversarios.filter(t => t.id !== clubeId);
-        const datas = calcularDatasFases(competicao, ano, quantidadeRodadas, mesInicial);
+        const datas = datasPersonalizadas || calcularDatasFases(competicao, ano, quantidadeRodadas, mesInicial);
     
         for (let fase = 0; fase < quantidadeRodadas; fase++) {
             const adversario = oponentes[Math.floor(Math.random() * oponentes.length)];
@@ -1375,7 +1534,7 @@
                 casa: Math.random() < 0.5,
                 competicao,
                 tipo: selecao ? "selecao" : "mata-mata",
-                torneioId: `${prefixo}:${competicao}`,
+                torneioId: torneioIdPersonalizado || `${prefixo}:${competicao}`,
                 fase: fase + 1,
                 totalFases: quantidadeRodadas,
                 selecao: selecao || null,
@@ -1503,7 +1662,7 @@
                     : [competicaoRegional, "Olimpíadas"];
                 competicoesSelecao.forEach((competicao, indice) => {
                     if (competicao === "Olimpíadas" && Number(perfil.idade) > 23) return;
-                    adicionarEliminatoria(partidas, [], convocada.id, competicao, ano, 5 + indice, 4, `selecao:${convocada.id}`, competicao);
+                    adicionarFaseGruposSelecao(partidas, competicao, convocada.id, ano);
                 });
             }
             const anoBaseSelecoes = ANO_BASE_COPA_DO_MUNDO_SELECOES;
@@ -1511,8 +1670,8 @@
                 && (ano - (anoBaseSelecoes + 1)) % 2 === 0
                 && !anoCopaDoMundo;
             if (anoMundialDeBase) {
-                if (perfil.idade <= 20) adicionarEliminatoria(partidas, [], convocada.id, "Mundial Sub-20", ano, 5, 4, `selecao:${convocada.id}`, "Mundial Sub-20");
-                if (perfil.idade <= 17) adicionarEliminatoria(partidas, [], convocada.id, "Mundial Sub-17", ano, 5, 4, `selecao:${convocada.id}`, "Mundial Sub-17");
+                if (perfil.idade <= 20) adicionarFaseGruposSelecao(partidas, "Mundial Sub-20", convocada.id, ano);
+                if (perfil.idade <= 17) adicionarFaseGruposSelecao(partidas, "Mundial Sub-17", convocada.id, ano);
             }
             partidas.push(...jogosSelecao);
         }
@@ -2122,14 +2281,18 @@
 
         let resumoTorneio = "";
         // Simula as partidas dos outros clubes do grupo
-        if (partida.tipo === "grupo") {
+        if (partida.tipo === "grupo" || partida.faseGrupo) {
             const jogosIA = estado.partidas.filter(p =>
                 p.torneioId === partida.torneioId &&
-                p.tipo === "grupo-ia" &&
+                (partida.faseGrupo ? p.tipo === "selecao-grupo-ia" : p.tipo === "grupo-ia") &&
                 p.rodadaGrupo === partida.rodadaGrupo &&
                 p.status === "agendada"
             );
             jogosIA.forEach(jogoIA => {
+                if (jogoIA.tipo === "selecao-grupo-ia") {
+                    simularPartidaGrupoSelecaoIA(jogoIA);
+                    return;
+                }
                 const timeCasa = obterClube(jogoIA.casaId);
                 const timeFora = obterClube(jogoIA.foraId);
                 if (timeCasa && timeFora) {
@@ -2139,7 +2302,9 @@
                     jogoIA.status = "concluida";
                 }
             });
-            resumoTorneio = verificarClassificacaoContinental(partida);   // ← alterado
+            resumoTorneio = partida.faseGrupo
+                ? verificarClassificacaoGrupoSelecao(partida)
+                : verificarClassificacaoContinental(partida);
         } 
           else {
             // ESTA LINHA É CRUCIAL: cancela fases futuras ao perder e entrega os troféus
@@ -2211,10 +2376,14 @@
         salvar(); renderizar();
 
         // NOVO: se acabaram os seus jogos, mas a IA tem jogos pendentes, simula a IA na hora
-        const temJogoMeu = estado.partidas.some(p => p.status === "agendada" && p.tipo !== "grupo-ia");
+        const temJogoMeu = estado.partidas.some(p => p.status === "agendada" && !ehPartidaDeIA(p));
         if (!temJogoMeu && !estado.salvaOficialmente) {
-            const jogosIARestantes = estado.partidas.filter(p => p.status === "agendada" && p.tipo === "grupo-ia");
+            const jogosIARestantes = estado.partidas.filter(p => p.status === "agendada" && ehPartidaDeIA(p));
             jogosIARestantes.forEach(jogoIA => {
+                if (jogoIA.tipo === "selecao-grupo-ia") {
+                    simularPartidaGrupoSelecaoIA(jogoIA);
+                    return;
+                }
                 const timeCasa = obterClube(jogoIA.casaId);
                 const timeFora = obterClube(jogoIA.foraId);
                 if (timeCasa && timeFora) {
@@ -2226,7 +2395,7 @@
             });
             finalizarTemporadaOficial();
         } else if (mostrarResultado) {
-            const totalValidas = estado.rodada + estado.partidas.filter(p => p.status === "agendada" && p.tipo !== "grupo-ia").length;
+            const totalValidas = estado.rodada + estado.partidas.filter(p => p.status === "agendada" && !ehPartidaDeIA(p)).length;
             informar(`Partida ${estado.rodada}/${totalValidas} concluída. ${detalhes}`);
         }
     }
@@ -2577,7 +2746,7 @@
         if (bloqueioAcoesPartida || decisaoEmAndamento) return;
         if (!estado) { informar("Inicie sua carreira primeiro.", true); return; }
         
-        const indice = estado.partidas.findIndex(p => p.status === "agendada" && p.tipo !== "grupo-ia");        
+        const indice = estado.partidas.findIndex(p => p.status === "agendada" && !ehPartidaDeIA(p));
         if (indice < 0) { informar("A temporada já foi concluída."); return; }
         const partida = estado.partidas[indice];
         const pelaSelecao = partida.tipo === "selecao";
@@ -2639,7 +2808,7 @@
       
         let indice;
         // ALTERAÇÃO AQUI: adicionado "&& p.tipo !== 'grupo-ia'" no while
-        while ((indice = estado.partidas.findIndex(p => p.status === "agendada" && p.tipo !== "grupo-ia")) >= 0) {
+        while ((indice = estado.partidas.findIndex(p => p.status === "agendada" && !ehPartidaDeIA(p))) >= 0) {
             const partida = estado.partidas[indice];
             // Pênaltis em modo automático (sem interação e sem animação)
             await simularPartida(indice, false, null, { interativo: false });
@@ -2892,7 +3061,7 @@
   
     function renderizarProgressoCompeticoes() {
         const partidas = estado.partidas.filter(partida =>
-            partida.torneioId && (partida.tipo === "grupo" || Number(partida.fase) > 0)
+            partida.torneioId && (partida.tipo === "grupo" || partida.faseGrupo || Number(partida.fase) > 0)
         );
         const competicoes = new Map();
         partidas.forEach(partida => {
@@ -2906,15 +3075,15 @@
         const conteudo = [...competicoes.values()].map(fases => {
             // ---- Ordenação: grupo primeiro (por rodada), depois mata-mata (por fase) ----
             fases.sort((a, b) => {
-                const aG = a.tipo === "grupo", bG = b.tipo === "grupo";
+                const aG = a.tipo === "grupo" || a.faseGrupo, bG = b.tipo === "grupo" || b.faseGrupo;
                 if (aG && !bG) return -1;
                 if (!aG && bG) return 1;
                 if (aG && bG) return (a.rodadaGrupo || 0) - (b.rodadaGrupo || 0);
                 return a.fase - b.fase;
             });
     
-            const fasesGrupo = fases.filter(p => p.tipo === "grupo");
-            const fasesMataMata = fases.filter(p => p.tipo !== "grupo");
+            const fasesGrupo = fases.filter(p => p.tipo === "grupo" || p.faseGrupo);
+            const fasesMataMata = fases.filter(p => p.fase && !p.faseGrupo);
     
             // Total de fases do mata-mata (0 se ainda não houver mata-mata).
             const totalFases = fasesMataMata.length
@@ -3031,7 +3200,9 @@
             // NOVO: Tabela do Grupo (ou da Fase Liga)
             let tabelaGrupoHtml = "";
             if (fasesGrupo.length > 0 && fasesGrupo[0].grupo) {
-                tabelaGrupoHtml = renderizarTabelaContinental(fasesGrupo[0].torneioId, fasesGrupo[0].grupo);
+                tabelaGrupoHtml = fasesGrupo[0].faseGrupo
+                    ? renderizarTabelaGrupoSelecao(fasesGrupo[0].torneioId, fasesGrupo[0].grupo, fasesGrupo[0].competicao)
+                    : renderizarTabelaContinental(fasesGrupo[0].torneioId, fasesGrupo[0].grupo);
             }
             
             // ... (código de resumo, etapas, progresso)
@@ -3051,7 +3222,7 @@
     function renderizar() {
         const ativo = !!estado;
         
-        const proxima = ativo ? estado.partidas.find(p => p.status === "agendada" && p.tipo !== "grupo-ia") : null;        
+        const proxima = ativo ? estado.partidas.find(p => p.status === "agendada" && !ehPartidaDeIA(p)) : null;
         const carreira = typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : {};
         const historicoCarreira = obterHistoricoCarreira(carreira);
         const encerrada = carreiraEncerrada(carreira, historicoCarreira);
@@ -3193,7 +3364,7 @@
             ${renderizarProgressoCompeticoes()}`;
     
         // ---------- NOVO: calendário com pênaltis ----------
-        $("jja-calendario").innerHTML = `<div class="jja-lista-jogos">${estado.partidas.filter(p => p.tipo !== "grupo-ia").map(p => {            const adv = clubesDisponiveis().find(c => c.id === p.adversarioId);
+        $("jja-calendario").innerHTML = `<div class="jja-lista-jogos">${estado.partidas.filter(p => !ehPartidaDeIA(p)).map(p => {            const adv = clubesDisponiveis().find(c => c.id === p.adversarioId);
             const nomeCasa = p.casa
                 ? (p.tipo === "selecao" ? equipeSelecao?.nome : clube?.nome)
                 : (adv?.nome || p.adversarioNome);
