@@ -305,3 +305,284 @@ html[data-theme="light"] .jja-penaltis-resumo {
     .penaltis-vencedor,
     .penaltis-derrotado { font-size: 1.1rem; }
 }
+
+/* ============================================================
+   Modal de conquista / troféu
+   ============================================================ */
+.jja-modal-trofeu {
+    z-index: 1150;
+}
+
+.jja-trofeu-caixa {
+    position: relative;
+    width: min(100%, 480px);
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    padding: 32px 24px 24px;
+    border: 2px solid #facc15;
+    border-radius: 20px;
+    background: linear-gradient(145deg, #0f172a, #1a2b1f 50%, #0f172a);
+    box-shadow: 0 24px 80px rgba(250, 204, 21, 0.3), inset 0 1px 0 rgba(250, 204, 21, 0.2);
+    text-align: center;
+    color: #e2e8f0;
+    animation: trofeuEntrada .5s cubic-bezier(.2, .9, .3, 1.2);
+    overflow: hidden;
+}
+
+@keyframes trofeuEntrada {
+    0%   { opacity: 0; transform: scale(.7) rotate(-8deg); }
+    60%  { opacity: 1; transform: scale(1.05) rotate(2deg); }
+    100% { transform: scale(1) rotate(0); }
+}
+
+.jja-trofeu-icone {
+    display: block;
+    font-size: 5rem;
+    line-height: 1;
+    margin-bottom: 10px;
+    filter: drop-shadow(0 0 30px rgba(250, 204, 21, 0.8));
+    animation: trofeuPulse 1.6s ease-in-out infinite;
+    transform-origin: center;
+    position: relative;
+    z-index: 1;
+}
+
+@keyframes trofeuPulse {
+    0%, 100% { transform: scale(1) rotate(0);   filter: drop-shadow(0 0 30px rgba(250, 204, 21, 0.8)); }
+    50%      { transform: scale(1.08) rotate(-3deg); filter: drop-shadow(0 0 50px rgba(250, 204, 21, 1)); }
+}
+
+.jja-trofeu-chamada {
+    display: inline-block;
+    padding: 4px 14px;
+    margin-bottom: 8px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #facc15, #f59e0b);
+    color: #1a1a1a;
+    font-weight: 900;
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    position: relative;
+    z-index: 1;
+}
+
+.jja-trofeu-caixa h3 {
+    margin: 4px 0 8px;
+    color: #facc15;
+    font-size: 1.6rem;
+    font-weight: 900;
+    text-shadow: 0 2px 20px rgba(250, 204, 21, 0.4);
+    overflow-wrap: anywhere;
+    position: relative;
+    z-index: 1;
+}
+
+.jja-trofeu-caixa p {
+    margin: 0 0 20px;
+    color: #cbd5e1;
+    line-height: 1.5;
+    font-size: 0.95rem;
+    position: relative;
+    z-index: 1;
+}
+
+.jja-trofeu-acoes {
+    display: flex;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+}
+
+.jja-trofeu-continuar {
+    min-height: 46px;
+    padding: 12px 32px;
+    border: 1px solid #facc15;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #d97706, #facc15);
+    color: #1a1a1a;
+    font-weight: 800;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.jja-trofeu-continuar:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(250, 204, 21, 0.4);
+}
+
+/* Confete de fundo */
+.jja-trofeu-confete {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+        radial-gradient(circle at 15% 20%, rgba(250, 204, 21, 0.7) 2px, transparent 3px),
+        radial-gradient(circle at 82% 18%, rgba(34, 197, 94, 0.6) 2px, transparent 3px),
+        radial-gradient(circle at 38% 75%, rgba(250, 204, 21, 0.6) 1.5px, transparent 3px),
+        radial-gradient(circle at 62% 82%, rgba(59, 130, 246, 0.5) 1.5px, transparent 3px),
+        radial-gradient(circle at 92% 62%, rgba(250, 204, 21, 0.6) 2px, transparent 3px),
+        radial-gradient(circle at 8% 88%, rgba(34, 197, 94, 0.55) 1.5px, transparent 3px),
+        radial-gradient(circle at 55% 12%, rgba(250, 204, 21, 0.5) 1.5px, transparent 3px),
+        radial-gradient(circle at 30% 45%, rgba(239, 68, 68, 0.5) 1.5px, transparent 3px);
+    animation: confeteCair 3s linear infinite;
+    opacity: 0.75;
+}
+
+@keyframes confeteCair {
+    0%   { transform: translateY(-24px); opacity: 0.5; }
+    100% { transform: translateY(24px);  opacity: 0.85; }
+}
+
+/* ============================================================
+   Modal de evento (hat-trick, cartões, lesão)
+   ============================================================ */
+.jja-modal-evento {
+    z-index: 1140;
+}
+
+.jja-evento-caixa {
+    width: min(100%, 400px);
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    padding: 24px 22px 20px;
+    border: 1px solid rgba(74, 145, 105, 0.5);
+    border-radius: 16px;
+    background: linear-gradient(145deg, #0f172a, #123426);
+    box-shadow: 0 20px 50px rgba(2, 8, 23, 0.5);
+    text-align: center;
+    color: #e2e8f0;
+    animation: eventoEntrada .3s ease;
+}
+
+@keyframes eventoEntrada {
+    from { opacity: 0; transform: translateY(-10px) scale(.95); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.jja-evento-icone {
+    display: block;
+    font-size: 2.6rem;
+    margin-bottom: 8px;
+    line-height: 1;
+}
+
+.jja-evento-caixa h3 {
+    margin: 0 0 8px;
+    color: #e2e8f0;
+    font-size: 1.15rem;
+    font-weight: 800;
+}
+
+.jja-evento-caixa p {
+    margin: 0 0 18px;
+    color: #cbd5e1;
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+
+.jja-evento-acoes {
+    display: flex;
+    justify-content: center;
+}
+
+.jja-evento-continuar {
+    min-height: 42px;
+    padding: 10px 24px;
+    border: 1px solid rgba(74, 145, 105, 0.5);
+    border-radius: 10px;
+    background: #17643b;
+    color: #f0fdf4;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background .15s ease, transform .15s ease;
+}
+
+.jja-evento-continuar:hover {
+    background: #21834d;
+    transform: translateY(-1px);
+}
+
+/* Cores por tipo de evento */
+.jja-modal-evento[data-cor="gol"] .jja-evento-caixa {
+    border-color: rgba(74, 222, 128, 0.6);
+    background: linear-gradient(145deg, #0f172a, #0f2a1a);
+}
+.jja-modal-evento[data-cor="gol"] .jja-evento-icone {
+    filter: drop-shadow(0 0 16px rgba(74, 222, 128, 0.7));
+}
+.jja-modal-evento[data-cor="amarelo"] .jja-evento-caixa {
+    border-color: rgba(251, 191, 36, 0.6);
+    background: linear-gradient(145deg, #0f172a, #2a2105);
+}
+.jja-modal-evento[data-cor="vermelho"] .jja-evento-caixa {
+    border-color: rgba(239, 68, 68, 0.6);
+    background: linear-gradient(145deg, #0f172a, #2a0f0f);
+}
+.jja-modal-evento[data-cor="lesao"] .jja-evento-caixa {
+    border-color: rgba(248, 113, 113, 0.5);
+    background: linear-gradient(145deg, #0f172a, #2a1010);
+}
+
+/* ============================================================
+   Destaque da próxima partida quando for uma FINAL
+   ============================================================ */
+.jja-proximo.proxima-e-final {
+    border: 2px solid #facc15;
+    background: radial-gradient(ellipse at top, rgba(250, 204, 21, 0.22), transparent 65%), #0b1220;
+    box-shadow: 0 0 24px rgba(250, 204, 21, 0.35), inset 0 0 16px rgba(250, 204, 21, 0.06);
+    animation: finalGlow 2.2s ease-in-out infinite;
+}
+
+.jja-proximo.proxima-e-final .jja-proximo-topo > span:first-child {
+    color: #facc15;
+    font-weight: 900;
+}
+
+@keyframes finalGlow {
+    0%, 100% { box-shadow: 0 0 24px rgba(250, 204, 21, 0.35), inset 0 0 16px rgba(250, 204, 21, 0.06); }
+    50%      { box-shadow: 0 0 42px rgba(250, 204, 21, 0.6),  inset 0 0 22px rgba(250, 204, 21, 0.12); }
+}
+
+/* ============================================================
+   Tema claro
+   ============================================================ */
+html[data-theme="light"] .jja-trofeu-caixa {
+    background: linear-gradient(145deg, #fffbeb, #fef3c7 50%, #fffbeb);
+    border-color: #f59e0b;
+    color: #1f2937;
+    box-shadow: 0 24px 80px rgba(245, 158, 11, 0.25), inset 0 1px 0 rgba(245, 158, 11, 0.2);
+}
+html[data-theme="light"] .jja-trofeu-caixa h3 { color: #b45309; text-shadow: none; }
+html[data-theme="light"] .jja-trofeu-caixa p { color: #475569; }
+html[data-theme="light"] .jja-trofeu-chamada { color: #fff; }
+
+html[data-theme="light"] .jja-evento-caixa {
+    background: linear-gradient(145deg, #f8fff8, #eaf5e9);
+    border-color: #86efac;
+    color: #1f2937;
+    box-shadow: 0 20px 50px rgba(44, 75, 48, 0.2);
+}
+html[data-theme="light"] .jja-evento-caixa h3 { color: #166534; }
+html[data-theme="light"] .jja-evento-caixa p { color: #334155; }
+html[data-theme="light"] .jja-evento-continuar { background: #4b8155; color: #fff; }
+html[data-theme="light"] .jja-evento-continuar:hover { background: #3d7048; }
+
+html[data-theme="light"] .jja-proximo.proxima-e-final {
+    background: radial-gradient(ellipse at top, rgba(250, 204, 21, 0.35), transparent 65%), #fef9c3;
+    border-color: #d97706;
+}
+html[data-theme="light"] .jja-proximo.proxima-e-final .jja-proximo-topo > span:first-child {
+    color: #92400e;
+}
+
+/* ============================================================
+   Responsivo
+   ============================================================ */
+@media (max-width: 520px) {
+    .jja-trofeu-caixa { padding: 26px 18px 20px; }
+    .jja-trofeu-icone { font-size: 4rem; }
+    .jja-trofeu-caixa h3 { font-size: 1.3rem; }
+    .jja-evento-caixa { padding: 20px 16px 16px; }
+    .jja-evento-icone { font-size: 2.2rem; }
+}

@@ -386,6 +386,7 @@
         { mes: 11, dia: 14, tipo: "Amistoso" },
         { mes: 11, dia: 18, tipo: "Eliminatórias" }
     ];
+  
 
     /* Cria timestamp UTC ao meio-dia. Meses podem passar de 12 e virar o ano. */
     function criarDataUTC(ano, mes, dia) {
@@ -455,7 +456,8 @@
     let decisaoEmAndamento = false;
     let fluxoDecisao = null;
     let loadingEl = null;
-
+    let filaModaisPartida = [];
+  
     function mostrarCarregamento(texto = "Simulando...") {
         if (!loadingEl) {
             loadingEl = document.createElement("div");
@@ -485,6 +487,117 @@
             bloqueioAcoesPartida = false;
             renderizar();
         }, 400);
+    }
+
+    /* ============================================================
+       Fila de modais de evento / troféu
+       ============================================================ */
+    function ehPartidaFinal(partida) {
+        if (!partida) return false;
+        return Number(partida.fase) > 0
+            && Number(partida.totalFases) > 0
+            && Number(partida.fase) === Number(partida.totalFases);
+    }
+    
+    function enfileirarTrofeu(competicao, tipoTrofeu) {
+        filaModaisPartida.push({ tipo: "trofeu", competicao, tipoTrofeu });
+    }
+    
+    function enfileirarEvento(tipoEvento, mensagem, icone) {
+        filaModaisPartida.push({ tipo: "evento", tipoEvento, mensagem, icone });
+    }
+    
+    async function processarFilaModais() {
+        while (filaModaisPartida.length > 0) {
+            const item = filaModaisPartida.shift();
+            if (item.tipo === "trofeu") {
+                await exibirModalTrofeu(item.competicao, item.tipoTrofeu);
+            } else if (item.tipo === "evento") {
+                await exibirModalEvento(item.tipoEvento, item.mensagem, item.icone);
+            }
+        }
+    }
+    
+    function exibirModalTrofeu(competicao, tipoTrofeu) {
+        return new Promise((resolve) => {
+            const modal = $("jja-modal-trofeu");
+            const titulo = $("jja-trofeu-titulo");
+            const msg = $("jja-trofeu-mensagem");
+            const continuar = $("jja-trofeu-continuar");
+            if (!modal || !continuar) { resolve(); return; }
+    
+            titulo.textContent = competicao;
+            msg.textContent = tipoTrofeu === "selecao"
+                ? "Parabéns! Você defendeu sua seleção e trouxe mais esse título para casa!"
+                : "Parabéns! Mais uma conquista inesquecível na sua carreira!";
+    
+            modal.hidden = false;
+            continuar.focus();
+    
+            const fechar = () => {
+                modal.hidden = true;
+                continuar.removeEventListener("click", fechar);
+                document.removeEventListener("keydown", aoTeclar);
+                modal.removeEventListener("click", aoClicarFora);
+                resolve();
+            };
+            const aoTeclar = (e) => {
+                if (e.key === "Escape" || e.key === "Enter") { e.preventDefault(); fechar(); }
+            };
+            const aoClicarFora = (e) => {
+                if (e.target === modal) fechar();
+            };
+            continuar.addEventListener("click", fechar);
+            document.addEventListener("keydown", aoTeclar);
+            modal.addEventListener("click", aoClicarFora);
+        });
+    }
+    
+    function exibirModalEvento(tipoEvento, mensagem, icone) {
+        return new Promise((resolve) => {
+            const modal = $("jja-modal-evento");
+            const iconeEl = $("jja-evento-icone");
+            const titulo = $("jja-evento-titulo");
+            const msg = $("jja-evento-mensagem");
+            const continuar = $("jja-evento-continuar");
+            if (!modal || !continuar) { resolve(); return; }
+    
+            const mapa = {
+                "hat-trick":         { icone: "🎩", titulo: "Hat-trick!",       cor: "gol" },
+                "cartao-amarelo":    { icone: "🟨", titulo: "Cartão amarelo",   cor: "amarelo" },
+                "cartao-vermelho":   { icone: "🟥", titulo: "Cartão vermelho",  cor: "vermelho" },
+                "suspensao-amarelos":{ icone: "🟨", titulo: "Suspensão",        cor: "amarelo" },
+                "lesao":             { icone: "🩹", titulo: "Lesão leve",       cor: "lesao" },
+                "lesao-moderada":    { icone: "🤕", titulo: "Lesão moderada",   cor: "lesao" },
+                "lesao-grave":       { icone: "🏥", titulo: "Lesão grave",      cor: "lesao" },
+                "lesao-carreira":    { icone: "💔", titulo: "Lesão gravíssima", cor: "lesao" }
+            }[tipoEvento] || { icone: icone || "⚡", titulo: "Evento", cor: "" };
+    
+            if (iconeEl) iconeEl.textContent = mapa.icone;
+            titulo.textContent = mapa.titulo;
+            msg.textContent = mensagem;
+            modal.dataset.cor = mapa.cor;
+    
+            modal.hidden = false;
+            continuar.focus();
+    
+            const fechar = () => {
+                modal.hidden = true;
+                continuar.removeEventListener("click", fechar);
+                document.removeEventListener("keydown", aoTeclar);
+                modal.removeEventListener("click", aoClicarFora);
+                resolve();
+            };
+            const aoTeclar = (e) => {
+                if (e.key === "Escape" || e.key === "Enter") { e.preventDefault(); fechar(); }
+            };
+            const aoClicarFora = (e) => {
+                if (e.target === modal) fechar();
+            };
+            continuar.addEventListener("click", fechar);
+            document.addEventListener("keydown", aoTeclar);
+            modal.addEventListener("click", aoClicarFora);
+        });
     }
 
     function escapar(texto) {
@@ -2305,10 +2418,12 @@
             resumoTorneio = partida.faseGrupo
                 ? verificarClassificacaoGrupoSelecao(partida)
                 : verificarClassificacaoContinental(partida);
-        } 
-          else {
-            // ESTA LINHA É CRUCIAL: cancela fases futuras ao perder e entrega os troféus
+        } else {
             resumoTorneio = processarEliminatoria(partida, golsCasa, golsFora);
+            // ─── NOVO: conquista de troféu em mata-mata ───
+            if (resumoTorneio.startsWith("Campeão:")) {
+                enfileirarTrofeu(partida.competicao, partida.tipo === "selecao" ? "selecao" : "clube");
+            }
         }
         
         let resumo = `${casa.nome} ${golsCasa} × ${golsFora} ${fora.nome}`;        
@@ -2348,6 +2463,7 @@
             if (tipoLesao) {
                 disponibilidade.jogosLesao = Math.max(disponibilidade.jogosLesao, jogosLesao);
                 estado.eventos.push({ tipo: tipoLesao, jogo: partida.numero, jogosPerdidos: jogosLesao });
+                eventoLesaoAtual = { tipo: tipoLesao, jogosPerdidos: jogosLesao };
                 detalheLesao = disponibilidade.lesaoCarreira
                     ? " Lesão gravíssima: encerra a carreira."
                     : ` Lesão: ficará fora das próximas ${jogosLesao} partidas do calendário.`;
@@ -2372,6 +2488,39 @@
         estado.feed.unshift({ titulo: `${partida.competicao} · ${resumo}`, texto: detalhes });
         estado.feed = estado.feed.slice(0, 12);
         if (partida.tipo === "liga") simularOutrosJogosDaRodada(partida.rodadaLiga);
+
+       // ─── NOVO: enfileirar eventos para modal (só quando o jogador está acompanhando) ───
+        if (mostrarResultado) {
+            if (hatTrick) {
+                enfileirarEvento("hat-trick", `Você marcou ${golsJogador} gols em uma única partida! Que atuação!`, "🎩");
+            }
+            if (vermelho) {
+                enfileirarEvento("cartao-vermelho",
+                    `Você foi expulso${jogosSuspensaoCartao ? ` e ficará suspenso por ${jogosSuspensaoCartao} jogo(s)` : ""}.`,
+                    "🟥");
+            } else if (amarelo) {
+                const cfgCartoes = getConfig()?.cartoes || {};
+                const limiteA = Math.max(1, Math.floor(Number(cfgCartoes.limiteAmarelosSuspensao) || 5));
+                const acumulados = Number(disponibilidade.amarelos[chaveEquipe]) || 0;
+                enfileirarEvento("cartao-amarelo",
+                    `Cartão amarelo${amarelo > 1 ? " (dois amarelos no jogo)" : ""}${suspensaoPorAmarelos ? " — suspenso por acúmulo" : ` — ${acumulados}/${limiteA} acumulados`}.`,
+                    "🟨");
+            }
+            if (suspensaoPorAmarelos && !vermelho) {
+                enfileirarEvento("suspensao-amarelos",
+                    "Você acumulou cartões amarelos e ficará suspenso pela próxima partida.",
+                    "🟨");
+            }
+            if (eventoLesaoAtual) {
+                const msgs = {
+                    "lesao":          `Lesão leve: você ficará de fora por ${eventoLesaoAtual.jogosPerdidos} jogo(s).`,
+                    "lesao-moderada": `Lesão moderada: você ficará de fora por ${eventoLesaoAtual.jogosPerdidos} jogo(s).`,
+                    "lesao-grave":    `Lesão grave: você ficará de fora por ${eventoLesaoAtual.jogosPerdidos} jogo(s).`,
+                    "lesao-carreira": "Lesão gravíssima: sua carreira foi encerrada."
+                };
+                enfileirarEvento(eventoLesaoAtual.tipo, msgs[eventoLesaoAtual.tipo] || "Você sofreu uma lesão.", "🩹");
+            }
+        }
       
         salvar(); renderizar();
 
@@ -2397,6 +2546,11 @@
         } else if (mostrarResultado) {
             const totalValidas = estado.rodada + estado.partidas.filter(p => p.status === "agendada" && !ehPartidaDeIA(p)).length;
             informar(`Partida ${estado.rodada}/${totalValidas} concluída. ${detalhes}`);
+        }
+
+        // ─── NOVO: processar fila de modais (troféus e eventos) ───
+        if (mostrarResultado && filaModaisPartida.length > 0) {
+            await processarFilaModais();
         }
     }
   
@@ -2743,6 +2897,7 @@
     }
   
     async function simularProxima() {
+        filaModaisPartida = [];
         if (bloqueioAcoesPartida || decisaoEmAndamento) return;
         if (!estado) { informar("Inicie sua carreira primeiro.", true); return; }
         
@@ -2795,7 +2950,9 @@
         if (decisaoEmAndamento || (bloqueioAcoesPartida && !simulacaoAutomatica)) return;
         if (!estado) { informar("Inicie sua carreira primeiro.", true); return; }
         if (!estado.partidas.some(p => p.status === "agendada")) { informar("A temporada já foi concluída."); return; }
-    
+
+        filaModaisPartida = []; 
+      
         if (!simulacaoAutomatica && typeof confirmarAcao === "function") {
             const confirmado = await confirmarAcao(
                 "A temporada será concluída automaticamente e todos os jogos restantes serão simulados.\n\nDeseja continuar?",
@@ -2820,6 +2977,14 @@
       
         salvar(); renderizar();
         if (!estado.partidas.some(p => p.status === "agendada") && !estado.salvaOficialmente) finalizarTemporadaOficial();
+
+       // ─── NOVO: processar fila (troféus conquistados em auto-simulação) ───
+        if (!simulacaoAutomatica && filaModaisPartida.length > 0) {
+            await processarFilaModais();
+        }
+      
+        filaModaisPartida = [];
+         
     }
   
     function finalizarTemporadaOficial() {
@@ -2900,8 +3065,13 @@
             const tabela = estado.tabela.filter(t => !String(t.id).startsWith("__rodada__")).sort((a,b) => b.pts-a.pts || (b.gp-b.gc)-(a.gp-a.gc) || b.gp-a.gp);
             const campeao = tabela[0]?.id === estado.clubeId;
             const nomesTrofeus = typeof obterNomesTrofeusClube === "function" ? obterNomesTrofeusClube(estado.clubeId) : { liga: estado.liga };
+           
             const trofeusClube = [...(estado.trofeusClube || [])];
-            if (campeao && !trofeusClube.includes(nomesTrofeus.liga || estado.liga)) trofeusClube.push(nomesTrofeus.liga || estado.liga);
+            if (campeao && !trofeusClube.includes(nomesTrofeus.liga || estado.liga)) {
+                trofeusClube.push(nomesTrofeus.liga || estado.liga);
+                enfileirarTrofeu(nomesTrofeus.liga || estado.liga, "clube");   // ← NOVO
+            } 
+          
             const trofeusSelecao = [...(estado.trofeusSelecao || [])];
             temporada.trofeusClube = trofeusClube;
             temporada.trofeusSelecao = trofeusSelecao;
@@ -3231,8 +3401,13 @@
         botaoIniciar.textContent = encerrada ? "Iniciar nova carreira" : historicoCarreira.length ? "Próxima temporada" : "Iniciar carreira";
         botaoIniciar.disabled = bloqueioAcoesPartida || emAndamento || (!!estado && !estado.salvaOficialmente && !proxima);
         const botaoAposentar = $("jja-aposentar");
+      
         const proximoCard = $("jja-proximo");
-        if (proximoCard) proximoCard.classList.toggle("tem-proxima-partida", !!proxima);
+        if (proximoCard) {
+            proximoCard.classList.toggle("tem-proxima-partida", !!proxima);
+            proximoCard.classList.toggle("proxima-e-final", !!proxima && ehPartidaFinal(proxima));   // ← NOVO
+        }  
+      
         botaoAposentar.hidden = !historicoCarreira.length || encerrada;
         botaoAposentar.disabled = !historicoCarreira.length || encerrada;
         botaoIniciar.disabled = bloqueioAcoesPartida || emAndamento || (!!estado && !estado.salvaOficialmente && !proxima) || decisaoEmAndamento;
@@ -3275,8 +3450,9 @@
         const faseProxima = proxima && Number(proxima.fase) > 0 && Number(proxima.totalFases) > 0
             ? nomeFaseCompeticao(proxima.fase, proxima.totalFases)
             : "";
+        const ehFinalProxima = ehPartidaFinal(proxima);
         const rotuloCompeticaoProxima = proxima
-            ? `PRÓXIMA PARTIDA · ${escapar(proxima.competicao)}${faseProxima ? ` · ${escapar(faseProxima)}` : ""}`
+            ? `${ehFinalProxima ? "🏆 FINAL" : "PRÓXIMA PARTIDA"} · ${escapar(proxima.competicao)}${faseProxima ? ` · ${escapar(faseProxima)}` : ""}`
             : "";
     
         $("jja-proximo").innerHTML = proxima
@@ -3384,7 +3560,7 @@
     
             return `<div class="jja-jogo ${p.status === "concluida" ? "jja-jogo--feito" : ""}">
                 <span class="jja-jogo-num">${p.data ? new Date(p.data).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : String(p.numero).padStart(2, "0")}</span>
-                <span class="jja-jogo-adversario">${escapar(p.competicao)} · ${escapar(nomeCasa || "Equipe")} × ${escapar(nomeFora || "Adversário")}</span>
+                <span class="jja-jogo-adversario">${ehPartidaFinal(p) ? "🏆 " : ""}${escapar(p.competicao)} · ${escapar(nomeCasa || "Equipe")} × ${escapar(nomeFora || "Adversário")}</span>                
                 <span class="jja-jogo-resultado">${escapar(status)}</span>
             </div>`;
         }).join("")}</div>`;

@@ -57,6 +57,7 @@
                 <summary>Histórico de atualização</summary>
                 <p class="update-history__intro">Principais mudanças registradas entre as versões:</p>
                 <ol class="update-history__list">
+                    <lu><strong>v2.2.5</strong> — Pop Ups de evteos na temporada.</lu>
                     <lu><strong>v2.2.4</strong> — Correção de bugs e fase de grupos nas competições de seleção.</lu>
                     <lu><strong>v2.2.3</strong> — Correção da responsividade no modo PC.</lu>
                     <lu><strong>v2.2.2</strong> — Botões auxiliares no modo mobile.</lu>
@@ -619,10 +620,36 @@
         </div>
     </div>
 
-<script src="js/config.js"></script>
-<script src="js/select-modal.js" defer></script>
-<script src="js/script.js" defer></script>
-<script src="js/dev-tools.js" defer></script>
-<script src="js/jogo-a-jogo.js" defer></script>
-</body>
+    <!-- Modal de conquista/troféu -->
+    <div id="jja-modal-trofeu" class="modal-overlay jja-modal-trofeu" hidden>
+        <div class="jja-trofeu-caixa" role="dialog" aria-modal="true" aria-labelledby="jja-trofeu-titulo" tabindex="-1">
+            <div class="jja-trofeu-confete" aria-hidden="true"></div>
+            <span class="jja-trofeu-icone" aria-hidden="true">🏆</span>
+            <span class="jja-trofeu-chamada">CAMPEÃO</span>
+            <h3 id="jja-trofeu-titulo"></h3>
+            <p id="jja-trofeu-mensagem"></p>
+            <div class="jja-trofeu-acoes">
+                <button type="button" class="jja-trofeu-continuar" id="jja-trofeu-continuar">Continuar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de evento da temporada -->
+    <div id="jja-modal-evento" class="modal-overlay jja-modal-evento" hidden>
+        <div class="jja-evento-caixa" role="dialog" aria-modal="true" aria-labelledby="jja-evento-titulo" tabindex="-1">
+            <span class="jja-evento-icone" id="jja-evento-icone" aria-hidden="true">⚡</span>
+            <h3 id="jja-evento-titulo">Evento</h3>
+            <p id="jja-evento-mensagem"></p>
+            <div class="jja-evento-acoes">
+                <button type="button" class="jja-evento-continuar" id="jja-evento-continuar">Continuar</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/config.js"></script>
+    <script src="js/select-modal.js" defer></script>
+    <script src="js/script.js" defer></script>
+    <script src="js/dev-tools.js" defer></script>
+    <script src="js/jogo-a-jogo.js" defer></script>
+    </body>
 </html>
