@@ -701,14 +701,21 @@
     
     function renderizarTabelaContinental(torneioId, timeIds) {
         const tabela = calcularTabelaContinental(torneioId, timeIds);
+        const ehCopinha = estado.partidas.some(partida => partida.torneioId === torneioId && partida.competicao === "Copinha");
+        const nomeGrupoCopinha = ehCopinha
+            ? Object.entries(estado.copinha?.grupos || {}).find(([, ids]) =>
+                ids.length === timeIds.length && ids.every(id => timeIds.includes(id))
+            )?.[0]
+            : "";
         const conf = CONTINENTAL_CONFS[Object.keys(CONTINENTAL_CONFS).find(c =>
             estado.partidas.some(p => p.torneioId === torneioId && p.competicao === c)
         )] || {};
-        const cutoff = conf.formato === "fase-liga"
+        const cutoff = ehCopinha ? 2 : conf.formato === "fase-liga"
             ? conf.classificadosParaKnockout
             : conf.classificadosPorGrupo;
     
-        return `<div class="jja-tabela-grupo-container">
+        return `${ehCopinha ? `<p class="jja-grupo-resumo"><strong>Grupo ${escapar(nomeGrupoCopinha || "")}</strong> · Os dois primeiros avançam às quartas de final.</p>` : ""}
+        <div class="jja-tabela-grupo-container">
             <table class="jja-tabela jja-tabela-grupo">
                 <thead><tr>
                     <th>#</th><th>Clube</th><th>Pts</th><th>J</th>
@@ -1638,6 +1645,227 @@
             : `${posicao}º no grupo`;
         return `${estado.nome} foi eliminado (${descricao}, ${meuTime.pts} pts).`;
     }
+
+    function embaralharTimesCopinha(times) {
+        const resultado = [...times];
+        for (let indice = resultado.length - 1; indice > 0; indice--) {
+            const sorteado = Math.floor(Math.random() * (indice + 1));
+            [resultado[indice], resultado[sorteado]] = [resultado[sorteado], resultado[indice]];
+        }
+        return resultado;
+    }
+
+    function adicionarFaseCopinha(partidas, times, clube, ano) {
+        if (times.length < 8) {
+            throw new Error("A Copinha precisa de pelo menos oito clubes de base para formar quatro grupos e as quartas de final.");
+        }
+
+        const nomesGrupos = ["A", "B", "C", "D"];
+        const grupos = Object.fromEntries(nomesGrupos.map(nome => [nome, []]));
+        embaralharTimesCopinha(times).forEach((time, indice) => {
+            grupos[nomesGrupos[indice % nomesGrupos.length]].push(time.id);
+        });
+
+        const torneioId = `copinha:${clube.nacionalidade}:${ano}`;
+
+        nomesGrupos.forEach(nomeGrupo => {
+            const grupo = grupos[nomeGrupo];
+            const timesGrupo = grupo.map(id => obterClube(id)).filter(Boolean);
+            const rodadas = gerarRodadasLiga(timesGrupo).slice(0, grupo.length % 2 === 0 ? grupo.length - 1 : grupo.length);
+            rodadas.forEach((confrontos, indiceRodada) => {
+                confrontos.forEach(confronto => {
+                    const data = criarDataUTC(ano, 1, 3 + indiceRodada * 3);
+                    if (confronto.casaId === clube.id || confronto.foraId === clube.id) {
+                        const adversarioId = confronto.casaId === clube.id ? confronto.foraId : confronto.casaId;
+                        const adversario = obterClube(adversarioId);
+                        partidas.push({
+                            data, adversarioId, adversarioNome: adversario?.nome || "Adversário",
+                            casa: confronto.casaId === clube.id, competicao: "Copinha", tipo: "grupo",
+                            torneioId, grupo, grupoCopinha: nomeGrupo, rodadaGrupo: indiceRodada + 1,
+                            status: "agendada"
+                        });
+                    } else {
+                        partidas.push({
+                            data, casaId: confronto.casaId, foraId: confronto.foraId,
+                            competicao: "Copinha", tipo: "grupo-ia", torneioId, grupo,
+                            grupoCopinha: nomeGrupo, rodadaGrupo: indiceRodada + 1, status: "agendada"
+                        });
+                    }
+                });
+            });
+        });
+
+        const primeiraPartidaDeGrupo = partidas.find(partida => partida.torneioId === torneioId && partida.tipo === "grupo");
+        if (primeiraPartidaDeGrupo) primeiraPartidaDeGrupo.gruposCopinha = grupos;
+        const datasMataMata = [1, 2, 3].map(fase => criarDataUTC(ano, 1, 25 + (fase - 1) * 3));
+        datasMataMata.forEach((fase, indice) => {
+            partidas.push({
+                data: fase, adversarioId: "", adversarioNome: "Aguardando classificação",
+                casa: true, competicao: "Copinha", tipo: "mata-mata", torneioId,
+                fase: indice + 1, totalFases: 3, status: "bloqueada"
+            });
+        });
+    }
+
+    function simularVencedorCopinha(timeCasaId, timeForaId) {
+        const forcaCasa = forcaClube(obterClube(timeCasaId));
+        const forcaFora = forcaClube(obterClube(timeForaId));
+        const chanceCasa = Math.max(0.2, Math.min(0.8, 0.5 + (forcaCasa - forcaFora) / 100));
+        return Math.random() < chanceCasa ? timeCasaId : timeForaId;
+    }
+
+    function inicializarChaveCopinha(torneioId, grupos) {
+        const primeiros = Object.keys(grupos).map(nome => calcularTabelaContinental(torneioId, grupos[nome])[0]?.id);
+        const segundos = Object.keys(grupos).map(nome => calcularTabelaContinental(torneioId, grupos[nome])[1]?.id);
+        const quartas = [
+            { casaId: primeiros[0], foraId: segundos[1], vencedorId: null },
+            { casaId: primeiros[1], foraId: segundos[0], vencedorId: null },
+            { casaId: primeiros[2], foraId: segundos[3], vencedorId: null },
+            { casaId: primeiros[3], foraId: segundos[2], vencedorId: null }
+        ];
+        quartas.forEach(partida => {
+            if (partida.casaId !== estado.clubeId && partida.foraId !== estado.clubeId) {
+                partida.vencedorId = simularVencedorCopinha(partida.casaId, partida.foraId);
+            }
+        });
+
+        const semifinais = [0, 1].map(indice => {
+            const partida = { casaId: null, foraId: null, vencedorId: null };
+            const qfCasa = quartas[indice * 2];
+            const qfFora = quartas[indice * 2 + 1];
+            if (qfCasa.vencedorId && qfFora.vencedorId) {
+                partida.casaId = qfCasa.vencedorId;
+                partida.foraId = qfFora.vencedorId;
+                if (partida.casaId !== estado.clubeId && partida.foraId !== estado.clubeId) {
+                    partida.vencedorId = simularVencedorCopinha(partida.casaId, partida.foraId);
+                }
+            }
+            return partida;
+        });
+        return { quartas, semifinais, final: { casaId: null, foraId: null, vencedorId: null } };
+    }
+
+    function verificarClassificacaoCopinha(partida) {
+        const jogosDoClube = estado.partidas.filter(item =>
+            item.torneioId === partida.torneioId && item.tipo === "grupo"
+        );
+        if (jogosDoClube.some(item => item.status === "agendada")) return "";
+
+        estado.partidas
+            .filter(item => item.torneioId === partida.torneioId && item.tipo === "grupo-ia" && item.status === "agendada")
+            .forEach(item => {
+                const vencedorId = simularVencedorCopinha(item.casaId, item.foraId);
+                const delta = vencedorId === item.casaId ? 1 : -1;
+                const golsCasa = Math.max(0, Math.round(1.3 + delta * 0.45 + Math.random() * 2));
+                const golsFora = Math.max(0, Math.round(1.2 - delta * 0.45 + Math.random() * 2));
+                Object.assign(item, { golsCasa, golsFora, status: "concluida" });
+                if (golsCasa === golsFora) item.golsCasa++;
+                if ((item.golsCasa > item.golsFora ? item.casaId : item.foraId) !== vencedorId) {
+                    [item.golsCasa, item.golsFora] = [item.golsFora, item.golsCasa];
+                }
+            });
+
+        const grupos = estado.copinha?.grupos;
+        if (!grupos) throw new Error("Não foi possível recuperar a formação dos grupos da Copinha.");
+        const grupoDoClube = Object.entries(grupos).find(([, ids]) => ids.includes(estado.clubeId));
+        const tabelaDoClube = grupoDoClube
+            ? calcularTabelaContinental(partida.torneioId, grupoDoClube[1])
+            : [];
+        const posicao = tabelaDoClube.findIndex(time => time.id === estado.clubeId);
+        if (posicao < 0) throw new Error("O clube não foi encontrado na classificação do grupo da Copinha.");
+
+        if (posicao > 1) {
+            estado.partidas
+                .filter(item => item.torneioId === partida.torneioId && item.fase && item.status === "bloqueada")
+                .forEach(item => { item.status = "cancelada"; });
+            return `${estado.nome} foi eliminado na fase de grupos da Copinha (${posicao + 1}º lugar).`;
+        }
+
+        const chave = inicializarChaveCopinha(partida.torneioId, grupos);
+        estado.copinha.chave = chave;
+        const indiceQuartas = chave.quartas.findIndex(item =>
+            item.casaId === estado.clubeId || item.foraId === estado.clubeId
+        );
+        const jogoQuartas = estado.partidas.find(item =>
+            item.torneioId === partida.torneioId && item.fase === 1
+        );
+        const confrontoQuartas = chave.quartas[indiceQuartas];
+        if (!jogoQuartas || !confrontoQuartas) throw new Error("Não foi possível montar as quartas de final da Copinha.");
+        const adversarioId = confrontoQuartas.casaId === estado.clubeId
+            ? confrontoQuartas.foraId
+            : confrontoQuartas.casaId;
+        const adversario = obterClube(adversarioId);
+        Object.assign(jogoQuartas, {
+            adversarioId, adversarioNome: adversario?.nome || "Adversário",
+            casa: confrontoQuartas.casaId === estado.clubeId, status: "agendada"
+        });
+        return `${estado.nome} avançou às quartas de final da Copinha (${posicao + 1}º lugar do Grupo ${grupoDoClube[0]}).`;
+    }
+
+    function processarEliminatoriaCopinha(partida, golsCasa, golsFora) {
+        const venceuCasa = partida.vencedorCasa;
+        const vencedorId = partida.casa === venceuCasa ? estado.clubeId : partida.adversarioId;
+        const clubeVenceu = vencedorId === estado.clubeId;
+        const chave = estado.copinha?.chave;
+        if (!chave) throw new Error("A chave eliminatória da Copinha não foi inicializada.");
+
+        const fixture = partida.fase === 1
+            ? chave.quartas.find(item => item.casaId === estado.clubeId || item.foraId === estado.clubeId)
+            : partida.fase === 2
+                ? chave.semifinais.find(item => item.casaId === estado.clubeId || item.foraId === estado.clubeId)
+                : chave.final;
+        if (!fixture) throw new Error("Não foi possível localizar o confronto da Copinha na chave.");
+
+        if (!clubeVenceu) {
+            estado.partidas
+                .filter(item => item.torneioId === partida.torneioId && item.fase > partida.fase && item.status !== "concluida")
+                .forEach(item => { item.status = "cancelada"; });
+            return `${estado.nome} foi eliminado da Copinha.`;
+        }
+
+        fixture.vencedorId = estado.clubeId;
+        if (partida.fase === 3) {
+            const titulos = estado.trofeusClube ||= [];
+            if (!titulos.includes("Copinha")) titulos.push("Copinha");
+            return "Campeão: Copinha.";
+        }
+
+        const proximaFase = partida.fase + 1;
+        let adversarioId;
+        if (partida.fase === 1) {
+            const indiceQuartas = chave.quartas.indexOf(fixture);
+            const semifinalIndice = Math.floor(indiceQuartas / 2);
+            const quartasPar = chave.quartas[semifinalIndice * 2 + (indiceQuartas % 2 === 0 ? 1 : 0)];
+            const semifinal = chave.semifinais[semifinalIndice];
+            if (!quartasPar?.vencedorId) throw new Error("O adversário da semifinal da Copinha ainda não foi definido.");
+            semifinal.casaId = estado.clubeId;
+            semifinal.foraId = quartasPar.vencedorId;
+            adversarioId = quartasPar.vencedorId;
+
+            const outraSemifinal = chave.semifinais[1 - semifinalIndice];
+            if (!outraSemifinal.vencedorId && outraSemifinal.casaId && outraSemifinal.foraId) {
+                outraSemifinal.vencedorId = simularVencedorCopinha(outraSemifinal.casaId, outraSemifinal.foraId);
+            }
+        } else {
+            const indiceSemifinal = chave.semifinais.indexOf(fixture);
+            const outraSemifinal = chave.semifinais[1 - indiceSemifinal];
+            if (!outraSemifinal?.vencedorId) throw new Error("O adversário da final da Copinha ainda não foi definido.");
+            chave.final.casaId = estado.clubeId;
+            chave.final.foraId = outraSemifinal.vencedorId;
+            adversarioId = outraSemifinal.vencedorId;
+        }
+
+        const proximaPartida = estado.partidas.find(item =>
+            item.torneioId === partida.torneioId && item.fase === proximaFase
+        );
+        const adversario = obterClube(adversarioId);
+        if (!proximaPartida || !adversario) throw new Error("Não foi possível preparar a próxima fase da Copinha.");
+        Object.assign(proximaPartida, {
+            adversarioId, adversarioNome: adversario.nome,
+            casa: Math.random() < 0.5, status: "agendada"
+        });
+        return `Classificado para a próxima fase da Copinha.`;
+    }
    
     function adicionarEliminatoria(partidas, times, clubeId, competicao, ano, mesInicial, quantidadeRodadas, prefixo, selecao = null, statusInicial = "agendada", datasPersonalizadas = null, torneioIdPersonalizado = "") {
         const adversarios = selecao && !times.length ? obterSelecoesAdversarias(competicao, clubeId) : times;
@@ -1694,7 +1922,8 @@
         return Math.random() < chance ? selecao : null;
     }
     function montarCalendarioTemporada(times, clube, rodadas, ano, carreira, historico, perfil) {
-        const partidas = gerarCalendario(times, clube, rodadas, ano);
+        const partidas = clube.tipo === "base" ? [] : gerarCalendario(times, clube, rodadas, ano);
+        if (clube.tipo === "base") adicionarFaseCopinha(partidas, times, clube, ano);
         const nomes = typeof obterNomesTrofeusClube === "function" ? obterNomesTrofeusClube(clube.id) : { liga: clube.liga, copa: "Copa Nacional" };
         
         const estadual = typeof ESTADUAIS_BRASIL !== "undefined" ? ESTADUAIS_BRASIL[clube.id] : null;
@@ -1923,9 +2152,10 @@
             const rodadas = gerarRodadasLiga(times);
             const perfil = { overall, idade, nacionalidade, posicao };
             const partidas = montarCalendarioTemporada(times, clube, rodadas, ano, carreira, historicoCarreira, perfil);
+            const gruposCopinha = partidas.find(partida => partida.gruposCopinha)?.gruposCopinha || null;
             partidas.forEach((partida, indice) => { partida.numero = indice + 1; });
             const jogosLesaoAnterior = Number(ultimaTemporada?.jogosForaProximaTemporada) || 0;
-            estado = { versao: 4, integrado: true, carreiraId: carreira.id, nome, posicao, nacionalidade, overall, atributos: modeloTemporada?.atributos || null, idade, idadeLimite, ano, clubeId, liga: clube.liga, rodada: 0, rodadas, partidas, tabela, disponibilidade: disponibilidadeInicial(jogosLesaoAnterior), desempenhoPosicional: desempenhoPosicionalInicial(), estatisticas: { jogos: 0, gols: 0, assistencias: 0, jogosClube: 0, golsClube: 0, assistenciasClube: 0, jogosSelecao: 0, golsSelecao: 0, assistenciasSelecao: 0, jogosSelecaoPorCompeticao: {}, golsSelecaoPorCompeticao: {}, convocado: partidas.some(p => p.tipo === "selecao"), amarelos: 0, vermelhos: 0, motm: 0, vitorias: 0, empates: 0, derrotas: 0, driblesCompletos: 0, desarmes: 0, defesas: 0, jogadasCriadas: 0 }, eventos: [], competicoes: {}, trofeusClube: [], trofeusSelecao: [], trofeusColetivos: [], trofeusIndividuais: [], ultima: null, feed: [], salvaOficialmente: false };
+            estado = { versao: 4, integrado: true, carreiraId: carreira.id, nome, posicao, nacionalidade, overall, atributos: modeloTemporada?.atributos || null, idade, idadeLimite, ano, clubeId, liga: clube.liga, rodada: 0, rodadas, partidas, tabela, copinha: gruposCopinha ? { torneioId: `copinha:${nacionalidade}:${ano}`, grupos: gruposCopinha, chave: null } : null, disponibilidade: disponibilidadeInicial(jogosLesaoAnterior), desempenhoPosicional: desempenhoPosicionalInicial(), estatisticas: { jogos: 0, gols: 0, assistencias: 0, jogosClube: 0, golsClube: 0, assistenciasClube: 0, jogosSelecao: 0, golsSelecao: 0, assistenciasSelecao: 0, jogosSelecaoPorCompeticao: {}, golsSelecaoPorCompeticao: {}, convocado: partidas.some(p => p.tipo === "selecao"), amarelos: 0, vermelhos: 0, motm: 0, vitorias: 0, empates: 0, derrotas: 0, driblesCompletos: 0, desarmes: 0, defesas: 0, jogadasCriadas: 0 }, eventos: [], competicoes: {}, trofeusClube: [], trofeusSelecao: [], trofeusColetivos: [], trofeusIndividuais: [], ultima: null, feed: [], salvaOficialmente: false };
             salvar(); renderizar();
             const convocado = estado.estatisticas.convocado ? ` Convocado para ${SELECOES.find(s => s.id === nacionalidade)?.nome || "a seleção"}; partidas internacionais adicionadas ao calendário.` : "";
             informar(`Temporada ${ano} iniciada por contrato com ${clube.nome}.${convocado}`);
@@ -2085,6 +2315,9 @@
         }
     
         partida.vencedorCasa = vencedorCasa;
+        if (partida.competicao === "Copinha") {
+            return processarEliminatoriaCopinha(partida, golsCasa, golsFora);
+        }
         const venceu = partida.casa === vencedorCasa;
         if (!venceu) {
             estado.partidas.filter(p => p.torneioId === partida.torneioId && p.fase > partida.fase && p.status === "agendada")
@@ -2454,7 +2687,9 @@
             });
             resumoTorneio = partida.faseGrupo
                 ? verificarClassificacaoGrupoSelecao(partida)
-                : verificarClassificacaoContinental(partida);
+                : partida.competicao === "Copinha"
+                    ? verificarClassificacaoCopinha(partida)
+                    : verificarClassificacaoContinental(partida);
         } else {
             resumoTorneio = processarEliminatoria(partida, golsCasa, golsFora);
             // ─── NOVO: conquista de troféu em mata-mata ───
@@ -3096,11 +3331,11 @@
                 estado.ano, estado.idade, historicoCarreira, estado.nacionalidade,
                 estado.clubeId,
                 estado.eventos,
-                temporada.overall, estado.posicao, !!e.convocado, temporada.atributos
+                temporada.overall, estado.posicao, !!e.convocado, temporada.atributos, false
             );
           
             const tabela = estado.tabela.filter(t => !String(t.id).startsWith("__rodada__")).sort((a,b) => b.pts-a.pts || (b.gp-b.gc)-(a.gp-a.gc) || b.gp-a.gp);
-            const campeao = tabela[0]?.id === estado.clubeId;
+            const campeao = !ehClubeBase(estado.clubeId) && tabela[0]?.id === estado.clubeId;
             const nomesTrofeus = typeof obterNomesTrofeusClube === "function" ? obterNomesTrofeusClube(estado.clubeId) : { liga: estado.liga };
            
             const trofeusClube = [...(estado.trofeusClube || [])];
@@ -3114,7 +3349,7 @@
             temporada.trofeusSelecao = trofeusSelecao;
             temporada.trofeusColetivos = [...new Set([...trofeusClube, ...trofeusSelecao])];
             temporada.base = typeof ehClubeBase === "function" && ehClubeBase(estado.clubeId);
-            temporada.campeaoCopinha = temporada.base && campeao;
+            temporada.campeaoCopinha = temporada.base && trofeusClube.includes("Copinha");
             temporada.trofeusIndividuais = (trofeusCalculados.trofeusIndividuais || []).filter(t => t !== "Bola de Ouro" || (e.gols >= 20 || e.assistencias >= 15 || e.gols + e.assistencias >= 25));
             estado.trofeusColetivos = temporada.trofeusColetivos;
             estado.trofeusIndividuais = temporada.trofeusIndividuais;
@@ -3577,15 +3812,20 @@
             </tr>`;
         }).join("");
     
-        $("jja-tabela").innerHTML = `
-            <div class="jja-tabela-wrap">
-                <table class="jja-tabela">
-                    <thead><tr><th>#</th><th>Clube</th><th>J</th><th>SG</th><th>Pts</th></tr></thead>
-                    <tbody>${linhasTabela}</tbody>
-                </table>
-            </div>
-            ${renderizarLegendaZonas(zonasClassificacao)}
-            ${renderizarProgressoCompeticoes()}`;
+        const grupoDoJogador = Object.values(estado.copinha?.grupos || {})
+            .find(grupo => grupo.includes(estado.clubeId));
+        $("jja-tabela").innerHTML = estado.copinha && grupoDoJogador
+            ? renderizarTabelaContinental(estado.copinha.torneioId, grupoDoJogador)
+                + renderizarProgressoCompeticoes()
+            : `
+                <div class="jja-tabela-wrap">
+                    <table class="jja-tabela">
+                        <thead><tr><th>#</th><th>Clube</th><th>J</th><th>SG</th><th>Pts</th></tr></thead>
+                        <tbody>${linhasTabela}</tbody>
+                    </table>
+                </div>
+                ${renderizarLegendaZonas(zonasClassificacao)}
+                ${renderizarProgressoCompeticoes()}`;
     
         // ---------- NOVO: calendário com pênaltis ----------
         $("jja-calendario").innerHTML = `<div class="jja-lista-jogos">${estado.partidas.filter(p => !ehPartidaDeIA(p)).map(p => {            const adv = clubesDisponiveis().find(c => c.id === p.adversarioId);
@@ -3747,12 +3987,15 @@
         if (typeof salvarHistorico === "function") salvarHistorico(outrosHistoricos);
     
         // Estado direto, sem modais
-        const times = clubesDisponiveis().filter(c => c.liga === clube.liga);
+        const times = clube.tipo === "base"
+            ? obterClubesCopinhaDaNacionalidade(nacionalidade)
+            : clubesDisponiveis().filter(c => c.liga === clube.liga);
         const ano = (typeof ANO_INICIAL !== "undefined" ? ANO_INICIAL : 2026);
         const tabela = times.map(t => ({ id: t.id, nome: t.nome, forca: forcaClube(t), j: 0, v: 0, e: 0, d: 0, gp: 0, gc: 0, pts: 0 }));
         const rodadas = gerarRodadasLiga(times);
         const perfil = { overall: 65, idade, nacionalidade, posicao };
         const partidas = montarCalendarioTemporada(times, clube, rodadas, ano, carreira, outrosHistoricos, perfil);
+        const gruposCopinha = partidas.find(partida => partida.gruposCopinha)?.gruposCopinha || null;
         partidas.forEach((partida, indice) => { partida.numero = indice + 1; });
     
         estado = {
@@ -3760,6 +4003,7 @@
             nome, posicao, nacionalidade, overall: 65, atributos: null,
             idade, idadeLimite, ano, clubeId, liga: clube.liga,
             rodada: 0, rodadas, partidas, tabela,
+            copinha: gruposCopinha ? { torneioId: `copinha:${nacionalidade}:${ano}`, grupos: gruposCopinha, chave: null } : null,
             disponibilidade: disponibilidadeInicial(0),
             desempenhoPosicional: desempenhoPosicionalInicial(),
             estatisticas: {

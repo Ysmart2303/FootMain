@@ -34,7 +34,7 @@ const CLUBES_BASE = SELECOES.flatMap((selecao) => {
     const clubesProfissionais = ligaNacional
         ? CLUBES.filter((clube) => clube.liga === ligaNacional)
         : [];
-    const quantidadeBases = Math.max(3, clubesProfissionais.length);
+    const quantidadeBases = Math.max(8, clubesProfissionais.length);
     return Array.from({ length: quantidadeBases }, (_, indice) => {
         const clubePrincipal = clubesProfissionais[indice] || null;
         return {
@@ -970,6 +970,90 @@ function sortearPremio(chance) {
     return Math.random() < chance;
 }
 
+function simularCampeaoCopinhaTemporada(nacionalidade, clubeJogador, overallJogador) {
+    const times = obterClubesCopinhaDaNacionalidade(nacionalidade);
+    if (times.length < 8 || !times.some(time => time.id === clubeJogador)) return false;
+
+    const grupos = [[], [], [], []];
+    const sorteados = [...times];
+    for (let indice = sorteados.length - 1; indice > 0; indice--) {
+        const sorteado = Math.floor(Math.random() * (indice + 1));
+        [sorteados[indice], sorteados[sorteado]] = [sorteados[sorteado], sorteados[indice]];
+    }
+    sorteados.forEach((time, indice) => grupos[indice % grupos.length].push(time.id));
+
+    const obterForca = id => {
+        const configurada = Number(getConfig().clubes?.potencias?.[id]) || 65;
+        const impactoJogador = id === clubeJogador
+            ? Math.max(-8, Math.min(8, (Number(overallJogador) - 65) * 0.3))
+            : 0;
+        return Math.max(35, Math.min(99, configurada + impactoJogador));
+    };
+    const sortearGols = lambda => {
+        const limite = Math.exp(-lambda);
+        let produto = 1;
+        let gols = 0;
+        do {
+            gols++;
+            produto *= Math.random();
+        } while (produto > limite);
+        return gols - 1;
+    };
+    const simularMataMata = (casaId, foraId) => {
+        const diferenca = (obterForca(casaId) - obterForca(foraId)) / 25;
+        const golsCasa = sortearGols(Math.max(0.25, 1.35 + diferenca * 0.5));
+        const golsFora = sortearGols(Math.max(0.25, 1.15 - diferenca * 0.5));
+        if (golsCasa > golsFora) return casaId;
+        if (golsFora > golsCasa) return foraId;
+        const chanceCasa = Math.max(0.2, Math.min(0.8, 0.5 + diferenca / 4));
+        return Math.random() < chanceCasa ? casaId : foraId;
+    };
+
+    const classificados = grupos.map(grupo => {
+        const tabela = grupo.map(id => ({ id, pontos: 0, saldo: 0, gols: 0 }));
+        for (let indiceCasa = 0; indiceCasa < grupo.length; indiceCasa++) {
+            for (let indiceFora = indiceCasa + 1; indiceFora < grupo.length; indiceFora++) {
+                const casaId = grupo[indiceCasa];
+                const foraId = grupo[indiceFora];
+                const diferenca = (obterForca(casaId) - obterForca(foraId)) / 25;
+                const golsCasa = sortearGols(Math.max(0.25, 1.35 + diferenca * 0.5));
+                const golsFora = sortearGols(Math.max(0.25, 1.15 - diferenca * 0.5));
+                const registroCasa = tabela.find(time => time.id === casaId);
+                const registroFora = tabela.find(time => time.id === foraId);
+                registroCasa.gols += golsCasa;
+                registroFora.gols += golsFora;
+                registroCasa.saldo += golsCasa - golsFora;
+                registroFora.saldo += golsFora - golsCasa;
+                if (golsCasa > golsFora) registroCasa.pontos += 3;
+                else if (golsFora > golsCasa) registroFora.pontos += 3;
+                else {
+                    registroCasa.pontos++;
+                    registroFora.pontos++;
+                }
+            }
+        }
+        return tabela
+            .sort((a, b) => b.pontos - a.pontos || b.saldo - a.saldo || b.gols - a.gols)
+            .slice(0, 2)
+            .map(time => time.id);
+    });
+
+    const confrontosQuartas = [
+        [classificados[0][0], classificados[1][1]],
+        [classificados[1][0], classificados[0][1]],
+        [classificados[2][0], classificados[3][1]],
+        [classificados[3][0], classificados[2][1]]
+    ];
+    const vencedoresQuartas = confrontosQuartas.map(([casaId, foraId]) =>
+        simularMataMata(casaId, foraId)
+    );
+    const vencedoresSemifinais = [
+        simularMataMata(vencedoresQuartas[0], vencedoresQuartas[1]),
+        simularMataMata(vencedoresQuartas[2], vencedoresQuartas[3])
+    ];
+    return simularMataMata(vencedoresSemifinais[0], vencedoresSemifinais[1]) === clubeJogador;
+}
+
 function obterCompeticoesSelecao(nacionalidade, ano) {
     const selecao = SELECOES.find((item) => item.id === nacionalidade);
     if (!selecao) return [];
@@ -1043,7 +1127,7 @@ function gerarTrofeusSelecao(nacionalidade, ano, multiplicadorTitulos) {
     return trofeus;
 }
 
-function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, temporadasAnteriores = [], nacionalidade = "", clubeId = "", eventos = [], overall = OVERALL_PADRAO, posicaoDetalhe = "", convocado = false, atributos = null) {
+function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, temporadasAnteriores = [], nacionalidade = "", clubeId = "", eventos = [], overall = OVERALL_PADRAO, posicaoDetalhe = "", convocado = false, atributos = null, simularCopinha = true) {
     const cfg = getConfig();
     const t = cfg.titulos;
     const multColetivos = cfg.geral.multiplicadorTitulos;
@@ -1226,8 +1310,9 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
     if (clubeJogador?.tipo === "base") {
         const trofeusSelecao = trofeusColetivos.filter((trofeu) => ehCompeticaoDeSelecao(trofeu));
         trofeusColetivos.splice(0, trofeusColetivos.length, ...trofeusSelecao);
-        const chanceCopinha = Math.min(0.65, 0.18 + overall / 250 + totalGolsAssist / 100);
-        if (jogos > 0 && sortearPremio(chanceCopinha)) trofeusColetivos.push("Copinha");
+        if (simularCopinha && jogos > 0 && simularCampeaoCopinhaTemporada(nacionalidade, clubeId, overall)) {
+            trofeusColetivos.push("Copinha");
+        }
     }
 
     return { trofeusColetivos, trofeusIndividuais };
