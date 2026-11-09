@@ -1769,6 +1769,10 @@ html[data-theme="light"] .trajetoria-vazio {
     background: linear-gradient(135deg, #16a34a, #15803d);
 }
 
+.modal-btn--promocao {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+}
+
 .modal-btn--decisao {
     border: 1px solid transparent;
 }

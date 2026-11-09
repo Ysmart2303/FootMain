@@ -35,7 +35,7 @@ Todos os dados ficam salvos no localStorage do navegador, então suas carreiras,
 · Eventos sazonais — Lesões e suspensões reduzem jogos; hat-tricks e passes decisivos adicionam gols e assistências, com registro no histórico.
 · Simulação completa — Gere temporada por temporada ou simule a carreira inteira de uma vez.
 · Formação na base — Escolha uma das três bases disponíveis para sua nacionalidade e dispute apenas a Copinha antes de chegar ao profissional.
-· Promoção por desempenho — Destaques em gols, assistências ou na conquista da Copinha garantem um convite ao time principal; propostas de outros clubes só chegam após uma temporada no profissional.
+· Promoção por desempenho — Destaques em gols, assistências ou na conquista da Copinha geram um convite para o time principal, que pode ser aceito ou recusado; quem recusar continua na base e pode receber novos convites em temporadas futuras.
 
 💼 Contratos e transferências
 

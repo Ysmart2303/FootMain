@@ -2814,7 +2814,7 @@
                     jogoIA.status = "concluida";
                 }
             });
-            finalizarTemporadaOficial();
+            await finalizarTemporadaOficial();
         } else if (mostrarResultado) {
             const totalValidas = estado.rodada + estado.partidas.filter(p => p.status === "agendada" && !ehPartidaDeIA(p)).length;
             informar(`Partida ${estado.rodada}/${totalValidas} concluída. ${detalhes}`);
@@ -3248,7 +3248,7 @@
         }
       
         salvar(); renderizar();
-        if (!estado.partidas.some(p => p.status === "agendada") && !estado.salvaOficialmente) finalizarTemporadaOficial();
+        if (!estado.partidas.some(p => p.status === "agendada") && !estado.salvaOficialmente) await finalizarTemporadaOficial();
 
        // ─── NOVO: processar fila (troféus conquistados em auto-simulação) ───
         if (!simulacaoAutomatica && filaModaisPartida.length > 0) {
@@ -3259,7 +3259,7 @@
          
     }
   
-    function finalizarTemporadaOficial() {
+    async function finalizarTemporadaOficial() {
         if (!estado || estado.salvaOficialmente || !estado.integrado) {
             return;
         }
@@ -3378,21 +3378,19 @@
             carreira.competicoesQualificadas = competicoesClubeProxima;
             carreira.clubeQualificado = estado.clubeId;
          
-            const novoHistorico = [...historicoCompleto, temporada];
-            if (typeof salvarHistorico !== "function" || !salvarHistorico(novoHistorico)) throw new Error("Falha ao salvar o Histórico oficial.");
             carreira.nome = estado.nome; carreira.clube = estado.clubeId; carreira.posicaoDetalhe = estado.posicao;
             carreira.posicao = temporada.posicao; carreira.nacionalidade = estado.nacionalidade;
-            const promovidoAgora = !carreira.subiuProfissional
+            const destaqueBase = !carreira.subiuProfissional
                 && typeof jogadorMerecePromocaoDaBase === "function"
                 && jogadorMerecePromocaoDaBase(temporada);
+            const promovidoAgora = destaqueBase && await perguntarPromocaoDaBase(temporada, obterClube(estado.clubeId));
             if (promovidoAgora) carreira.subiuProfissional = true;
             carreira.anosContratoRestantes = Math.max(0, (Number(carreira.anosContratoRestantes) || 0) - 1);
             carreira.salarioAtual = Number(temporada.salario) || Number(carreira.salarioAtual) || 0;
             const perfilContrato = $("perfil-contrato"); if (perfilContrato) perfilContrato.textContent = carreira.anosContratoRestantes > 0 ? `Contrato ativo · ${carreira.anosContratoRestantes} temporada(s)` : "Contrato encerrado; negociar na próxima temporada";
+            const novoHistorico = [...historicoCompleto, temporada];
+            if (typeof salvarHistorico !== "function" || !salvarHistorico(novoHistorico)) throw new Error("Falha ao salvar o Histórico oficial.");
             if (typeof salvarCarreiraAtual === "function") salvarCarreiraAtual(carreira);
-            if (promovidoAgora && typeof mostrarNotificacaoFootMain === "function") {
-                mostrarNotificacaoFootMain("Destaque na base! Um clube profissional vai receber você na próxima temporada; propostas de outros clubes só chegam após sua estreia no profissional.", "sucesso");
-            }
             estado.salvaOficialmente = true; salvar();
             if (typeof renderHistorico === "function") renderHistorico();
             if (typeof renderAtributos === "function") renderAtributos(temporada);
@@ -3815,8 +3813,7 @@
         const grupoDoJogador = Object.values(estado.copinha?.grupos || {})
             .find(grupo => grupo.includes(estado.clubeId));
         $("jja-tabela").innerHTML = estado.copinha && grupoDoJogador
-            ? renderizarTabelaContinental(estado.copinha.torneioId, grupoDoJogador)
-                + renderizarProgressoCompeticoes()
+            ? renderizarProgressoCompeticoes()
             : `
                 <div class="jja-tabela-wrap">
                     <table class="jja-tabela">

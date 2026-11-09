@@ -2908,6 +2908,77 @@ function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], na
     };
 }
 
+function perguntarPromocaoDaBase(temporada, clubeBase) {
+    const overlay = document.getElementById("modal-confirmacao");
+    const tituloEl = document.getElementById("modal-titulo");
+    const mensagemEl = document.getElementById("modal-mensagem");
+    const btnRecusar = document.getElementById("modal-cancelar");
+    const btnAceitar = document.getElementById("modal-confirmar");
+    const opcoesEl = document.getElementById("modal-opcoes-clube");
+    const filtroLigaContainer = document.getElementById("filtro-liga-clube-alvo");
+    const icone = overlay?.querySelector(".modal-icone");
+
+    if (!overlay || !tituloEl || !mensagemEl || !btnRecusar || !btnAceitar) {
+        return Promise.resolve(window.confirm("Você se destacou na base. Deseja aceitar a promoção ao time profissional?"));
+    }
+
+    return new Promise((resolve) => {
+        const elementoComFoco = document.activeElement;
+        const tituloAnterior = tituloEl.textContent;
+        const mensagemAnterior = mensagemEl.textContent;
+        const recusarAnterior = btnRecusar.textContent;
+        const aceitarAnterior = btnAceitar.textContent;
+        const classeAceitarAnterior = btnAceitar.className;
+        const iconeAnterior = icone?.textContent;
+        const opcoesOcultasAnterior = opcoesEl?.hidden;
+        const filtroOcultoAnterior = filtroLigaContainer?.hidden;
+        const nomeClube = obterClube(clubeBase?.clubePrincipal)?.nome;
+
+        tituloEl.textContent = "Convite para o time profissional";
+        mensagemEl.textContent = `${temporada.nome} se destacou por ${clubeBase?.nome || "sua base"} nesta temporada (${temporada.golsClube ?? temporada.gols} gols, ${temporada.assistenciasClube ?? temporada.assistencias} assistências e overall ${temporada.overall}).${nomeClube ? ` Deseja aceitar a promoção para o ${nomeClube}?` : " Deseja aceitar a promoção ao time profissional?"}`;
+        btnRecusar.textContent = "Continuar na base";
+        btnAceitar.textContent = "Aceitar promoção";
+        btnAceitar.className = "modal-btn modal-btn--confirmar modal-btn--promocao";
+        if (icone) icone.textContent = "⚽";
+        if (opcoesEl) opcoesEl.hidden = true;
+        if (filtroLigaContainer) filtroLigaContainer.hidden = true;
+
+        const fechar = (aceitou) => {
+            overlay.hidden = true;
+            btnRecusar.removeEventListener("click", aoRecusar);
+            btnAceitar.removeEventListener("click", aoAceitar);
+            overlay.removeEventListener("click", aoClicarFora);
+            document.removeEventListener("keydown", aoTeclar);
+            tituloEl.textContent = tituloAnterior;
+            mensagemEl.textContent = mensagemAnterior;
+            btnRecusar.textContent = recusarAnterior;
+            btnAceitar.textContent = aceitarAnterior;
+            btnAceitar.className = classeAceitarAnterior;
+            if (icone) icone.textContent = iconeAnterior;
+            if (opcoesEl) opcoesEl.hidden = opcoesOcultasAnterior;
+            if (filtroLigaContainer) filtroLigaContainer.hidden = filtroOcultoAnterior;
+            if (elementoComFoco instanceof HTMLElement) elementoComFoco.focus();
+            resolve(aceitou);
+        };
+        const aoRecusar = () => fechar(false);
+        const aoAceitar = () => fechar(true);
+        const aoClicarFora = (evento) => {
+            if (evento.target === overlay) aoRecusar();
+        };
+        const aoTeclar = (evento) => {
+            if (evento.key === "Escape") aoRecusar();
+            else if (evento.key === "Enter" && evento.target !== btnRecusar) aoAceitar();
+        };
+
+        btnRecusar.addEventListener("click", aoRecusar);
+        btnAceitar.addEventListener("click", aoAceitar);
+        overlay.addEventListener("click", aoClicarFora);
+        document.addEventListener("keydown", aoTeclar);
+        overlay.hidden = false;
+        btnAceitar.focus();
+    });
+}
+
 function exibirEscolhaClube(opcoes, titulo, mensagem, clubeSelecionado = "", exibirFiltroLiga = false) {
     const overlay = document.getElementById("modal-confirmacao");
     const tituloEl = document.getElementById("modal-titulo");
@@ -3604,7 +3675,8 @@ async function gerar() {
         const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id, historico, nacionalidade, contratoEscolhido.clube);
         temporada.base = ehClubeBase(contratoEscolhido.clube);
         if (temporada.base) temporada.campeaoCopinha = temporada.trofeusColetivos.includes("Copinha");
-        const promovidoAgora = !carreiraAtual.subiuProfissional && jogadorMerecePromocaoDaBase(temporada);
+        const destaqueBase = !carreiraAtual.subiuProfissional && jogadorMerecePromocaoDaBase(temporada);
+        const promovidoAgora = destaqueBase && await perguntarPromocaoDaBase(temporada, obterClube(contratoEscolhido.clube));
         if (promovidoAgora) carreiraAtual.subiuProfissional = true;
         
         // Persistir o salário negociado
@@ -3630,10 +3702,6 @@ async function gerar() {
         if (!salvarCarreiraAtual(carreiraAtual)) {
             throw new Error("Não foi possível salvar o estado da carreira.");
         }
-        if (promovidoAgora) {
-            mostrarNotificacaoFootMain("Destaque na base! Um clube profissional vai receber você na próxima temporada; propostas de outros clubes só chegam após sua estreia no profissional.", "sucesso");
-        }
-        
         const historicoAtualizado = [...historico, temporada];
         
         // Salvar histórico ANTES de atualizar UI (para que lerHistoricoAtiva veja a nova temporada)
@@ -3692,7 +3760,7 @@ function atualizarTitulosResultados(temporada) {
     individuaisElemento.textContent = individuais.length ? individuais.join(", ") : "Nenhum";
 }
 
-function simularTudo() {
+async function simularTudo() {
     if (haTemporadaJogoAJogoEmAndamento()) {
         alert("Conclua a temporada jogo a jogo antes de usar a simulação clássica. Assim, os resultados e os clubes não se misturam no Histórico.");
         return;
@@ -3844,9 +3912,10 @@ function simularTudo() {
                 break;
             }
             
-            const promovidoAgora = !carreiraAtual.subiuProfissional && jogadorMerecePromocaoDaBase(temporada);
+            const destaqueBase = !carreiraAtual.subiuProfissional && jogadorMerecePromocaoDaBase(temporada);
+            const aceitouPromocao = destaqueBase && await perguntarPromocaoDaBase(temporada, obterClube(clubeAtual));
             anosContratoRestantes = Math.max(0, anosContratoRestantes - 1);
-            if (promovidoAgora) {
+            if (aceitouPromocao) {
                 carreiraAtual.subiuProfissional = true;
                 const clubeBase = obterClube(clubeAtual);
                 clubeAtual = clubeBase?.clubePrincipal || sortearClubeParaTemporada("", true, carreiraAtual.clubeAlvo, historico);
