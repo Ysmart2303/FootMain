@@ -7,7 +7,7 @@
 [![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/HTML)
 [![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/CSS)
 [![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
-![Versão](https://img.shields.io/badge/vers%C3%A3o-2.2.3-16a34a?style=for-the-badge)
+![Versão](https://img.shields.io/badge/vers%C3%A3o-2.3.0-16a34a?style=for-the-badge)
 
 *Crie seu jogador, escolha uma posição no 4-3-3, suba de overall e construa uma lenda.*
 
@@ -34,6 +34,8 @@ Todos os dados ficam salvos no localStorage do navegador, então suas carreiras,
 · Curva de carreira realista — Evolução na juventude, pico aos 25-29, declínio físico após os 33.
 · Eventos sazonais — Lesões e suspensões reduzem jogos; hat-tricks e passes decisivos adicionam gols e assistências, com registro no histórico.
 · Simulação completa — Gere temporada por temporada ou simule a carreira inteira de uma vez.
+· Formação na base — Escolha uma das três bases disponíveis para sua nacionalidade e dispute apenas a Copinha antes de chegar ao profissional.
+· Promoção por desempenho — Destaques em gols, assistências ou na conquista da Copinha garantem um convite ao time principal; propostas de outros clubes só chegam após uma temporada no profissional.
 
 💼 Contratos e transferências
 
@@ -89,10 +91,10 @@ Não é necessário instalar nada, usar npm ou rodar um servidor. Basta abrir o 
 
 1. Digite seu nome e idade inicial.
 2. Defina a idade limite (até quando sua carreira vai).
-3. Escolha sua nacionalidade e, opcionalmente, um clube-alvo.
+3. Escolha sua nacionalidade e uma das três bases disponíveis.
 4. Clique em uma das 11 posições no campo.
-5. Clique em "Gerar temporada" ou "Simular carreira completa".
-6. Acompanhe sua evolução e veja sua carreira entrar no Ranking! 🏅
+5. Inicie a carreira e dispute a Copinha; destaque-se para ser promovido ao profissional.
+6. Após a promoção, faça sua estreia no clube profissional que o convidou; depois de uma temporada, poderão chegar propostas de outros clubes. 🏅
 
 ---
 

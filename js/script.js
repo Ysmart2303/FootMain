@@ -14,6 +14,82 @@ const REGIOES_SELECOES = {
 
 const OVERALL_PADRAO = 50;
 
+const LIGAS_NACIONAIS_BASE = {
+    espanha: "La Liga", argentina: "Argentine Primera División", franca: "Ligue 1",
+    inglaterra: "Premier League", portugal: "Primeira Liga", brasil: "Brasileirão",
+    holanda: "Eredivisie", belgica: "Belgian Pro League", alemanha: "Bundesliga",
+    italia: "Serie A", colombia: "Colombian Primera A", uruguai: "Uruguayan Primera División",
+    suica: "Swiss Super League", japao: "J1 League", mexico: "Liga MX",
+    estadosUnidos: "MLS", noruega: "Norwegian Eliteserien", dinamarca: "Danish Superliga",
+    austria: "Austrian Bundesliga", equador: "Ecuadorian Serie A",
+    chile: "Chilean Primera División", canada: "MLS", coreiaDoSul: "K League 1",
+    arabiaSaudita: "Saudi Pro League", egito: "Egyptian Premier League",
+    africaDoSul: "South African Premier Division", australia: "Australian A-League",
+    china: "Chinese Super League", marrocos: "Moroccan Botola",
+    paraguai: "Paraguayan Primera División"
+};
+
+const CLUBES_BASE = SELECOES.flatMap((selecao) => {
+    const ligaNacional = LIGAS_NACIONAIS_BASE[selecao.id];
+    const clubesProfissionais = ligaNacional
+        ? CLUBES.filter((clube) => clube.liga === ligaNacional)
+        : [];
+    const quantidadeBases = Math.max(3, clubesProfissionais.length);
+    return Array.from({ length: quantidadeBases }, (_, indice) => {
+        const clubePrincipal = clubesProfissionais[indice] || null;
+        return {
+            id: `base-${selecao.id}-${indice + 1}`,
+            nome: clubePrincipal
+                ? `${clubePrincipal.nome} Sub-20`
+                : `${selecao.nome} - Base ${indice + 1}`,
+            liga: "Copinha",
+            tipo: "base",
+            nacionalidade: selecao.id,
+            clubePrincipal: clubePrincipal?.id || "",
+            disponivelEscolha: indice < 3
+        };
+    });
+});
+
+CLUBES.push(...CLUBES_BASE);
+
+function obterBasesDaNacionalidade(nacionalidade) {
+    return CLUBES_BASE.filter((clube) => clube.nacionalidade === nacionalidade && clube.disponivelEscolha);
+}
+
+function obterClubesCopinhaDaNacionalidade(nacionalidade) {
+    return CLUBES_BASE.filter((clube) => clube.nacionalidade === nacionalidade);
+}
+
+function ehClubeBase(clubeId) {
+    return obterClube(clubeId)?.tipo === "base";
+}
+
+function temporadaDaBase(temporada) {
+    return !!temporada && (temporada.base === true || ehClubeBase(temporada.clube));
+}
+
+function jogadorMerecePromocaoDaBase(temporada) {
+    if (!temporadaDaBase(temporada)) return false;
+    const participacoes = (Number(temporada.golsClube ?? temporada.gols) || 0)
+        + (Number(temporada.assistenciasClube ?? temporada.assistencias) || 0);
+    const venceuCopinha = temporada.campeaoCopinha === true
+        || (temporada.trofeusColetivos || []).includes("Copinha");
+    const destaqueCopinha = Number(temporada.motm) >= 2 || participacoes >= 5 || Number(temporada.overall) >= 75;
+    return participacoes >= 10 || (venceuCopinha && destaqueCopinha);
+}
+
+function obterOfertaBase(clube, temporadaAnterior = null) {
+    return {
+        ...clube,
+        anosContrato: 1,
+        valorMercado: 0,
+        salarioProposto: 0,
+        salarioAnterior: Number(temporadaAnterior?.salario) || 0,
+        detalheContrato: "Contrato de base por 1 temporada"
+    };
+}
+
 /* ========== Competições secundárias e estaduais ========== */
 
 const ESTADUAIS_BRASIL = {
@@ -228,6 +304,9 @@ const MAPA_TROFEUS_POR_LIGA = {
 
 function obterNomesTrofeusClube(clubeId) {
     const clube = obterClube(clubeId);
+    if (clube?.tipo === "base") {
+        return { liga: "Copinha", copa: "", continental: "" };
+    }
     return MAPA_TROFEUS_POR_LIGA[clube?.liga] || {
         liga: "Liga Nacional",
         copa: "Copa Nacional",
@@ -299,7 +378,7 @@ function jogadorTeveBomDesempenho(temporada) {
 }
 
 function sortearClubes(quantidade, clubeExcluir = "", clubeAlvo = "", desempenhoBom = false) {
-    const disponiveis = CLUBES.filter((clube) => clube.id !== clubeExcluir);
+    const disponiveis = CLUBES.filter((clube) => clube.tipo !== "base" && clube.id !== clubeExcluir);
     for (let indice = 0; indice < quantidade; indice++) {
         const indiceAleatorio = indice + Math.floor(Math.random() * (disponiveis.length - indice));
         [disponiveis[indice], disponiveis[indiceAleatorio]] = [disponiveis[indiceAleatorio], disponiveis[indice]];
@@ -439,6 +518,7 @@ function validarTemporada(temporada) {
     const trofeusIndividuais = Array.isArray(temporada.trofeusIndividuais) ? temporada.trofeusIndividuais.filter((t) => typeof t === "string") : [];
     const trofeusClube = Array.isArray(temporada.trofeusClube) ? temporada.trofeusClube.filter((t) => typeof t === "string") : trofeusColetivos.filter((t) => t !== "Copa do Mundo" && t !== "Copa América" && t !== "Eurocopa" && t !== "Copa Ouro" && t !== "Copa das Nações Africanas" && t !== "Copa da Ásia" && t !== "Copa das Nações da OFC" && t !== "Olimpíadas" && t !== "Mundial Sub-20" && t !== "Mundial Sub-17");
     const trofeusSelecao = Array.isArray(temporada.trofeusSelecao) ? temporada.trofeusSelecao.filter((t) => typeof t === "string") : [];
+    const base = temporadaDaBase(temporada);
   
     const competicoesQualificadas = Array.isArray(temporada.competicoesQualificadas)
         ? temporada.competicoesQualificadas.filter((t) => ehCompeticaoDeSelecao(t))
@@ -492,6 +572,8 @@ function validarTemporada(temporada) {
         trofeusClube,
         trofeusSelecao,
         trofeusIndividuais,
+        base,
+        campeaoCopinha: !!temporada.campeaoCopinha,
         competicoesQualificadas,
         eventos,
         lesaoGrave: !!temporada.lesaoGrave,
@@ -579,6 +661,8 @@ function obterCarreiraAtual() {
         posicaoDetalhe: "CA",
         idadeLimite: IDADE_LIMITE_PADRAO,
         nacionalidade: "",
+        baseClube: "",
+        subiuProfissional: false,
         clubeAlvo: "",
         anosContratoRestantes: 0,
         rompimentosContratoUsados: 0,
@@ -606,7 +690,13 @@ function obterCarreiraAtual() {
             idadeLimite: Number.isFinite(Number(carreira.idadeLimite)) ? Math.max(1, Math.floor(Number(carreira.idadeLimite))) : IDADE_LIMITE_PADRAO,
             nacionalidade: SELECOES.some((selecao) => selecao.id === carreira.nacionalidade) ? carreira.nacionalidade : "",
             clube: obterClube(carreira.clube)?.id || "",
-            clubeAlvo: obterClube(carreira.clubeAlvo)?.id || "",
+            baseClube: obterBasesDaNacionalidade(carreira.nacionalidade).some((clube) => clube.id === carreira.baseClube)
+                ? carreira.baseClube
+                : "",
+            subiuProfissional: typeof carreira.subiuProfissional === "boolean"
+                ? carreira.subiuProfissional
+                : !!carreira.clube && !ehClubeBase(carreira.clube),
+            clubeAlvo: !ehClubeBase(carreira.clubeAlvo) ? obterClube(carreira.clubeAlvo)?.id || "" : "",
             anosContratoRestantes: Number.isFinite(Number(carreira.anosContratoRestantes))
                 ? Math.max(0, Math.min(5, Math.floor(Number(carreira.anosContratoRestantes))))
                 : 0,
@@ -641,7 +731,11 @@ function salvarCarreiraAtual(carreira) {
         idadeLimite: Number.isFinite(Number(carreiraAtual.idadeLimite)) ? Math.max(1, Math.floor(Number(carreiraAtual.idadeLimite))) : IDADE_LIMITE_PADRAO,
         nacionalidade: SELECOES.some((selecao) => selecao.id === carreiraAtual.nacionalidade) ? carreiraAtual.nacionalidade : "",
         clube: obterClube(carreiraAtual.clube)?.id || "",
-        clubeAlvo: obterClube(carreiraAtual.clubeAlvo)?.id || "",
+        baseClube: obterBasesDaNacionalidade(carreiraAtual.nacionalidade).some((clube) => clube.id === carreiraAtual.baseClube)
+            ? carreiraAtual.baseClube
+            : "",
+        subiuProfissional: !!carreiraAtual.subiuProfissional,
+        clubeAlvo: !ehClubeBase(carreiraAtual.clubeAlvo) ? obterClube(carreiraAtual.clubeAlvo)?.id || "" : "",
         anosContratoRestantes: Number.isFinite(Number(carreiraAtual.anosContratoRestantes))
             ? Math.max(0, Math.min(5, Math.floor(Number(carreiraAtual.anosContratoRestantes))))
             : 0,
@@ -1127,6 +1221,13 @@ function gerarTrofeusTemporada(posicao, jogos, gols, assistencias, ano, idade, t
         if (Number(idade) <= 21 && sortearPremio((t.chanceMelhorJovemCompeticao || 0.20) * multIndividuais)) {
             trofeusIndividuais.push(`Melhor Jovem da ${titulo}`);
         }
+    }
+
+    if (clubeJogador?.tipo === "base") {
+        const trofeusSelecao = trofeusColetivos.filter((trofeu) => ehCompeticaoDeSelecao(trofeu));
+        trofeusColetivos.splice(0, trofeusColetivos.length, ...trofeusSelecao);
+        const chanceCopinha = Math.min(0.65, 0.18 + overall / 250 + totalGolsAssist / 100);
+        if (jogos > 0 && sortearPremio(chanceCopinha)) trofeusColetivos.push("Copinha");
     }
 
     return { trofeusColetivos, trofeusIndividuais };
@@ -2511,7 +2612,9 @@ function simularTemporadaPorJogo(posicao, atributos, idade, jogosForaInicioTempo
     const houveTrocaTreinador = (ultimaTemporada?.eventos || []).some(e => e.tipo === "troca-treinador");
     const eCapitao = historicoEventos.some(e => e.tipo === "capitao-time" && e.clube === clubeId);
     const probParticipar = Math.max(.05, Math.min(.99, ((overall - 10) / 90) * fatorIdade * (houveTrocaTreinador ? .94 : 1) * (eCapitao ? 1.025 : 1)));
-    const maxJogosClube = clubeId ? Math.round((posicao === "go" ? 45 : 50) * (cfg.geral.multiplicadorJogos || 1)) : 0;
+    const maxJogosClube = clubeId
+        ? Math.round((ehClubeBase(clubeId) ? 8 : posicao === "go" ? 45 : 50) * (cfg.geral.multiplicadorJogos || 1))
+        : 0;
     const fin=Number(atributos?.finalizacao)||OVERALL_PADRAO, pas=Number(atributos?.passe)||OVERALL_PADRAO, dri=Number(atributos?.drible)||OVERALL_PADRAO;
     const carreiraAtualRef = typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : {};
     const idadeAposentadoriaSelecao = Number(cfg.geral.idadeAposentadoriaSelecao) || 32;
@@ -2686,6 +2789,8 @@ function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], na
     );
 
     const clube = obterClube(clubeId);
+    const base = clube?.tipo === "base";
+    const campeaoCopinha = base && trofeus.trofeusColetivos.includes("Copinha");
 
     return {
         nome, idade,
@@ -2708,6 +2813,8 @@ function criarTemporada(nome, idade, ano, posicao, temporadasAnteriores = [], na
         atributos: atributos,
         trofeusColetivos: trofeus.trofeusColetivos,
         trofeusIndividuais: trofeus.trofeusIndividuais,
+        base,
+        campeaoCopinha,
         lesaoGrave: sim.lesaoGrave || false,                    // NOVO
         lesaoCarreira: sim.lesaoCarreira || false,              // NOVO
         jogosForaProximaTemporada: sim.jogosForaProximaTemporada || 0, // NOVO
@@ -2889,6 +2996,52 @@ function criarOfertaContrato(clube, idade, idadeLimite, temporadaAnterior = null
 }
 
 async function escolherContratoParaTemporada(clubeAtual, temporadaInicial, idade, idadeLimite, carreiraAtual, clubePreferidoExtra = "") {
+    if (!carreiraAtual.subiuProfissional) {
+        const bases = obterBasesDaNacionalidade(carreiraAtual.nacionalidade);
+        const baseInicial = bases.find((clube) => clube.id === carreiraAtual.baseClube);
+        if (!baseInicial) {
+            throw new Error("Escolha uma base para a nacionalidade selecionada antes de iniciar a carreira.");
+        }
+        if (temporadaInicial) {
+            return {
+                clube: baseInicial.id,
+                anosContrato: 1,
+                rompeContrato: false,
+                salarioProposto: 0,
+                valorMercado: 0
+            };
+        }
+        const opcoesBase = bases.map((clube) => obterOfertaBase(clube));
+        const baseEscolhida = await exibirEscolhaClube(
+            opcoesBase,
+            "Ofertas de clubes de base",
+            "Antes da promoção, você só pode se transferir para outra base do seu país.",
+            clubeAtual
+        );
+        const ofertaBaseEscolhida = opcoesBase.find((clube) => clube.id === baseEscolhida);
+        return ofertaBaseEscolhida
+            ? { clube: ofertaBaseEscolhida.id, anosContrato: 1, rompeContrato: false, salarioProposto: 0, valorMercado: 0 }
+            : null;
+    }
+
+    if (temporadaInicial && ehClubeBase(clubeAtual)) {
+        const base = CLUBES_BASE.find((clube) => clube.id === clubeAtual);
+        const historico = obterHistoricoDaCarreira(carreiraAtual.nome, { nome: carreiraAtual.posicao });
+        const clubeProfissional = obterClube(base?.clubePrincipal)
+            || sortearClubesParaCarreira(1, "", carreiraAtual.clubeAlvo, historico)[0];
+        if (!clubeProfissional) {
+            throw new Error("Não foi possível encontrar um clube profissional para receber o jogador promovido.");
+        }
+        const convite = criarOfertaContrato(clubeProfissional, idade, idadeLimite, historico[historico.length - 1] || null, historico);
+        return {
+            clube: convite.id,
+            anosContrato: convite.anosContrato,
+            rompeContrato: false,
+            salarioProposto: convite.salarioProposto,
+            valorMercado: convite.valorMercado
+        };
+    }
+
     const limiteRompimentos = getConfig().geral.limiteRompimentosContrato;
     const rompimentosRestantes = Math.max(0, limiteRompimentos - carreiraAtual.rompimentosContratoUsados);
     const contratoAtivo = !temporadaInicial && carreiraAtual.anosContratoRestantes > 0;
@@ -2911,8 +3064,10 @@ async function escolherContratoParaTemporada(clubeAtual, temporadaInicial, idade
         : sortearClubes(3, clubeAtual, carreiraAtual.clubeAlvo, desempenhoBom);
     // O modo jogo a jogo pode acrescentar o clube escolhido como preferência,
     // sem perder as três ofertas aleatórias da carreira clássica.
-    if (temporadaInicial && clubePreferidoExtra && !clubesOfertados.some((clube) => clube.id === clubePreferidoExtra)) {
-        const preferido = obterClube(clubePreferidoExtra);
+    const clubePrincipalBase = CLUBES_BASE.find((clube) => clube.id === carreiraAtual.baseClube)?.clubePrincipal;
+    const clubePreferido = clubePreferidoExtra || (carreiraAtual.subiuProfissional ? clubePrincipalBase : "");
+    if (temporadaInicial && clubePreferido && !clubesOfertados.some((clube) => clube.id === clubePreferido)) {
+        const preferido = obterClube(clubePreferido);
         if (preferido) clubesOfertados.push(preferido);
     }
     const ofertas = clubesOfertados
@@ -2995,7 +3150,7 @@ async function escolherContratoParaTemporada(clubeAtual, temporadaInicial, idade
 
 function escolherClubeAlvo(clubeAlvo) {
     return exibirEscolhaClube(
-        CLUBES,
+        CLUBES.filter((clube) => clube.tipo !== "base"),
         "Escolha seu clube-alvo",
         "O clube escolhido terá 60% de chance de aparecer entre as ofertas quando você estiver tendo uma boa temporada. A escolha não garante uma oferta.",
         clubeAlvo,
@@ -3093,7 +3248,7 @@ function sortearClubesParaCarreira(quantidade, clubeExcluir, clubeAlvo, historic
     // Na primeira temporada, a reputação começa em zero: favorece clubes menores,
     // mas mantém uma chance baixa de surgir uma oferta de clube grande.
     if (temporadas.length === 0) {
-        const disponiveis = CLUBES.filter((clube) => clube.id !== clubeExcluir);
+        const disponiveis = CLUBES.filter((clube) => clube.tipo !== "base" && clube.id !== clubeExcluir);
         const sorteados = [];
         while (sorteados.length < Math.min(quantidade, disponiveis.length)) {
             const pesos = disponiveis.map((clube) => {
@@ -3122,7 +3277,7 @@ function sortearClubesParaCarreira(quantidade, clubeExcluir, clubeAlvo, historic
         ? maiorPrestigio * 0.62 + prestigioMedio * 0.18 + Math.max(ultimoOver, melhorOver) * 0.20
         : Math.max(ultimoOver, 50);
 
-    const disponiveis = CLUBES.filter((clube) => clube.id !== clubeExcluir);
+    const disponiveis = CLUBES.filter((clube) => clube.tipo !== "base" && clube.id !== clubeExcluir);
     const sorteados = [];
     while (sorteados.length < Math.min(quantidade, disponiveis.length)) {
         const pesos = disponiveis.map((clube) => {
@@ -3277,17 +3432,27 @@ async function gerar() {
         if (carreiraFinalizada) {
             carreiraAtual.id = gerarIdRanking();
             carreiraAtual.clube = "";
+            carreiraAtual.subiuProfissional = false;
             carreiraAtual.anosContratoRestantes = 0;
             carreiraAtual.rompimentosContratoUsados = 0;
             carreiraAtual.aposentadoriaSelecao = false;
             carreiraAtual.aposentadoriaVoluntaria = false;
             delete carreiraAtual.potencial;
         }
+        if (historico.length === 0) {
+            carreiraAtual.clube = "";
+            carreiraAtual.subiuProfissional = false;
+            carreiraAtual.anosContratoRestantes = 0;
+        }
         carreiraAtual.nome = nome;
         carreiraAtual.posicao = POSICOES_CAMPO[posicaoDetalhe]?.nome || dadosPosicao.nome;
         carreiraAtual.posicaoDetalhe = posicaoDetalhe;
         carreiraAtual.idadeLimite = idadeLimite;
         carreiraAtual.nacionalidade = nacionalidade;
+        if (!carreiraAtual.subiuProfissional && !obterBasesDaNacionalidade(nacionalidade).some((base) => base.id === carreiraAtual.baseClube)) {
+            alert("Selecione uma base da nacionalidade escolhida antes de simular a carreira.");
+            return;
+        }
         if (!carreiraFinalizada) {
             salvarCarreiraAtual(carreiraAtual);
         }
@@ -3295,7 +3460,8 @@ async function gerar() {
         const idade = historico.length === 0 ? dadosValidos.idade : (Number(historico[historico.length - 1].idade) || 0) + 1;
         const ano = proximoAno(historico);
         const clubeAtual = obterClube(historico[historico.length - 1]?.clube)?.id || carreiraAtual.clube;
-        const temporadaInicial = historico.length === 0 || !obterClube(clubeAtual);
+        const temporadaInicial = historico.length === 0 || !obterClube(clubeAtual)
+            || (carreiraAtual.subiuProfissional && ehClubeBase(clubeAtual));
         carreiraAtual.anosContratoRestantes = Math.min(
             carreiraAtual.anosContratoRestantes,
             obterLimiteDuracaoContrato(idade, idadeLimite)
@@ -3332,6 +3498,7 @@ async function gerar() {
         if (!contratoEscolhido) return;
 
         carreiraAtual.clube = contratoEscolhido.clube;
+        if (ehClubeBase(contratoEscolhido.clube)) carreiraAtual.baseClube = contratoEscolhido.clube;
         carreiraAtual.anosContratoRestantes = Math.max(0, contratoEscolhido.anosContrato - 1);
         if (contratoEscolhido.rompeContrato) {
             carreiraAtual.rompimentosContratoUsados += 1;
@@ -3350,6 +3517,10 @@ async function gerar() {
             await perguntarAposentadoriaSelecao(idade);
         }
         const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id, historico, nacionalidade, contratoEscolhido.clube);
+        temporada.base = ehClubeBase(contratoEscolhido.clube);
+        if (temporada.base) temporada.campeaoCopinha = temporada.trofeusColetivos.includes("Copinha");
+        const promovidoAgora = !carreiraAtual.subiuProfissional && jogadorMerecePromocaoDaBase(temporada);
+        if (promovidoAgora) carreiraAtual.subiuProfissional = true;
         
         // Persistir o salário negociado
         if (contratoEscolhido.salarioProposto !== undefined && contratoEscolhido.salarioProposto >= 0) {
@@ -3360,18 +3531,22 @@ async function gerar() {
         const temporadasParaReputacao = [...historico, temporada];
         temporada.reputacao = calcularReputacao({ clube: contratoEscolhido.clube }, temporadasParaReputacao);
         temporada.anosContrato = carreiraAtual.anosContratoRestantes;
-        temporada.valorMercado = calcularValorMercado(
+        temporada.valorMercado = temporada.base ? 0 : calcularValorMercado(
             temporada.overall,
             idade,
             temporada.reputacao,
             temporada.anosContrato
         );
-        temporada.salario = carreiraAtual.salarioAtual
+        temporada.salario = temporada.base ? 0 : carreiraAtual.salarioAtual
             || calcularSalario(temporada.valorMercado, temporada.reputacao, contratoEscolhido.clube);
+        if (temporada.base) carreiraAtual.salarioAtual = 0;
         
         // Salvar contrato + salário na carreira ANTES de renderizar
         if (!salvarCarreiraAtual(carreiraAtual)) {
             throw new Error("Não foi possível salvar o estado da carreira.");
+        }
+        if (promovidoAgora) {
+            mostrarNotificacaoFootMain("Destaque na base! Um clube profissional vai receber você na próxima temporada; propostas de outros clubes só chegam após sua estreia no profissional.", "sucesso");
         }
         
         const historicoAtualizado = [...historico, temporada];
@@ -3474,7 +3649,6 @@ function simularTudo() {
         carreiraAtual.posicaoDetalhe = posicaoDetalhe;
         carreiraAtual.idadeLimite = idadeLimite;
         carreiraAtual.nacionalidade = nacionalidade;
-
         // Uma carreira que já está no ranking foi finalizada. Nunca reutilizamos
         // seu ID ao iniciar outra, mesmo que o nome do jogador seja igual.
         const carreiraFinalizada = lerRanking().some(
@@ -3483,11 +3657,17 @@ function simularTudo() {
         if (carreiraFinalizada) {
             carreiraAtual.id = gerarIdRanking();
             carreiraAtual.clube = "";
+            carreiraAtual.subiuProfissional = false;
             carreiraAtual.anosContratoRestantes = 0;
             carreiraAtual.rompimentosContratoUsados = 0;
             carreiraAtual.aposentadoriaSelecao = false;
             carreiraAtual.aposentadoriaVoluntaria = false;
             delete carreiraAtual.potencial;
+        }
+        if (!carreiraAtual.subiuProfissional
+            && !obterBasesDaNacionalidade(nacionalidade).some((base) => base.id === carreiraAtual.baseClube)) {
+            alert("Selecione uma base da nacionalidade escolhida antes de simular a carreira completa.");
+            return;
         }
 
         // Se "gerar" já criou temporadas para esta carreira, continuamos dela.
@@ -3500,6 +3680,9 @@ function simularTudo() {
 
         if (!continuandoCarreira) {
             historico = [];
+            carreiraAtual.clube = "";
+            carreiraAtual.subiuProfissional = false;
+            carreiraAtual.anosContratoRestantes = 0;
         }
         salvarCarreiraAtual(carreiraAtual);
 
@@ -3525,7 +3708,16 @@ function simularTudo() {
         }
 
         while (idade <= idadeLimite) {
-            if (!obterClube(clubeAtual)) {
+            if (!carreiraAtual.subiuProfissional) {
+                const bases = obterBasesDaNacionalidade(nacionalidade);
+                if (!bases.length) throw new Error("Não há bases cadastradas para esta nacionalidade.");
+                if (!ehClubeBase(clubeAtual)) {
+                    clubeAtual = bases.find((base) => base.id === carreiraAtual.baseClube)?.id || bases[0].id;
+                } else if (anosContratoRestantes <= 0) {
+                    clubeAtual = bases[Math.floor(Math.random() * bases.length)].id;
+                }
+                anosContratoRestantes = 1;
+            } else if (!obterClube(clubeAtual) || ehClubeBase(clubeAtual)) {
                 // Sem clube válido: sorteia um clube inicial (com viés do clube-alvo).
                 clubeAtual = sortearClubeParaTemporada("", true, carreiraAtual.clubeAlvo, historico);
                 anosContratoRestantes = obterDuracaoContrato(idade, idadeLimite);
@@ -3535,7 +3727,7 @@ function simularTudo() {
                 const naoRenovou = ultimaTemporada && clubeNaoRenovaContrato(clubeAtual, ultimaTemporada);
                 if (naoRenovou) {
                     const ofertas = sortearClubesParaCarreira(3, clubeAtual, carreiraAtual.clubeAlvo, historico);
-                    const candidatos = ofertas.length ? ofertas : CLUBES.filter((clube) => clube.id !== clubeAtual);
+                    const candidatos = ofertas.length ? ofertas : CLUBES.filter((clube) => clube.tipo !== "base" && clube.id !== clubeAtual);
                     const alvo = obterClube(carreiraAtual.clubeAlvo);
                     const alvoElegivel = alvo && alvo.id !== clubeAtual && candidatos.some((clube) => clube.id === alvo.id);
                     clubeAtual = alvoElegivel && jogadorTeveBomDesempenho(ultimaTemporada) && Math.random() < 0.6
@@ -3548,11 +3740,17 @@ function simularTudo() {
                 anosContratoRestantes = obterDuracaoContrato(idade, idadeLimite);
             }
             const temporada = criarTemporada(nome, idade, ano, posicaoSelecionada.id, historico, nacionalidade, clubeAtual);
+            temporada.base = ehClubeBase(clubeAtual);
+            temporada.campeaoCopinha = temporada.base && temporada.trofeusColetivos.includes("Copinha");
             const temporadasParaReputacao = [...historico, temporada];
             temporada.reputacao = calcularReputacao({ clube: clubeAtual }, temporadasParaReputacao);
             temporada.anosContrato = anosContratoRestantes;
             temporada.valorMercado = calcularValorMercado(temporada.overall, idade, temporada.reputacao, anosContratoRestantes);
             temporada.salario = calcularSalario(temporada.valorMercado, temporada.reputacao, clubeAtual);
+            if (temporada.base) {
+                temporada.valorMercado = 0;
+                temporada.salario = 0;
+            }
             carreiraAtual.salarioAtual = temporada.salario;
             historico.push(temporada);
             
@@ -3561,7 +3759,15 @@ function simularTudo() {
                 break;
             }
             
+            const promovidoAgora = !carreiraAtual.subiuProfissional && jogadorMerecePromocaoDaBase(temporada);
             anosContratoRestantes = Math.max(0, anosContratoRestantes - 1);
+            if (promovidoAgora) {
+                carreiraAtual.subiuProfissional = true;
+                const clubeBase = obterClube(clubeAtual);
+                clubeAtual = clubeBase?.clubePrincipal || sortearClubeParaTemporada("", true, carreiraAtual.clubeAlvo, historico);
+                anosContratoRestantes = obterDuracaoContrato(idade + 1, idadeLimite);
+            }
+            if (temporada.base) carreiraAtual.baseClube = temporada.clube;
             idade = Number(historico[historico.length - 1].idade) + 1;
             ano = proximoAno(historico);
 
@@ -3628,6 +3834,11 @@ async function limparHistorico() {
     document.getElementById("idade-limite").value = IDADE_LIMITE_PADRAO;
     const nacionalidadeInput = document.getElementById("nacionalidade");
     if (nacionalidadeInput) nacionalidadeInput.value = "";
+    const baseClubeInput = document.getElementById("base-clube");
+    if (baseClubeInput) {
+        baseClubeInput.innerHTML = '<option value="">Escolha a nacionalidade primeiro</option>';
+        baseClubeInput.disabled = true;
+    }
     const resumoFinal = document.getElementById("resumo-final");
     if (resumoFinal) resumoFinal.hidden = true;
     const resultados = document.getElementById("resultados");
@@ -3864,8 +4075,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const nacionalidadeInput = document.getElementById("nacionalidade");
+    const baseClubeInput = document.getElementById("base-clube");
     const filtroRegiaoNacionalidade = document.getElementById("filtro-regiao-nacionalidade");
     const carreiraAtual = obterCarreiraAtual();
+    const temporadasCarreiraAtual = lerHistorico().filter((temporada) => temporada.carreiraId === carreiraAtual.id);
+    const carreiraEncerradaAtual = lerRanking().some((carreira) => String(carreira.id) === String(carreiraAtual.id));
+    const baseBloqueada = temporadasCarreiraAtual.length > 0 && !carreiraEncerradaAtual;
     const clubeAlvoButton = document.getElementById("clube-alvo");
     const atualizarBotaoClubeAlvo = () => {
         const clubeAlvo = obterClube(obterCarreiraAtual().clubeAlvo);
@@ -3917,15 +4132,35 @@ document.addEventListener("DOMContentLoaded", () => {
                 }).join("");
             // Reaplica a seleção atual após reconstruir as opções.
             nacionalidadeInput.value = selecaoAtual?.id || "";
+                if (typeof configurarSeletoresEmModal === "function") configurarSeletoresEmModal();
         };
         atualizarOpcoesNacionalidade();
         nacionalidadeInput.value = carreiraAtual.nacionalidade;
+        const atualizarOpcoesBase = (nacionalidade, baseSelecionada = "") => {
+            if (!baseClubeInput) return;
+            const bases = obterBasesDaNacionalidade(nacionalidade);
+            baseClubeInput.innerHTML = bases.length
+                ? '<option value="">Selecione uma base</option>' +
+                    bases.map((base) => `<option value="${base.id}">${escaparHTML(base.nome)}</option>`).join("")
+                : '<option value="">Escolha a nacionalidade primeiro</option>';
+            baseClubeInput.disabled = baseBloqueada || !bases.length;
+            baseClubeInput.value = bases.some((base) => base.id === baseSelecionada) ? baseSelecionada : "";
+            if (typeof configurarSeletoresEmModal === "function") configurarSeletoresEmModal();
+        };
+        atualizarOpcoesBase(carreiraAtual.nacionalidade, carreiraAtual.baseClube);
         if (filtroRegiaoNacionalidade) {
             filtroRegiaoNacionalidade.addEventListener("change", atualizarOpcoesNacionalidade);
         }
         nacionalidadeInput.addEventListener("change", () => {
             const carreiraAtualizada = obterCarreiraAtual();
             carreiraAtualizada.nacionalidade = nacionalidadeInput.value;
+            const bases = obterBasesDaNacionalidade(nacionalidadeInput.value);
+            if (!carreiraAtualizada.subiuProfissional || carreiraEncerradaAtual) {
+                carreiraAtualizada.baseClube = baseBloqueada
+                    ? (bases[0]?.id || "")
+                    : "";
+            }
+            atualizarOpcoesBase(nacionalidadeInput.value, carreiraAtualizada.baseClube);
             salvarCarreiraAtual(carreiraAtualizada);
             atualizarResumoJogador(
                 normalizarNome(carreiraAtualizada.nome) || "Jogador",
@@ -3933,6 +4168,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 proximoAno(lerHistoricoAtiva()),
                 nacionalidadeInput.value
             );
+        });
+        baseClubeInput?.addEventListener("change", () => {
+            const carreiraAtualizada = obterCarreiraAtual();
+            carreiraAtualizada.baseClube = baseClubeInput.value;
+            if (!salvarCarreiraAtual(carreiraAtualizada)) {
+                mostrarNotificacaoFootMain("Não foi possível salvar a base escolhida.", "erro");
+            }
         });
     }
 
