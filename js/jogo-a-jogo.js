@@ -2086,6 +2086,7 @@
                     : clubesOfertados.find(clube => clube.id === clubePrincipalBase) || clubesOfertados[0];
                 if (!clubeOfertado) throw new Error("Não foi possível encontrar um clube profissional para receber o jogador promovido.");
                 contratoEscolhido = criarOfertaContrato(clubeOfertado, idade, idadeLimite, ultimaTemporada, historicoCarreira);
+                contratoEscolhido = await confirmarContratoFechado(contratoEscolhido, ultimaTemporada?.clube || carreira.clube);
                 clubeId = contratoEscolhido.clube;
                 carreira.clube = clubeId;
                 carreira.anosContratoRestantes = Math.max(0, Number(contratoEscolhido.anosContrato) || 0);

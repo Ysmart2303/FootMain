@@ -377,27 +377,41 @@ function jogadorTeveBomDesempenho(temporada) {
     return overall >= 75 || (jogos >= 20 && participacoes / jogos >= 0.65);
 }
 
-function sortearClubes(quantidade, clubeExcluir = "", clubeAlvo = "", desempenhoBom = false) {
-    const disponiveis = CLUBES.filter((clube) => clube.tipo !== "base" && clube.id !== clubeExcluir);
-    for (let indice = 0; indice < quantidade; indice++) {
-        const indiceAleatorio = indice + Math.floor(Math.random() * (disponiveis.length - indice));
-        [disponiveis[indice], disponiveis[indiceAleatorio]] = [disponiveis[indiceAleatorio], disponiveis[indice]];
-    }
-    const sorteados = disponiveis.slice(0, quantidade);
-    const alvo = obterClube(clubeAlvo);
+function calcularNivelMercadoJogador(temporadas = []) {
+    const recentes = (Array.isArray(temporadas) ? temporadas : []).slice(-3).reverse();
+    if (!recentes.length) return 50;
 
-    if (
-        alvo
-        && alvo.id !== clubeExcluir
-        && !sorteados.some((clube) => clube.id === alvo.id)
-        && sorteados.length > 0
-        && desempenhoBom
-        && Math.random() < 0.6
-    ) {
-        sorteados[Math.floor(Math.random() * sorteados.length)] = alvo;
-    }
+    let somaPonderada = 0;
+    let somaPesos = 0;
+    recentes.forEach((temporada, indice) => {
+        const peso = [0.55, 0.3, 0.15][indice] || 0;
+        const overall = Number(temporada.overall) || 50;
+        const jogos = Number(temporada.jogosClube ?? temporada.jogos) || 0;
+        const participacoes = (Number(temporada.golsClube ?? temporada.gols) || 0)
+            + (Number(temporada.assistenciasClube ?? temporada.assistencias) || 0);
+        const producao = jogos > 0 ? Math.min(1.2, participacoes / jogos) : 0;
+        const coletivos = Array.isArray(temporada.trofeusColetivos) ? temporada.trofeusColetivos : [];
+        const individuais = Array.isArray(temporada.trofeusIndividuais) ? temporada.trofeusIndividuais : [];
+        const pontosTitulos = Math.min(8,
+            coletivos.reduce((pontos, titulo) => pontos + (ehTituloCompeticaoContinental(titulo) ? 2 : 1), 0)
+            + Math.min(4, individuais.length * 2)
+        );
+        const nivelTemporada = Math.min(99, overall + Math.min(6, producao * 5) + pontosTitulos);
+        somaPonderada += nivelTemporada * peso;
+        somaPesos += peso;
+    });
 
-    return sorteados;
+    return Math.max(1, Math.min(99, Math.round(somaPonderada / somaPesos)));
+}
+
+function calcularChanceAceitacaoClube(clube, historico) {
+    const nivelJogador = calcularNivelMercadoJogador(historico);
+    const nivelClube = obterNivelMercadoClube(clube);
+    return Math.max(0.08, Math.min(0.92, 0.62 - (nivelClube - nivelJogador) * 0.018));
+}
+
+function sortearClubes(quantidade, clubeExcluir = "", clubeAlvo = "", historico = []) {
+    return sortearClubesParaCarreira(quantidade, clubeExcluir, clubeAlvo, historico);
 }
 
 function jogadorTeveMauDesempenho(temporada) {
@@ -3151,6 +3165,80 @@ function criarOfertaContrato(clube, idade, idadeLimite, temporadaAnterior = null
     };
 }
 
+function exibirConfirmacaoContrato(contrato) {
+    const overlay = document.getElementById("modal-confirmacao");
+    const tituloEl = document.getElementById("modal-titulo");
+    const mensagemEl = document.getElementById("modal-mensagem");
+    const btnCancelar = document.getElementById("modal-cancelar");
+    const btnConfirmar = document.getElementById("modal-confirmar");
+    const filtroLiga = document.getElementById("filtro-liga-clube-alvo");
+    const opcoes = document.getElementById("modal-opcoes-clube");
+    const icone = overlay?.querySelector(".modal-icone");
+
+    if (!overlay || !tituloEl || !mensagemEl || !btnCancelar || !btnConfirmar) return Promise.resolve();
+
+    return new Promise((resolve) => {
+        const clube = obterClube(contrato.clube)
+            || (typeof CLUBES_BASE !== "undefined" ? CLUBES_BASE.find((item) => item.id === contrato.clube) : null);
+        const anos = Math.max(0, Number(contrato.anosContrato) || 0);
+        const salario = Number(contrato.salarioProposto) || 0;
+        const estadoAnterior = {
+            titulo: tituloEl.textContent,
+            mensagem: mensagemEl.textContent,
+            cancelar: btnCancelar.textContent,
+            confirmar: btnConfirmar.textContent,
+            classeConfirmar: btnConfirmar.className,
+            cancelarOculto: btnCancelar.hidden,
+            filtroOculto: filtroLiga?.hidden,
+            opcoesOcultas: opcoes?.hidden,
+            icone: icone?.textContent
+        };
+        const fechar = () => {
+            overlay.hidden = true;
+            document.removeEventListener("keydown", aoTeclar);
+            btnConfirmar.removeEventListener("click", aoFechar);
+            overlay.removeEventListener("click", aoClicarFora);
+            tituloEl.textContent = estadoAnterior.titulo;
+            mensagemEl.textContent = estadoAnterior.mensagem;
+            btnCancelar.textContent = estadoAnterior.cancelar;
+            btnConfirmar.textContent = estadoAnterior.confirmar;
+            btnConfirmar.className = estadoAnterior.classeConfirmar;
+            btnCancelar.hidden = estadoAnterior.cancelarOculto;
+            if (filtroLiga) filtroLiga.hidden = estadoAnterior.filtroOculto;
+            if (opcoes) opcoes.hidden = estadoAnterior.opcoesOcultas;
+            if (icone) icone.textContent = estadoAnterior.icone;
+            resolve();
+        };
+        const aoFechar = () => fechar();
+        const aoClicarFora = (evento) => {
+            if (evento.target === overlay) fechar();
+        };
+        const aoTeclar = (evento) => {
+            if (evento.key === "Escape" || evento.key === "Enter") fechar();
+        };
+
+        tituloEl.textContent = "Contrato fechado";
+        mensagemEl.textContent = `Contrato fechado com: ${clube?.nome || "o clube escolhido"} por ${anos} ${anos === 1 ? "ano" : "anos"}.${salario > 0 ? ` Salário: ${formatarValorEuro(salario)}/ano.` : ""}`;
+        btnCancelar.hidden = true;
+        btnConfirmar.textContent = "Fechar";
+        btnConfirmar.className = "modal-btn modal-btn--decisao modal-btn--continuar";
+        if (filtroLiga) filtroLiga.hidden = true;
+        if (opcoes) opcoes.hidden = true;
+        if (icone) icone.textContent = "✅";
+        btnConfirmar.addEventListener("click", aoFechar);
+        overlay.addEventListener("click", aoClicarFora);
+        document.addEventListener("keydown", aoTeclar);
+        overlay.hidden = false;
+        btnConfirmar.focus();
+    });
+}
+
+async function confirmarContratoFechado(contrato, clubeAnterior = "", contratoAtivo = false) {
+    if (!contrato || (contratoAtivo && contrato.clube === clubeAnterior)) return contrato;
+    await exibirConfirmacaoContrato(contrato);
+    return contrato;
+}
+
 async function escolherContratoParaTemporada(clubeAtual, temporadaInicial, idade, idadeLimite, carreiraAtual, clubePreferidoExtra = "") {
     if (!carreiraAtual.subiuProfissional) {
         const bases = obterBasesDaNacionalidade(carreiraAtual.nacionalidade);
@@ -3159,13 +3247,13 @@ async function escolherContratoParaTemporada(clubeAtual, temporadaInicial, idade
             throw new Error("Escolha uma base para a nacionalidade selecionada antes de iniciar a carreira.");
         }
         if (temporadaInicial) {
-            return {
+            return confirmarContratoFechado({
                 clube: baseInicial.id,
                 anosContrato: 1,
                 rompeContrato: false,
                 salarioProposto: 0,
                 valorMercado: 0
-            };
+            });
         }
         const opcoesBase = bases.map((clube) => obterOfertaBase(clube));
         const baseEscolhida = await exibirEscolhaClube(
@@ -3176,7 +3264,7 @@ async function escolherContratoParaTemporada(clubeAtual, temporadaInicial, idade
         );
         const ofertaBaseEscolhida = opcoesBase.find((clube) => clube.id === baseEscolhida);
         return ofertaBaseEscolhida
-            ? { clube: ofertaBaseEscolhida.id, anosContrato: 1, rompeContrato: false, salarioProposto: 0, valorMercado: 0 }
+            ? confirmarContratoFechado({ clube: ofertaBaseEscolhida.id, anosContrato: 1, rompeContrato: false, salarioProposto: 0, valorMercado: 0 }, clubeAtual)
             : null;
     }
 
@@ -3189,13 +3277,13 @@ async function escolherContratoParaTemporada(clubeAtual, temporadaInicial, idade
             throw new Error("Não foi possível encontrar um clube profissional para receber o jogador promovido.");
         }
         const convite = criarOfertaContrato(clubeProfissional, idade, idadeLimite, historico[historico.length - 1] || null, historico);
-        return {
+        return confirmarContratoFechado({
             clube: convite.id,
             anosContrato: convite.anosContrato,
             rompeContrato: false,
             salarioProposto: convite.salarioProposto,
             valorMercado: convite.valorMercado
-        };
+        }, clubeAtual);
     }
 
     const limiteRompimentos = getConfig().geral.limiteRompimentosContrato;
@@ -3208,8 +3296,6 @@ async function escolherContratoParaTemporada(clubeAtual, temporadaInicial, idade
     ); 
   
     const ultimaTemporada = historicoCarreira[historicoCarreira.length - 1] || null;
-    const desempenhoBom = jogadorTeveBomDesempenho(ultimaTemporada);
-
     // Migração: se já tem contrato mas salário nunca foi salvo, deriva da última temporada.
     if (contratoAtivo && !carreiraAtual.salarioAtual && ultimaTemporada) {
         carreiraAtual.salarioAtual = Number(ultimaTemporada.salario) || 0;
@@ -3217,7 +3303,7 @@ async function escolherContratoParaTemporada(clubeAtual, temporadaInicial, idade
 
     const clubesOfertados = temporadaInicial
         ? sortearClubesParaCarreira(3, "", carreiraAtual.clubeAlvo, [])
-        : sortearClubes(3, clubeAtual, carreiraAtual.clubeAlvo, desempenhoBom);
+        : sortearClubes(3, clubeAtual, carreiraAtual.clubeAlvo, historicoCarreira);
     // O modo jogo a jogo pode acrescentar o clube escolhido como preferência,
     // sem perder as três ofertas aleatórias da carreira clássica.
     const clubePrincipalBase = CLUBES_BASE.find((clube) => clube.id === carreiraAtual.baseClube)?.clubePrincipal;
@@ -3281,27 +3367,76 @@ async function escolherContratoParaTemporada(clubeAtual, temporadaInicial, idade
             renovacao.detalheContrato = `Renovação por ${renovacao.anosContrato} ${renovacao.anosContrato === 1 ? "ano" : "anos"}`;
         }
 
-        opcoes = [renovacao, ...ofertas];
+        opcoes = [
+            renovacao,
+            ...ofertas,
+            {
+                id: "__solicitar_clube__",
+                nome: "Pedir contrato a outro clube",
+                detalheContrato: "Escolha qualquer clube; a aceitação depende do seu desempenho recente"
+            }
+        ];
         mensagem = `Seu contrato venceu. Você pode renovar no ${clube?.nome || "clube atual"} ou aceitar uma oferta sem gastar rompimento. Nenhum contrato passará da idade limite de ${idadeLimite} anos.`;
         clubeSelecionado = clubeAtual;
     }
 
-    const clubeEscolhido = await exibirEscolhaClube(
+    let clubeEscolhido = await exibirEscolhaClube(
         opcoes,
         temporadaInicial ? "Escolha seu primeiro clube" : "Ofertas de contrato",
         mensagem,
         clubeSelecionado
     );
-    const ofertaEscolhida = opcoes.find((opcao) => opcao.id === clubeEscolhido);
+    if (clubeEscolhido === "__solicitar_clube__") {
+        const clubesParaPedido = CLUBES
+            .filter((clube) => clube.tipo !== "base" && clube.id !== clubeAtual)
+            .map((clube) => {
+                const chance = calcularChanceAceitacaoClube(clube, historicoCarreira);
+                return {
+                    ...clube,
+                    chanceAceitacao: chance,
+                    detalheContrato: `Chance estimada de aceite: ${Math.round(chance * 100)}%`
+                };
+            });
+        clubeEscolhido = await exibirEscolhaClube(
+            clubesParaPedido,
+            "Escolha um clube para pedir contrato",
+            "O clube avaliará seu desempenho nas últimas temporadas. Se o pedido for recusado, você poderá escolher entre a renovação e as outras ofertas.",
+            "",
+            true
+        );
+        const clubePedido = clubesParaPedido.find((opcao) => opcao.id === clubeEscolhido);
+        if (!clubePedido) return null;
+
+        if (Math.random() < clubePedido.chanceAceitacao) {
+            const contrato = criarOfertaContrato(clubePedido, idade, idadeLimite, ultimaTemporada, historicoCarreira);
+            return confirmarContratoFechado({
+                clube: contrato.id,
+                anosContrato: contrato.anosContrato,
+                rompeContrato: false,
+                salarioProposto: contrato.salarioProposto,
+                valorMercado: contrato.valorMercado
+            }, clubeAtual, contratoAtivo);
+        }
+
+        clubeEscolhido = await exibirEscolhaClube(
+            [renovacao, ...ofertas],
+            "Pedido recusado",
+            `${clubePedido.nome} recusou o pedido de contrato (chance estimada: ${Math.round(clubePedido.chanceAceitacao * 100)}%). Escolha a renovação ou outra oferta disponível.`,
+            clubeAtual
+        );
+    }
+
+    const opcoesResultado = opcoes.filter((opcao) => opcao.id !== "__solicitar_clube__");
+    const ofertaEscolhida = opcoesResultado.find((opcao) => opcao.id === clubeEscolhido);
     if (!ofertaEscolhida) return null;
 
-    return {
+    return confirmarContratoFechado({
         clube: ofertaEscolhida.id,
         anosContrato: ofertaEscolhida.anosContrato,
         rompeContrato: contratoAtivo && ofertaEscolhida.id !== clubeAtual,
         salarioProposto: ofertaEscolhida.salarioProposto || 0,
         valorMercado: ofertaEscolhida.valorMercado || 0
-    };
+    }, clubeAtual, contratoAtivo);
 }
 
 function escolherClubeAlvo(clubeAlvo) {
@@ -3339,6 +3474,15 @@ function obterPrestigioClube(clube) {
     const forca = Number(config?.clubes?.potencias?.[clube.id]);
     return (Number.isFinite(forca) ? forca : 60) * 0.72
         + (prestigioLigas[clube.liga] || 8) * 1.15;
+}
+
+function obterNivelMercadoClube(clube) {
+    if (!clube) return 0;
+    const forca = Number(getConfig()?.clubes?.potencias?.[clube.id]) || 50;
+    const prestigio = obterPrestigioClube(clube);
+    const prestigioLiga = (prestigio - forca * 0.72) / 1.15;
+    const nivelLiga = 40 + prestigioLiga * 1.9;
+    return forca * 0.55 + nivelLiga * 0.45;
 }
 
 function sortearIndicePorPesos(pesos) {
@@ -3418,34 +3562,22 @@ function sortearClubesParaCarreira(quantidade, clubeExcluir, clubeAlvo, historic
         }
         return sorteados;
     }
-    const clubesAnteriores = temporadas.map((temporada) => obterClube(temporada.clube)).filter(Boolean);
-    const prestigiosAnteriores = clubesAnteriores.map(obterPrestigioClube);
-    const maiorPrestigio = Math.max(0, ...prestigiosAnteriores);
-    const prestigioMedio = prestigiosAnteriores.length
-        ? prestigiosAnteriores.reduce((soma, valor) => soma + valor, 0) / prestigiosAnteriores.length
-        : 0;
-    const ultimoOver = Number(temporadas[temporadas.length - 1]?.overall) || 50;
-    const melhorOver = Math.max(0, ...temporadas.map((temporada) => Number(temporada.overall) || 0));
-
-    // O histórico pesa mais que uma temporada isolada; o Over atual ajuda a
-    // diferenciar um veterano ainda de elite de outro já em declínio.
-    const reputacao = prestigiosAnteriores.length
-        ? maiorPrestigio * 0.62 + prestigioMedio * 0.18 + Math.max(ultimoOver, melhorOver) * 0.20
-        : Math.max(ultimoOver, 50);
+    const nivelJogador = calcularNivelMercadoJogador(temporadas);
 
     const disponiveis = CLUBES.filter((clube) => clube.tipo !== "base" && clube.id !== clubeExcluir);
     const sorteados = [];
     while (sorteados.length < Math.min(quantidade, disponiveis.length)) {
         const pesos = disponiveis.map((clube) => {
             const prestigio = obterPrestigioClube(clube);
-            const reputacaoJogador = calcularReputacao({ clube: temporadas[temporadas.length - 1]?.clube }, temporadas);
-            const forcaClube = Number(getConfig()?.clubes?.potencias?.[clube.id]) || 50;
-            const gap = forcaClube - reputacaoJogador;
-            const compatibilidade = gap < -10 ? 1 : gap < 10 ? 0.6 : gap < 20 ? 0.15 : 0.02;
-            // O prestígio do destino ainda importa, mas reputação limita saltos irreais.
-            const distancia = (prestigio - reputacao) / 17;
-            let peso = Math.exp(Math.max(-2.2, Math.min(2.2, distancia))) * compatibilidade;
-            if (clube.id === clubeAlvo) peso *= jogadorTeveBomDesempenho(temporadas[temporadas.length - 1]) ? 1.8 : 1;
+            const nivelClube = obterNivelMercadoClube(clube);
+            const clubeAbaixo = Math.max(0, nivelJogador - nivelClube - 5);
+            const clubeAcima = Math.max(0, nivelClube - nivelJogador - 8);
+            const compatibilidade = Math.exp(-clubeAbaixo / 7 - clubeAcima / 12);
+            const bonusPrestigio = Math.exp(Math.max(-0.3, Math.min(0.3, (prestigio - 75) / 35)));
+            let peso = compatibilidade * bonusPrestigio;
+            if (clube.id === clubeAlvo) {
+                peso *= jogadorTeveBomDesempenho(temporadas[temporadas.length - 1]) ? 1.8 : 1;
+            }
             return Math.max(0.01, peso);
         });
         const indice = sortearIndicePorPesos(pesos);
