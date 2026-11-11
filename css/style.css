@@ -4991,6 +4991,7 @@ html[data-theme="light"] .jja-fase {
 .jja-decisao-caixa > p { margin: 0 0 18px; color: #cbd5e1; line-height: 1.5; }
 .jja-decisao-caixa > .jja-decisao-aviso { margin: -8px 0 16px; color: #9ed0a5; font-size: .8rem; }
 .jja-decisao-opcoes { display: grid; gap: 9px; }
+.jja-proxima-opcoes { display: grid; width: 100%; gap: 10px; }
 .jja-decisao-opcao,
 .jja-decisao-continuar,
 .jja-decisao-voltar {
@@ -5007,6 +5008,8 @@ html[data-theme="light"] .jja-fase {
 .jja-decisao-continuar { background: #17643b; color: #f0fdf4; }
 .jja-decisao-opcao:hover,
 .jja-decisao-continuar:hover { background: #21834d; transform: translateY(-1px); }
+.jja-proxima-simular { background: #24543a; }
+.jja-proxima-simular:hover { background: #326b4a; }
 .jja-decisao-feedback { min-height: 1.5em; margin: 14px 0 0 !important; color: #b7e4c2 !important; }
 .jja-decisao-acoes { display: flex; gap: 10px; margin-top: 16px; }
 .jja-decisao-acoes button { flex: 1; }
@@ -5028,6 +5031,8 @@ html[data-theme="light"] .jja-decisao-opcao,
 html[data-theme="light"] .jja-decisao-continuar { border-color: #4b8155; background: #4b8155; color: #fff; }
 html[data-theme="light"] .jja-decisao-opcao:hover,
 html[data-theme="light"] .jja-decisao-continuar:hover { background: #3d7048; }
+html[data-theme="light"] .jja-proxima-simular { background: #3f704b; }
+html[data-theme="light"] .jja-proxima-simular:hover { background: #356441; }
 html[data-theme="light"] .jja-decisao-voltar { border-color: rgba(67, 126, 83, .3); background: rgba(67, 126, 83, .08); color: #405645; }
 html[data-theme="light"] .jja-decisao-voltar:hover { background: rgba(67, 126, 83, .16); }
 @media (max-width: 520px) {

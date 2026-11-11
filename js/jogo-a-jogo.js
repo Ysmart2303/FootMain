@@ -3168,6 +3168,122 @@
             if (evento.key === "Escape" && fluxoDecisao && !fluxoDecisao.escolhaConfirmada) encerrarDecisoesPartida(false);
         });
     }
+
+    function configurarModalProximaPartida() {
+        const modal = $("jja-modal-proxima");
+        const dialogo = modal?.querySelector('[role="dialog"]');
+        let elementoAnterior = null;
+
+        const fechar = () => {
+            if (!modal || modal.hidden) return;
+            modal.hidden = true;
+            elementoAnterior?.focus();
+        };
+
+        $("jja-jogar")?.addEventListener("click", () => {
+            if (!modal) return;
+            elementoAnterior = document.activeElement;
+            const jogosLesao = Number(estado?.disponibilidade?.jogosLesao) || 0;
+            const botaoLesao = $("jja-proxima-lesao");
+            if (botaoLesao) {
+                botaoLesao.hidden = jogosLesao <= 0 || !!estado?.disponibilidade?.lesaoCarreira;
+                botaoLesao.textContent = `Simular partidas até o fim da lesão (${jogosLesao})`;
+            }
+            $("jja-proxima-contexto").textContent = jogosLesao > 0
+                ? `Você está lesionado e ficará fora das próximas ${jogosLesao} partidas. Como deseja avançar?`
+                : "Como deseja avançar nesta partida?";
+            modal.hidden = false;
+            $("jja-proxima-jogar")?.focus();
+        });
+        $("jja-proxima-cancelar")?.addEventListener("click", fechar);
+        $("jja-proxima-jogar")?.addEventListener("click", () => {
+            fechar();
+            simularProxima();
+        });
+        $("jja-proxima-simular")?.addEventListener("click", () => {
+            fechar();
+            simularProximaAutomaticamente();
+        });
+        $("jja-proxima-lesao")?.addEventListener("click", () => {
+            fechar();
+            simularAteFimLesao();
+        });
+        modal?.addEventListener("click", evento => {
+            if (evento.target === evento.currentTarget) fechar();
+        });
+        document.addEventListener("keydown", evento => {
+            if (evento.key === "Escape" && modal && !modal.hidden) fechar();
+            if (evento.key === "Tab" && modal && !modal.hidden && dialogo) {
+                const botoes = [...dialogo.querySelectorAll("button:not([disabled])")].filter(botao => !botao.hidden);
+                if (!botoes.length) return;
+                const primeiro = botoes[0];
+                const ultimo = botoes[botoes.length - 1];
+                if (evento.shiftKey && document.activeElement === primeiro) {
+                    evento.preventDefault();
+                    ultimo.focus();
+                } else if (!evento.shiftKey && document.activeElement === ultimo) {
+                    evento.preventDefault();
+                    primeiro.focus();
+                }
+            }
+        });
+    }
+
+    async function simularProximaAutomaticamente() {
+        filaModaisPartida = [];
+        if (bloqueioAcoesPartida || decisaoEmAndamento) return;
+        if (!estado) { informar("Inicie sua carreira primeiro.", true); return; }
+
+        const indice = estado.partidas.findIndex(partida => partida.status === "agendada" && !ehPartidaDeIA(partida));
+        if (indice < 0) { informar("A temporada já foi concluída."); return; }
+
+        bloquearAcoesPartida();
+        await simularPartida(indice, true, null, { interativo: false });
+    }
+
+    async function simularAteFimLesao() {
+        filaModaisPartida = [];
+        if (bloqueioAcoesPartida || decisaoEmAndamento) return;
+        if (!estado) { informar("Inicie sua carreira primeiro.", true); return; }
+
+        const disponibilidade = estado.disponibilidade || disponibilidadeInicial();
+        if (disponibilidade.lesaoCarreira || Number(disponibilidade.jogosLesao) <= 0) {
+            informar("Não há uma lesão com partidas restantes para simular.", true);
+            return;
+        }
+
+        bloqueioAcoesPartida = true;
+        let partidasSimuladas = 0;
+        try {
+            while (
+                !estado.disponibilidade?.lesaoCarreira
+                && Number(estado.disponibilidade?.jogosLesao) > 0
+            ) {
+                const indice = estado.partidas.findIndex(partida =>
+                    partida.status === "agendada" && !ehPartidaDeIA(partida)
+                );
+                if (indice < 0) break;
+
+                const partida = estado.partidas[indice];
+                await simularPartida(indice, false, null, { interativo: false });
+                if (partida.status !== "concluida") {
+                    informar("A simulação foi interrompida porque uma partida não pôde ser concluída.", true);
+                    return;
+                }
+                partidasSimuladas++;
+            }
+
+            const jogosRestantes = Number(estado.disponibilidade?.jogosLesao) || 0;
+            informar(estado.disponibilidade?.lesaoCarreira
+                ? "A simulação foi interrompida porque uma lesão gravíssima encerrou a carreira."
+                : jogosRestantes > 0
+                ? `${partidasSimuladas} partida(s) simulada(s). Você segue lesionado por mais ${jogosRestantes} partida(s), que poderão ser simuladas na próxima temporada.`
+                : `Lesão encerrada após simular ${partidasSimuladas} partida(s).`);
+        } finally {
+            bloqueioAcoesPartida = false;
+            renderizar();
+        }
+    }
   
     async function simularProxima() {
         filaModaisPartida = [];
@@ -4054,6 +4170,7 @@
             $("nacionalidade").value = estado?.nacionalidade || carreira.nacionalidade || "";
         }
         configurarDecisoesPartida();
+        configurarModalProximaPartida();
         $("mobile-action-start")?.addEventListener("click", () => $("jja-iniciar").click());
         $("mobile-action-play")?.addEventListener("click", () => $("jja-jogar").click());
         $("mobile-action-simulate")?.addEventListener("click", () => $("jja-simular-restantes").click());
@@ -4073,7 +4190,6 @@
         ajustarAccordionsMobile();
         window.matchMedia("(max-width: 600px)").addEventListener?.("change", ajustarAccordionsMobile);
         $("jja-iniciar")?.addEventListener("click", iniciarOuAvancar);
-        $("jja-jogar")?.addEventListener("click", simularProxima);
         $("jja-simular-restantes")?.addEventListener("click", () => simularRestantes(false));
         $("jja-simular-carreira")?.addEventListener("click", () => simularFimCarreira());
         $("jja-aposentar")?.addEventListener("click", aposentarJogador);
