@@ -4045,7 +4045,7 @@ async function simularTudo() {
             }
             
             const destaqueBase = !carreiraAtual.subiuProfissional && jogadorMerecePromocaoDaBase(temporada);
-            const aceitouPromocao = destaqueBase && await perguntarPromocaoDaBase(temporada, obterClube(clubeAtual));
+            const aceitouPromocao = destaqueBase;
             anosContratoRestantes = Math.max(0, anosContratoRestantes - 1);
             if (aceitouPromocao) {
                 carreiraAtual.subiuProfissional = true;

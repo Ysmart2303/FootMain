@@ -3500,7 +3500,8 @@
             const destaqueBase = !carreira.subiuProfissional
                 && typeof jogadorMerecePromocaoDaBase === "function"
                 && jogadorMerecePromocaoDaBase(temporada);
-            const promovidoAgora = destaqueBase && await perguntarPromocaoDaBase(temporada, obterClube(estado.clubeId));
+            const promovidoAgora = destaqueBase && (simulandoCarreira
+                || await perguntarPromocaoDaBase(temporada, obterClube(estado.clubeId)));
             if (promovidoAgora) carreira.subiuProfissional = true;
             carreira.anosContratoRestantes = Math.max(0, (Number(carreira.anosContratoRestantes) || 0) - 1);
             carreira.salarioAtual = Number(temporada.salario) || Number(carreira.salarioAtual) || 0;
