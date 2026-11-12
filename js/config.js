@@ -3,7 +3,7 @@
  */
 
 const STORAGE_KEY_CONFIG = "footmain_config_v1";
-const VERSAO_APP = "2.3.6";
+const VERSAO_APP = "2.3.7";
 
 /* ---------- Definições base (as "de fábrica") ---------- */
 const POSICOES_PADRAO = {
@@ -110,7 +110,7 @@ const SELECOES = [
     { id: "arabiaSaudita", nome: "Arábia Saudita", regiao: "asia" },
     { id: "egito", nome: "Egito", regiao: "africa" },
     { id: "africaDoSul", nome: "África do Sul", regiao: "africa" },
-    { id: "australia", nome: "Austrália", regiao: "oceania" },
+    { id: "australia", nome: "Austrália", regiao: "asia" },
     { id: "novaZelandia", nome: "Nova Zelândia", regiao: "oceania" },
         // ─── ÁFRICA (cobertura ampliada) ───
     { id: "nigeria", nome: "Nigéria", regiao: "africa" },
@@ -161,6 +161,34 @@ const SELECOES = [
     { id: "peru", nome: "Peru", regiao: "americaSul" },
     { id: "bolivia", nome: "Bolívia", regiao: "americaSul" },
 ];
+
+
+// Expansão das seleções para que as eliminatórias tenham grupos continentais
+// com participantes suficientes. A inserção é idempotente e preserva IDs existentes.
+(function completarSelecoesConfederacoes() {
+    const listas = {
+        europa: `Albânia|Andorra|Armênia|Azerbaijão|Belarus|Bósnia e Herzegovina|Bulgária|Chipre|Eslováquia|Eslovênia|Estônia|Finlândia|Geórgia|Gibraltar|Grécia|Hungria|Islândia|Irlanda|Irlanda do Norte|Israel|Kosovo|Letônia|Liechtenstein|Lituânia|Luxemburgo|Macedônia do Norte|Malta|Moldávia|Montenegro|Polônia|Romênia|Rússia|San Marino|Sérvia|Suécia|Turquia|Ucrânia|País de Gales|República Tcheca|Escócia|Ilhas Faroé|Cazaquistão`,
+        africa: `Angola|Benim|Botsuana|Burundi|Chade|Comores|Djibuti|Eritreia|Essuatíni|Etiópia|Gabão|Gâmbia|Guiné-Bissau|Guiné Equatorial|Lesoto|Libéria|Líbia|Madagascar|Malawi|Maurício|Mauritânia|Moçambique|Namíbia|Níger|Quênia|República Centro-Africana|República do Congo|Ruanda|São Tomé e Príncipe|Seicheles|Serra Leoa|Somália|Sudão|Sudão do Sul|Tanzânia|Togo|Uganda|Zimbábue`,
+        asia: `Afeganistão|Bahrein|Bangladesh|Butão|Brunei|Camboja|Filipinas|Guam|Hong Kong|Índia|Indonésia|Kuwait|Quirguistão|Laos|Líbano|Macau|Malásia|Maldivas|Mongólia|Myanmar|Nepal|Paquistão|Palestina|Singapura|Sri Lanka|Taiwan|Tajiquistão|Timor-Leste|Turcomenistão|Vietnã|Iêmen`,
+        americaNorte: `Anguilla|Antígua e Barbuda|Aruba|Bahamas|Barbados|Belize|Bermudas|Bonaire|Cuba|Curaçao|Dominica|Granada|Guadalupe|Guiana|Guiana Francesa|Ilhas Cayman|Ilhas Virgens Americanas|Ilhas Virgens Britânicas|Martinica|Montserrat|Nicarágua|Porto Rico|República Dominicana|Santa Lúcia|São Cristóvão e Névis|São Vicente e Granadinas|Suriname|Turcas e Caicos|Sint Maarten|Saint Martin`,
+        oceania: `Samoa|Samoa Americana|Tonga|Vanuatu|Ilhas Cook`
+    };
+    const idsUsados = new Set(SELECOES.map(s => s.id));
+    const normalizarId = nome => nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, ' ').trim().split(/\s+/).map((p,i)=>i?p[0].toUpperCase()+p.slice(1):p.toLowerCase()).join('');
+    Object.entries(listas).forEach(([regiao, nomes]) => nomes.split('|').forEach(nome => {
+        const id = normalizarId(nome);
+        if (idsUsados.has(id) || SELECOES.some(s => s.nome.toLocaleLowerCase('pt-BR') === nome.toLocaleLowerCase('pt-BR'))) return;
+        SELECOES.push({ id, nome, regiao });
+        idsUsados.add(id);
+    }));
+
+    // Associações continentais que não são membros FIFA permanecem disponíveis
+    // para amistosos, mas não entram nas eliminatórias da Copa do Mundo.
+    const naoFifa = new Set(["guadalupe", "guianaFrancesa", "martinica", "bonaire", "sintMaarten", "saintMartin"]);
+    SELECOES.forEach(selecao => { selecao.fifa = !naoFifa.has(selecao.id); });
+})();
+
+
 
 
 const CLUBES = [

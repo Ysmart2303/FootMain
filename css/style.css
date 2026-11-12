@@ -5120,8 +5120,20 @@ html[data-theme="light"] .jja-competicao__vazio {
     border-bottom: none;
 }
 
+.jja-tabela-grupo tr.qualificado {
+    background: rgba(34, 197, 94, 0.09);
+}
+
 .jja-tabela-grupo tr.qualificado td:nth-child(1) {
     border-left: 3px solid #22c55e;
+}
+
+.jja-tabela-grupo tr.playoff {
+    background: rgba(245, 158, 11, 0.09);
+}
+
+.jja-tabela-grupo tr.playoff td:nth-child(1) {
+    border-left: 3px solid #f59e0b;
 }
 
 .jja-tabela-grupo tr.meu-clube {

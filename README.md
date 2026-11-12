@@ -7,7 +7,7 @@
 [![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/HTML)
 [![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/CSS)
 [![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
-![Versão](https://img.shields.io/badge/vers%C3%A3o-2.3.0-16a34a?style=for-the-badge)
+![Versão](https://img.shields.io/badge/vers%C3%A3o-2.3.7-16a34a?style=for-the-badge)
 
 *Crie seu jogador, escolha uma posição no 4-3-3, suba de overall e construa uma lenda.*
 
@@ -47,6 +47,8 @@ Todos os dados ficam salvos no localStorage do navegador, então suas carreiras,
 🏆 Títulos e conquistas
 
 · Títulos coletivos: Liga Nacional, Copa Nacional, Copa Continental, Copa do Mundo, Intercontinental, Mundial de Clubes, entre outros.
+· Eliminatórias da Copa do Mundo: calendário de três temporadas, classificação por confederação e vagas que determinam a participação no Mundial.
+· Formatos continentais: CONMEBOL em turno e returno (18 jogos e 7 vagas); UEFA em grupos e fase classificatória adicional; CAF em grupos; AFC e CONCACAF com grupos finais e vagas adicionais; OFC com grupos e decisão da vaga.
 · Títulos individuais: Bola de Ouro, Golden Boy, Chuteira de Ouro, Luva de Ouro.
 · 40 conquistas desbloqueáveis divididas em 8 categorias, incluindo hat-tricks e Over.
 · Recordes históricos de gols, assistências, títulos, hat-tricks e Over.
