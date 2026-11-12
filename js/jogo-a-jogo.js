@@ -3553,6 +3553,15 @@
     return partidas.sort((a, b) => a.data - b.data);
   }
 
+  function idadeInicialDentroDoLimite(idade, idadeLimite) {
+    if (idade <= idadeLimite) return true;
+    informar(
+      `A idade inicial (${idade}) não pode ser maior que a idade limite (${idadeLimite}).`,
+      true,
+    );
+    return false;
+  }
+
   async function iniciar() {
     const carreira =
       typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : {};
@@ -3635,9 +3644,15 @@
       ? Number(carreira.idadeLimite) ||
         (typeof obterIdadeLimite === "function" ? obterIdadeLimite() : 40)
       : Math.max(
-          idade,
-          Number($("idade-limite").value) || Number(carreira.idadeLimite) || 40,
+          1,
+          Math.floor(
+            Number($("idade-limite").value) ||
+              Number(carreira.idadeLimite) ||
+              40,
+          ),
         );
+    if (!ultimaTemporada && !idadeInicialDentroDoLimite(idade, idadeLimite))
+      return;
     if (idade > idadeLimite) {
       informar(
         `A carreira chegou à idade limite (${idadeLimite}). Use a opção de aposentadoria ou inicie outra carreira.`,
@@ -3976,6 +3991,16 @@
       typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : {};
     const historico = obterHistoricoCarreira(carreira);
     if (carreiraEncerrada(carreira, historico)) {
+      const idadeInicial = Math.max(16, Number($("idade").value) || 18);
+      const idadeLimite = Math.max(
+        1,
+        Math.floor(
+          Number($("idade-limite").value) ||
+            Number(carreira.idadeLimite) ||
+            40,
+        ),
+      );
+      if (!idadeInicialDentroDoLimite(idadeInicial, idadeLimite)) return;
       carreira.id =
         typeof gerarIdRanking === "function"
           ? gerarIdRanking()
