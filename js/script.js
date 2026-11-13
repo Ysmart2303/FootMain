@@ -828,6 +828,33 @@ function ehCompeticaoDeSelecao(nome) {
   return typeof nome === "string" && COMPETICOES_DA_SELECAO.has(nome);
 }
 
+function validarRankingLiga(ranking) {
+  if (!ranking || typeof ranking !== "object") return null;
+  const normalizarLista = (lista, metrica) =>
+    (Array.isArray(lista) ? lista : [])
+      .filter((jogador) => jogador && typeof jogador === "object")
+      .map((jogador, indice) => ({
+        id: typeof jogador.id === "string" ? jogador.id : "",
+        nome: normalizarNome(jogador.nome) || "Jogador",
+        clubeId: typeof jogador.clubeId === "string" ? jogador.clubeId : "",
+        clube: typeof jogador.clube === "string" ? jogador.clube : "Clube",
+        posicao: Math.max(1, Math.floor(Number(jogador.posicao) || indice + 1)),
+        gols: Math.max(0, Math.floor(Number(jogador.gols) || 0)),
+        assistencias: Math.max(
+          0,
+          Math.floor(Number(jogador.assistencias) || 0),
+        ),
+      }))
+      .filter((jogador) => jogador.id && jogador[metrica] > 0);
+
+  return {
+    ano: Math.floor(Number(ranking.ano) || 0),
+    liga: typeof ranking.liga === "string" ? ranking.liga : "",
+    artilharia: normalizarLista(ranking.artilharia, "gols"),
+    assistencias: normalizarLista(ranking.assistencias, "assistencias"),
+  };
+}
+
 function validarTemporada(temporada) {
   if (!temporada || typeof temporada !== "object") {
     return null;
@@ -1021,6 +1048,7 @@ function validarTemporada(temporada) {
     trofeusIndividuais,
     base,
     campeaoCopinha: !!temporada.campeaoCopinha,
+    rankingLiga: validarRankingLiga(temporada.rankingLiga),
     competicoesQualificadas,
     eventos,
     lesaoGrave: !!temporada.lesaoGrave,

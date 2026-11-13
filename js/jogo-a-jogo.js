@@ -3993,6 +3993,7 @@
         feed: [],
         salvaOficialmente: false,
       };
+      prepararElencosLiga();
       salvar();
       renderizar();
       const convocado = estado.estatisticas.convocado
@@ -4142,6 +4143,251 @@
       fora.pts++;
     }
   }
+
+  const POSICOES_ELENCO_LIGA = [
+    "GOL",
+    "ZCE",
+    "ZCD",
+    "LE",
+    "LD",
+    "ME",
+    "MC",
+    "MD",
+    "PE",
+    "CA",
+    "PD",
+  ];
+  const NOMES_JOGADORES_LIGA = [
+    "Rafael", "Lucas", "Mateus", "Caio", "Bruno", "Daniel", "Enzo",
+    "Felipe", "Gabriel", "Igor", "Joao", "Leandro", "Marcos", "Nicolas",
+    "Otavio", "Pedro", "Renan", "Samuel", "Thiago", "Vitor", "Andre",
+    "Davi", "Eduardo", "Gustavo", "Heitor", "Murilo", "Ruan", "Yuri",
+  ];
+  const SOBRENOMES_JOGADORES_LIGA = [
+    "Almeida", "Barbosa", "Cardoso", "Dias", "Esteves", "Ferreira",
+    "Gomes", "Lopes", "Martins", "Mendes", "Nogueira", "Oliveira",
+    "Pereira", "Ramos", "Ribeiro", "Rocha", "Santana", "Silva",
+    "Teixeira", "Vieira", "Azevedo", "Castro", "Freitas", "Monteiro",
+    "Moreira", "Rezende", "Santos", "Tavares",
+  ];
+
+  function hashIdentificador(texto) {
+    return Array.from(String(texto)).reduce(
+      (hash, caractere) => (hash * 31 + caractere.charCodeAt(0)) >>> 0,
+      7,
+    );
+  }
+
+  function criarElencoLiga(clube) {
+    const base = hashIdentificador(clube.id);
+    return POSICOES_ELENCO_LIGA.map((posicao, indice) => ({
+      id: `liga:${estado.ano}:${clube.id}:${indice}`,
+      nome: `${NOMES_JOGADORES_LIGA[(base + indice * 5) % NOMES_JOGADORES_LIGA.length]} ${SOBRENOMES_JOGADORES_LIGA[(base + indice * 11) % SOBRENOMES_JOGADORES_LIGA.length]}`,
+      posicao,
+      clubeId: clube.id,
+    }));
+  }
+
+  function prepararElencosLiga() {
+    if (!estado || (typeof ehClubeBase === "function" && ehClubeBase(estado.clubeId)))
+      return;
+    estado.elencosLiga ||= {};
+    const clubesLiga = estado.tabela
+      .filter((time) => !String(time.id).startsWith("__rodada__"))
+      .map((time) => obterClube(time.id) || time)
+      .filter((clube) => clube.id);
+
+    clubesLiga.forEach((clube) => {
+      if (!Array.isArray(estado.elencosLiga[clube.id]) || !estado.elencosLiga[clube.id].length)
+        estado.elencosLiga[clube.id] = criarElencoLiga(clube);
+    });
+
+    const elencoMeuClube = estado.elencosLiga[estado.clubeId];
+    if (!elencoMeuClube || !estado.carreiraId) return;
+    let jogador = elencoMeuClube.find((item) => item.id === estado.carreiraId);
+    if (!jogador) {
+      const posicao = String(estado.posicao || "CA").toUpperCase();
+      const indice = Math.max(0, POSICOES_ELENCO_LIGA.indexOf(posicao));
+      jogador = { id: estado.carreiraId, posicao, clubeId: estado.clubeId };
+      elencoMeuClube[indice] = jogador;
+    }
+    jogador.nome = estado.nome || jogador.nome || "Jogador";
+    jogador.clubeId = estado.clubeId;
+  }
+
+  function escolherJogadorLiga(jogadores, pesos) {
+    const pesoTotal = jogadores.reduce(
+      (total, jogador) => total + (pesos[jogador.posicao] || 1),
+      0,
+    );
+    let sorteio = Math.random() * pesoTotal;
+    return (
+      jogadores.find((jogador) => {
+        sorteio -= pesos[jogador.posicao] || 1;
+        return sorteio < 0;
+      }) || jogadores[jogadores.length - 1]
+    );
+  }
+
+  function gerarEventosIndividuaisLiga(
+    partidaId,
+    casaId,
+    foraId,
+    golsCasa,
+    golsFora,
+    opcoes = {},
+  ) {
+    prepararElencosLiga();
+    const eventos = [];
+    const pesosGols = {
+      GOL: 0.01, ZCE: 0.18, ZCD: 0.18, LE: 0.28, LD: 0.28,
+      ME: 0.8, MC: 0.7, MD: 0.8, PE: 2.2, CA: 3.2, PD: 2.2,
+    };
+    const pesosAssistencias = {
+      GOL: 0.05, ZCE: 0.25, ZCD: 0.25, LE: 0.65, LD: 0.65,
+      ME: 2.6, MC: 2.2, MD: 2.6, PE: 1.8, CA: 0.7, PD: 1.8,
+    };
+    const times = [
+      { lado: "casa", clubeId: casaId, gols: golsCasa },
+      { lado: "fora", clubeId: foraId, gols: golsFora },
+    ];
+
+    times.forEach((time) => {
+      const elenco = estado.elencosLiga?.[time.clubeId] || [];
+      const jogadorDoUsuario = time.clubeId === estado.clubeId
+        ? elenco.find((jogador) => jogador.id === estado.carreiraId)
+        : null;
+      const podeJogar = jogadorDoUsuario && opcoes.jogadorParticipou;
+      const jogadores = elenco.filter(
+        (jogador) => jogador.id !== estado.carreiraId || podeJogar,
+      );
+      const elegiveis = jogadores.length ? jogadores : elenco;
+      const goleadoresAleatorios = elegiveis.filter(
+        (jogador) => jogador.id !== estado.carreiraId,
+      );
+      const gols = Math.max(0, Math.floor(Number(time.gols) || 0));
+      const golsForcadosUsuario = podeJogar
+        ? Math.min(gols, Math.max(0, Math.floor(Number(opcoes.golsJogador) || 0)))
+        : 0;
+      const golsTime = [];
+
+      for (let indice = 0; indice < gols; indice++) {
+        const autor = indice < golsForcadosUsuario
+          ? jogadorDoUsuario
+          : escolherJogadorLiga(
+              goleadoresAleatorios.length ? goleadoresAleatorios : elegiveis,
+              pesosGols,
+            );
+        golsTime.push({
+          id: `${partidaId}:${time.lado}:${indice + 1}`,
+          partidaId,
+          clubeId: time.clubeId,
+          autorId: autor.id,
+          autorNome: autor.nome,
+          assistenteId: null,
+          assistenteNome: null,
+        });
+      }
+
+      let assistenciasForcadasUsuario = podeJogar
+        ? Math.max(0, Math.floor(Number(opcoes.assistenciasJogador) || 0))
+        : 0;
+      golsTime.forEach((gol) => {
+        const podeAssistir = elegiveis.filter(
+          (jogador) => jogador.id !== gol.autorId,
+        );
+        if (!podeAssistir.length) return;
+        const assistentesAleatorios = podeAssistir.filter(
+          (jogador) => jogador.id !== estado.carreiraId,
+        );
+        let assistente = null;
+        if (
+          assistenciasForcadasUsuario > 0 &&
+          jogadorDoUsuario &&
+          gol.autorId !== jogadorDoUsuario.id
+        ) {
+          assistente = jogadorDoUsuario;
+          assistenciasForcadasUsuario--;
+        } else if (Math.random() < 0.68) {
+          assistente = escolherJogadorLiga(
+            assistentesAleatorios.length
+              ? assistentesAleatorios
+              : podeAssistir,
+            pesosAssistencias,
+          );
+        }
+        if (assistente) {
+          gol.assistenteId = assistente.id;
+          gol.assistenteNome = assistente.nome;
+        }
+      });
+      eventos.push(...golsTime);
+    });
+
+    return eventos;
+  }
+
+  function obterRankingsLiga() {
+    const jogadores = new Map();
+    const obterJogador = (id, nome, clubeId) => {
+      if (!id) return null;
+      if (!jogadores.has(id)) {
+        jogadores.set(id, {
+          id,
+          nome: nome || "Jogador",
+          clubeId,
+          gols: 0,
+          assistencias: 0,
+        });
+      }
+      const jogador = jogadores.get(id);
+      if (nome) jogador.nome = nome;
+      if (clubeId) jogador.clubeId = clubeId;
+      return jogador;
+    };
+
+    (estado?.rodadas || []).forEach((rodada) => {
+      rodada.forEach((partida) => {
+        (partida.eventosIndividuais || []).forEach((evento) => {
+          const autor = obterJogador(evento.autorId, evento.autorNome, evento.clubeId);
+          if (autor) autor.gols++;
+          const assistente = obterJogador(
+            evento.assistenteId,
+            evento.assistenteNome,
+            evento.clubeId,
+          );
+          if (assistente) assistente.assistencias++;
+        });
+      });
+    });
+
+    const montarRanking = (metrica, desempate) =>
+      [...jogadores.values()]
+        .filter((jogador) => jogador[metrica] > 0)
+        .sort(
+          (a, b) =>
+            b[metrica] - a[metrica] ||
+            b[desempate] - a[desempate] ||
+            a.nome.localeCompare(b.nome, "pt-BR"),
+        )
+        .map((jogador, indice) => ({
+          ...jogador,
+          posicao: indice + 1,
+          clube: obterClube(jogador.clubeId)?.nome || jogador.clubeId || "Clube",
+        }));
+
+    return {
+      artilharia: montarRanking("gols", "assistencias"),
+      assistencias: montarRanking("assistencias", "gols"),
+    };
+  }
+
+  function localizarConfrontoLiga(partida, casaId, foraId) {
+    return estado.rodadas?.[partida.rodadaLiga]?.find(
+      (jogo) => jogo.casaId === casaId && jogo.foraId === foraId,
+    );
+  }
+
   function obterCompeticoesQualificadas(tabela, liga) {
     const ordenada = [...tabela].sort(
       (a, b) => b.pts - a.pts || b.gp - b.gc - (a.gp - a.gc) || b.gp - a.gp,
@@ -4735,6 +4981,35 @@
 
     if (!pelaSelecao && partida.tipo === "liga")
       registrarResultado(casa, fora, golsCasa, golsFora);
+    if (!pelaSelecao && partida.tipo === "liga") {
+      const partidaLigaId = `${estado.ano}:${partida.rodadaLiga}:${casa.id}:${fora.id}`;
+      const eventosIndividuais = gerarEventosIndividuaisLiga(
+        partidaLigaId,
+        casa.id,
+        fora.id,
+        golsCasa,
+        golsFora,
+        {
+          jogadorParticipou: participou && !motivoAusencia,
+          golsJogador,
+          assistenciasJogador: assistJogador,
+        },
+      );
+      partida.eventosIndividuais = eventosIndividuais;
+      const confrontoLiga = localizarConfrontoLiga(partida, casa.id, fora.id);
+      if (confrontoLiga) {
+        confrontoLiga.status = "concluido";
+        confrontoLiga.golsCasa = golsCasa;
+        confrontoLiga.golsFora = golsFora;
+        confrontoLiga.eventosIndividuais = eventosIndividuais;
+      }
+      golsJogador = eventosIndividuais.filter(
+        (evento) => evento.autorId === estado.carreiraId,
+      ).length;
+      assistJogador = eventosIndividuais.filter(
+        (evento) => evento.assistenteId === estado.carreiraId,
+      ).length;
+    }
     if (participou) {
       const prefixo = pelaSelecao ? "Selecao" : "Clube";
       estado.estatisticas[`jogos${prefixo}`] =
@@ -5103,6 +5378,14 @@
       const delta = (forcaClube(casa) - forcaClube(fora)) / 25;
       const gc = sortearPoisson(Math.max(0.25, 1.3 + delta * 0.48));
       const gf = sortearPoisson(Math.max(0.25, 1.2 - delta * 0.42));
+      const partidaId = `${estado.ano}:${indiceRodada}:${casa.id}:${fora.id}`;
+      j.eventosIndividuais = gerarEventosIndividuaisLiga(
+        partidaId,
+        casa.id,
+        fora.id,
+        gc,
+        gf,
+      );
       registrarResultado(casa, fora, gc, gf);
       j.status = "concluido";
       j.golsCasa = gc;
@@ -6296,6 +6579,13 @@
       temporada.penaltisCometidos = 0;
       temporada.minutosJogados = e.jogos * 90;
       temporada.clube = estado.clubeId;
+      temporada.rankingLiga = estado.liga
+        ? {
+            ano: estado.ano,
+            liga: estado.liga,
+            ...obterRankingsLiga(),
+          }
+        : null;
       temporada.ano = estado.ano;
       temporada.idade = estado.idade;
       temporada.nome = estado.nome;
@@ -7035,6 +7325,41 @@
     return `<section class="jja-competicoes"><h3>Outras competições da temporada</h3>${conteudo}</section>`;
   }
 
+  function renderizarRankingLiga() {
+    const secao = $("jja-ranking-liga");
+    if (!secao) return;
+    const clube = clubesDisponiveis().find((item) => item.id === estado?.clubeId);
+    secao.hidden = !estado || !clube || clube.tipo === "base";
+    if (secao.hidden) return;
+
+    const rankings = obterRankingsLiga();
+    const renderTabela = (lista, metrica, rotulo) =>
+      lista.length
+        ? `<div class="jja-ranking-wrap"><table class="jja-ranking-tabela"><thead><tr><th>#</th><th>Jogador</th><th>Clube</th><th>${rotulo}</th></tr></thead><tbody>${lista
+            .map((jogador) => {
+              const sigla = jogador.clube
+                .split(/\s+/)
+                .map((parte) => parte[0] || "")
+                .slice(0, 3)
+                .join("")
+                .toUpperCase();
+              return `<tr><td>${jogador.posicao}</td><td>${escapar(jogador.nome)}</td><td><span class="jja-ranking-clube" title="${escapar(jogador.clube)}"><span class="jja-ranking-sigla" aria-hidden="true">${escapar(sigla)}</span><span>${escapar(jogador.clube)}</span></span></td><td><strong>${jogador[metrica]}</strong></td></tr>`;
+            })
+            .join("")}</tbody></table></div>`
+        : `<p class="jja-ranking-vazio">Nenhum ${rotulo.toLowerCase()} registrado nesta temporada.</p>`;
+
+    $("jja-ranking-artilharia").innerHTML = renderTabela(
+      rankings.artilharia,
+      "gols",
+      "Gols",
+    );
+    $("jja-ranking-assistencias").innerHTML = renderTabela(
+      rankings.assistencias,
+      "assistencias",
+      "Assistências",
+    );
+  }
+
   function renderizar() {
     const ativo = !!estado;
 
@@ -7113,7 +7438,12 @@
       mobileCareer.disabled = $("jja-simular-carreira").disabled;
     if (mobileRetire) mobileRetire.disabled = botaoAposentar.disabled;
 
-    if (!ativo) return;
+    if (!ativo) {
+      const ranking = $("jja-ranking-liga");
+      if (ranking) ranking.hidden = true;
+      return;
+    }
+    renderizarRankingLiga();
 
     const clube = clubesDisponiveis().find((c) => c.id === estado.clubeId);
     const equipeSelecao =
@@ -7554,6 +7884,7 @@
       feed: [],
       salvaOficialmente: false,
     };
+    prepararElencosLiga();
     salvar();
     renderizar();
 
@@ -7579,6 +7910,10 @@
 
   function inicializar() {
     carregar();
+    if (estado) {
+      prepararElencosLiga();
+      salvar();
+    }
     const carreira =
       typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : {};
     const historicoCarreira = obterHistoricoCarreira(carreira);
@@ -7601,6 +7936,21 @@
         estado?.nacionalidade || carreira.nacionalidade || "";
     }
     configurarDecisoesPartida();
+    $("jja-ranking-liga")?.addEventListener("click", (evento) => {
+      const botao = evento.target.closest("[data-ranking-liga]");
+      if (!botao) return;
+      $("jja-ranking-liga")
+        .querySelectorAll("[data-ranking-liga]")
+        .forEach((item) => {
+          const selecionado = item === botao;
+          item.classList.toggle("is-active", selecionado);
+          item.setAttribute("aria-pressed", String(selecionado));
+        });
+      $("jja-ranking-artilharia").hidden =
+        botao.dataset.rankingLiga !== "artilharia";
+      $("jja-ranking-assistencias").hidden =
+        botao.dataset.rankingLiga !== "assistencias";
+    });
     configurarModalProximaPartida();
     $("mobile-action-start")?.addEventListener("click", () =>
       $("jja-iniciar").click(),
@@ -7694,6 +8044,10 @@
       salvar: () => salvar(),
       carregar: () => carregar(),
       renderizar: () => renderizar(),
+      prepararElencosLiga: () => prepararElencosLiga(),
+      gerarEventosIndividuaisLiga: (...args) =>
+        gerarEventosIndividuaisLiga(...args),
+      obterRankingsLiga: () => obterRankingsLiga(),
 
       // ---- Simulação ----
       simularPartida: (
