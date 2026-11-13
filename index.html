@@ -198,14 +198,21 @@
                     <summary>Classificação da liga</summary>
                     <div id="jja-tabela">Inicie uma temporada para ver a tabela.</div>
                 </details>
-                <section id="jja-ranking-liga" class="jja-ranking-liga" aria-label="Rankings da liga" hidden>
-                    <div class="jja-ranking-tabs" role="group" aria-label="Categoria do ranking">
-                        <button type="button" class="is-active" aria-pressed="true" data-ranking-liga="artilharia">Artilharia</button>
-                        <button type="button" aria-pressed="false" data-ranking-liga="assistencias">Assistências</button>
+                <details id="jja-ranking-liga" class="jja-recolhivel jja-ranking-liga" aria-label="Rankings da temporada" hidden>
+                    <summary>Ranking da temporada</summary>
+                    <div class="jja-ranking-conteudo">
+                        <label class="jja-ranking-seletor" for="jja-ranking-competicao"><span>Ranking:</span>
+                            <select id="jja-ranking-competicao" aria-label="Selecionar competição do ranking">
+                                <option value="global">Global anual</option>
+                            </select>
+                        </label>
+                        <div class="jja-ranking-tabs" role="group" aria-label="Categoria do ranking">
+                            <button type="button" class="is-active" aria-pressed="true" data-ranking-metrica="artilharia">Artilharia</button>
+                            <button type="button" aria-pressed="false" data-ranking-metrica="assistencias">Assistências</button>
+                        </div>
+                        <div id="jja-ranking-painel" class="jja-ranking-painel"></div>
                     </div>
-                    <div id="jja-ranking-artilharia" class="jja-ranking-painel"></div>
-                    <div id="jja-ranking-assistencias" class="jja-ranking-painel" hidden></div>
-                </section>
+                </details>
                 <details class="jja-recolhivel jja-calendario-painel">
                     <summary>Calendário completo</summary>
                     <div id="jja-calendario">As partidas aparecerão aqui.</div>
