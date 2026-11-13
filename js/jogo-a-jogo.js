@@ -4192,6 +4192,100 @@
     "Sampaio", "Saraiva", "Soares", "Souza", "Torres", "Valente",
   ];
 
+  const JOGADORES_REAIS = [
+    { id: "messi", nome: "Lionel Messi", anoNascimento: 1987, clube: "inter-miami", posicao: "PD", idadeAposentadoria: 41, destinos: ["newells-old-boys"], chanceTransferencia: 0.05, pesoRanking: 3.8 },
+    { id: "cristiano-ronaldo", nome: "Cristiano Ronaldo", anoNascimento: 1985, clube: "al-nassr", posicao: "CA", idadeAposentadoria: 42, destinos: ["sporting-cp", "al-hilal"], chanceTransferencia: 0.08, pesoRanking: 4.1 },
+    { id: "neymar", nome: "Neymar Jr.", anoNascimento: 1992, clube: "santos", posicao: "PE", idadeAposentadoria: 39, destinos: ["al-hilal", "inter-miami"], chanceTransferencia: 0.16, pesoRanking: 3.5 },
+    { id: "luis-suarez", nome: "Luis Suárez", anoNascimento: 1987, clube: "inter-miami", posicao: "CA", idadeAposentadoria: 40, destinos: ["santos", "newells-old-boys"], chanceTransferencia: 0.12, pesoRanking: 3.1 },
+    { id: "modric", nome: "Luka Modrić", anoNascimento: 1985, clube: "milan", posicao: "MC", idadeAposentadoria: 41, destinos: ["real-madrid", "inter"], chanceTransferencia: 0.1, pesoRanking: 2.8 },
+    { id: "lewandowski", nome: "Robert Lewandowski", anoNascimento: 1988, clube: "barcelona", posicao: "CA", idadeAposentadoria: 40, destinos: ["bayern-munich", "milan"], chanceTransferencia: 0.12, pesoRanking: 3.2 },
+    { id: "mohamed-salah", nome: "Mohamed Salah", anoNascimento: 1992, clube: "liverpool", posicao: "PD", idadeAposentadoria: 39, destinos: ["al-nassr", "inter-miami"], chanceTransferencia: 0.14, pesoRanking: 3.3 },
+    { id: "virgil-van-dijk", nome: "Virgil van Dijk", anoNascimento: 1991, clube: "liverpool", posicao: "ZCD", idadeAposentadoria: 39, destinos: ["bayern-munich", "paris-saint-germain"], chanceTransferencia: 0.12, pesoRanking: 2.8 },
+    { id: "kevin-de-bruyne", nome: "Kevin De Bruyne", anoNascimento: 1991, clube: "napoli", posicao: "MC", idadeAposentadoria: 39, destinos: ["manchester-city", "inter-miami"], chanceTransferencia: 0.14, pesoRanking: 3.1 },
+    { id: "harry-kane", nome: "Harry Kane", anoNascimento: 1993, clube: "bayern-munich", posicao: "CA", idadeAposentadoria: 40, destinos: ["manchester-city", "tottenham"], chanceTransferencia: 0.12, pesoRanking: 3.6 },
+    { id: "kylian-mbappe", nome: "Kylian Mbappé", anoNascimento: 1998, clube: "real-madrid", posicao: "PE", idadeAposentadoria: 39, destinos: ["paris-saint-germain", "liverpool"], chanceTransferencia: 0.1, pesoRanking: 4.2 },
+    { id: "vinicius-junior", nome: "Vinícius Júnior", anoNascimento: 2000, clube: "real-madrid", posicao: "PE", idadeAposentadoria: 40, destinos: ["paris-saint-germain", "manchester-city"], chanceTransferencia: 0.12, pesoRanking: 3.5 },
+    { id: "jude-bellingham", nome: "Jude Bellingham", anoNascimento: 2003, clube: "real-madrid", posicao: "MC", idadeAposentadoria: 40, destinos: ["liverpool", "manchester-city"], chanceTransferencia: 0.12, pesoRanking: 3.4 },
+    { id: "rodrygo", nome: "Rodrygo", anoNascimento: 2001, clube: "real-madrid", posicao: "PD", idadeAposentadoria: 39, destinos: ["liverpool", "manchester-city"], chanceTransferencia: 0.14, pesoRanking: 2.9 },
+    { id: "lamine-yamal", nome: "Lamine Yamal", anoNascimento: 2007, clube: "barcelona", posicao: "PD", idadeAposentadoria: 40, destinos: ["paris-saint-germain", "manchester-city"], chanceTransferencia: 0.1, pesoRanking: 4.0 },
+    { id: "pedri", nome: "Pedri", anoNascimento: 2002, clube: "barcelona", posicao: "MC", idadeAposentadoria: 39, destinos: ["manchester-city", "bayern-munich"], chanceTransferencia: 0.12, pesoRanking: 3.0 },
+    { id: "erling-haaland", nome: "Erling Haaland", anoNascimento: 2000, clube: "manchester-city", posicao: "CA", idadeAposentadoria: 40, destinos: ["real-madrid", "bayern-munich"], chanceTransferencia: 0.12, pesoRanking: 3.9 },
+    { id: "bukayo-saka", nome: "Bukayo Saka", anoNascimento: 2001, clube: "arsenal", posicao: "PD", idadeAposentadoria: 40, destinos: ["liverpool", "manchester-city"], chanceTransferencia: 0.1, pesoRanking: 3.0 },
+    { id: "lautaro-martinez", nome: "Lautaro Martínez", anoNascimento: 1997, clube: "inter", posicao: "CA", idadeAposentadoria: 39, destinos: ["barcelona", "atletico-madrid"], chanceTransferencia: 0.12, pesoRanking: 3.1 },
+    { id: "endrick", nome: "Endrick", anoNascimento: 2006, clube: "real-madrid", posicao: "CA", idadeAposentadoria: 39, destinos: ["santos", "liverpool"], chanceTransferencia: 0.14, pesoRanking: 2.9 },
+    { id: "alisson-becker", nome: "Alisson Becker", anoNascimento: 1992, clube: "liverpool", posicao: "GOL", idadeAposentadoria: 40, destinos: ["bayern-munich", "juventus"], chanceTransferencia: 0.08, pesoRanking: 2.5 },
+    { id: "alexis-mac-allister", nome: "Alexis Mac Allister", anoNascimento: 1998, clube: "liverpool", posicao: "MC", idadeAposentadoria: 40, destinos: ["real-madrid", "inter"], chanceTransferencia: 0.12, pesoRanking: 2.9 },
+    { id: "dominik-szoboszlai", nome: "Dominik Szoboszlai", anoNascimento: 2000, clube: "liverpool", posicao: "MC", idadeAposentadoria: 40, destinos: ["real-madrid", "bayern-munich"], chanceTransferencia: 0.12, pesoRanking: 2.7 },
+    { id: "cody-gakpo", nome: "Cody Gakpo", anoNascimento: 1999, clube: "liverpool", posicao: "PE", idadeAposentadoria: 39, destinos: ["barcelona", "bayern-munich"], chanceTransferencia: 0.12, pesoRanking: 2.8 },
+    { id: "florian-wirtz", nome: "Florian Wirtz", anoNascimento: 2003, clube: "liverpool", posicao: "MC", idadeAposentadoria: 40, destinos: ["real-madrid", "manchester-city"], chanceTransferencia: 0.12, pesoRanking: 3.2 },
+    { id: "hugo-ekitike", nome: "Hugo Ekitike", anoNascimento: 2002, clube: "liverpool", posicao: "CA", idadeAposentadoria: 39, destinos: ["paris-saint-germain", "real-madrid"], chanceTransferencia: 0.12, pesoRanking: 2.7 },
+    { id: "gabriel-magalhaes", nome: "Gabriel Magalhães", anoNascimento: 1997, clube: "arsenal", posicao: "ZCE", idadeAposentadoria: 40, destinos: ["real-madrid", "juventus"], chanceTransferencia: 0.1, pesoRanking: 2.7 },
+    { id: "william-saliba", nome: "William Saliba", anoNascimento: 2001, clube: "arsenal", posicao: "ZCD", idadeAposentadoria: 40, destinos: ["real-madrid", "paris-saint-germain"], chanceTransferencia: 0.12, pesoRanking: 2.8 },
+    { id: "declan-rice", nome: "Declan Rice", anoNascimento: 1999, clube: "arsenal", posicao: "MC", idadeAposentadoria: 40, destinos: ["manchester-city", "real-madrid"], chanceTransferencia: 0.1, pesoRanking: 3.1 },
+    { id: "martin-odegaard", nome: "Martin Ødegaard", anoNascimento: 1998, clube: "arsenal", posicao: "MC", idadeAposentadoria: 39, destinos: ["real-madrid", "inter"], chanceTransferencia: 0.1, pesoRanking: 2.9 },
+    { id: "phil-foden", nome: "Phil Foden", anoNascimento: 2000, clube: "manchester-city", posicao: "PD", idadeAposentadoria: 40, destinos: ["real-madrid", "bayern-munich"], chanceTransferencia: 0.1, pesoRanking: 3.0 },
+    { id: "rodri", nome: "Rodri", anoNascimento: 1996, clube: "manchester-city", posicao: "MC", idadeAposentadoria: 39, destinos: ["real-madrid", "inter"], chanceTransferencia: 0.1, pesoRanking: 3.3 },
+    { id: "ruben-dias", nome: "Rúben Dias", anoNascimento: 1997, clube: "manchester-city", posicao: "ZCD", idadeAposentadoria: 40, destinos: ["bayern-munich", "paris-saint-germain"], chanceTransferencia: 0.1, pesoRanking: 2.7 },
+    { id: "bernardo-silva", nome: "Bernardo Silva", anoNascimento: 1994, clube: "manchester-city", posicao: "MC", idadeAposentadoria: 39, destinos: ["barcelona", "benfica"], chanceTransferencia: 0.12, pesoRanking: 3.0 },
+    { id: "cole-palmer", nome: "Cole Palmer", anoNascimento: 2002, clube: "chelsea", posicao: "PD", idadeAposentadoria: 40, destinos: ["manchester-city", "real-madrid"], chanceTransferencia: 0.1, pesoRanking: 2.8 },
+    { id: "enzo-fernandez", nome: "Enzo Fernández", anoNascimento: 2001, clube: "chelsea", posicao: "MC", idadeAposentadoria: 40, destinos: ["real-madrid", "inter"], chanceTransferencia: 0.12, pesoRanking: 2.8 },
+    { id: "reece-james", nome: "Reece James", anoNascimento: 1999, clube: "chelsea", posicao: "LD", idadeAposentadoria: 38, destinos: ["real-madrid", "bayern-munich"], chanceTransferencia: 0.1, pesoRanking: 2.5 },
+    { id: "bruno-fernandes", nome: "Bruno Fernandes", anoNascimento: 1994, clube: "manchester-united", posicao: "MC", idadeAposentadoria: 39, destinos: ["inter", "bayern-munich"], chanceTransferencia: 0.12, pesoRanking: 2.9 },
+    { id: "kobbie-mainoo", nome: "Kobbie Mainoo", anoNascimento: 2005, clube: "manchester-united", posicao: "MC", idadeAposentadoria: 40, destinos: ["real-madrid", "barcelona"], chanceTransferencia: 0.12, pesoRanking: 2.7 },
+    { id: "james-maddison", nome: "James Maddison", anoNascimento: 1996, clube: "tottenham", posicao: "MC", idadeAposentadoria: 39, destinos: ["manchester-united", "aston-villa"], chanceTransferencia: 0.12, pesoRanking: 2.6 },
+    { id: "micky-van-de-ven", nome: "Micky van de Ven", anoNascimento: 2001, clube: "tottenham", posicao: "ZCE", idadeAposentadoria: 40, destinos: ["liverpool", "bayern-munich"], chanceTransferencia: 0.12, pesoRanking: 2.6 },
+    { id: "dominic-solanke", nome: "Dominic Solanke", anoNascimento: 1997, clube: "tottenham", posicao: "CA", idadeAposentadoria: 39, destinos: ["liverpool", "aston-villa"], chanceTransferencia: 0.1, pesoRanking: 2.6 },
+    { id: "bruno-guimaraes", nome: "Bruno Guimarães", anoNascimento: 1997, clube: "newcastle", posicao: "MC", idadeAposentadoria: 40, destinos: ["manchester-city", "paris-saint-germain"], chanceTransferencia: 0.12, pesoRanking: 2.8 },
+    { id: "anthony-gordon", nome: "Anthony Gordon", anoNascimento: 2001, clube: "newcastle", posicao: "PE", idadeAposentadoria: 39, destinos: ["liverpool", "manchester-city"], chanceTransferencia: 0.12, pesoRanking: 2.7 },
+    { id: "sandro-tonali", nome: "Sandro Tonali", anoNascimento: 2000, clube: "newcastle", posicao: "MC", idadeAposentadoria: 40, destinos: ["milan", "juventus"], chanceTransferencia: 0.12, pesoRanking: 2.7 },
+    { id: "ollie-watkins", nome: "Ollie Watkins", anoNascimento: 1995, clube: "aston-villa", posicao: "CA", idadeAposentadoria: 39, destinos: ["arsenal", "manchester-united"], chanceTransferencia: 0.1, pesoRanking: 2.7 },
+    { id: "emiliano-martinez", nome: "Emiliano Martínez", anoNascimento: 1992, clube: "aston-villa", posicao: "GOL", idadeAposentadoria: 40, destinos: ["manchester-united", "inter"], chanceTransferencia: 0.1, pesoRanking: 2.5 },
+    { id: "thibaut-courtois", nome: "Thibaut Courtois", anoNascimento: 1992, clube: "real-madrid", posicao: "GOL", idadeAposentadoria: 40, destinos: ["chelsea", "bayern-munich"], chanceTransferencia: 0.08, pesoRanking: 2.6 },
+    { id: "federico-valverde", nome: "Federico Valverde", anoNascimento: 1998, clube: "real-madrid", posicao: "MC", idadeAposentadoria: 40, destinos: ["manchester-city", "liverpool"], chanceTransferencia: 0.1, pesoRanking: 3.0 },
+    { id: "eduardo-camavinga", nome: "Eduardo Camavinga", anoNascimento: 2002, clube: "real-madrid", posicao: "MC", idadeAposentadoria: 40, destinos: ["paris-saint-germain", "liverpool"], chanceTransferencia: 0.12, pesoRanking: 2.9 },
+    { id: "aurelien-tchouameni", nome: "Aurélien Tchouaméni", anoNascimento: 2000, clube: "real-madrid", posicao: "MC", idadeAposentadoria: 40, destinos: ["liverpool", "paris-saint-germain"], chanceTransferencia: 0.1, pesoRanking: 2.9 },
+    { id: "arda-guler", nome: "Arda Güler", anoNascimento: 2005, clube: "real-madrid", posicao: "MC", idadeAposentadoria: 40, destinos: ["liverpool", "manchester-city"], chanceTransferencia: 0.12, pesoRanking: 2.6 },
+    { id: "raphinha", nome: "Raphinha", anoNascimento: 1996, clube: "barcelona", posicao: "PD", idadeAposentadoria: 39, destinos: ["paris-saint-germain", "arsenal"], chanceTransferencia: 0.1, pesoRanking: 2.8 },
+    { id: "gavi", nome: "Gavi", anoNascimento: 2004, clube: "barcelona", posicao: "MC", idadeAposentadoria: 40, destinos: ["manchester-city", "bayern-munich"], chanceTransferencia: 0.12, pesoRanking: 2.8 },
+    { id: "dani-olmo", nome: "Dani Olmo", anoNascimento: 1998, clube: "barcelona", posicao: "MC", idadeAposentadoria: 39, destinos: ["manchester-city", "bayern-munich"], chanceTransferencia: 0.1, pesoRanking: 2.8 },
+    { id: "ronald-araujo", nome: "Ronald Araújo", anoNascimento: 1999, clube: "barcelona", posicao: "ZCD", idadeAposentadoria: 40, destinos: ["manchester-united", "bayern-munich"], chanceTransferencia: 0.1, pesoRanking: 2.8 },
+    { id: "jules-kounde", nome: "Jules Koundé", anoNascimento: 1998, clube: "barcelona", posicao: "LD", idadeAposentadoria: 39, destinos: ["chelsea", "paris-saint-germain"], chanceTransferencia: 0.1, pesoRanking: 2.7 },
+    { id: "jan-oblak", nome: "Jan Oblak", anoNascimento: 1993, clube: "atletico-madrid", posicao: "GOL", idadeAposentadoria: 40, destinos: ["paris-saint-germain", "inter"], chanceTransferencia: 0.08, pesoRanking: 2.7 },
+    { id: "julian-alvarez", nome: "Julián Álvarez", anoNascimento: 2000, clube: "atletico-madrid", posicao: "CA", idadeAposentadoria: 40, destinos: ["manchester-city", "barcelona"], chanceTransferencia: 0.12, pesoRanking: 3.4 },
+    { id: "antoine-griezmann", nome: "Antoine Griezmann", anoNascimento: 1991, clube: "atletico-madrid", posicao: "CA", idadeAposentadoria: 39, destinos: ["real-madrid", "inter-miami"], chanceTransferencia: 0.1, pesoRanking: 3.0 },
+    { id: "manuel-neuer", nome: "Manuel Neuer", anoNascimento: 1986, clube: "bayern-munich", posicao: "GOL", idadeAposentadoria: 41, destinos: ["real-madrid", "inter"], chanceTransferencia: 0.06, pesoRanking: 3.1 },
+    { id: "sergio-ramos", nome: "Sergio Ramos", anoNascimento: 1986, clube: "real-madrid", posicao: "ZCD", idadeAposentadoria: 40, destinos: ["paris-saint-germain", "inter-miami"], chanceTransferencia: 0.09, pesoRanking: 3.1 },
+    { id: "marquinhos", nome: "Marquinhos", anoNascimento: 1994, clube: "paris-saint-germain", posicao: "ZCD", idadeAposentadoria: 40, destinos: ["barcelona", "real-madrid"], chanceTransferencia: 0.08, pesoRanking: 3.2 },
+    { id: "gianluigi-donnarumma", nome: "Gianluigi Donnarumma", anoNascimento: 1999, clube: "paris-saint-germain", posicao: "GOL", idadeAposentadoria: 40, destinos: ["real-madrid", "manchester-city"], chanceTransferencia: 0.08, pesoRanking: 3.2 },
+    { id: "antonio-rudiger", nome: "Antonio Rüdiger", anoNascimento: 1993, clube: "real-madrid", posicao: "ZCD", idadeAposentadoria: 40, destinos: ["chelsea", "bayern-munich"], chanceTransferencia: 0.08, pesoRanking: 2.9 },
+    { id: "david-alaba", nome: "David Alaba", anoNascimento: 1992, clube: "real-madrid", posicao: "ZCD", idadeAposentadoria: 39, destinos: ["bayern-munich", "inter"], chanceTransferencia: 0.09, pesoRanking: 2.9 },
+    { id: "joao-cancelo", nome: "João Cancelo", anoNascimento: 1994, clube: "manchester-city", posicao: "LD", idadeAposentadoria: 39, destinos: ["real-madrid", "barcelona"], chanceTransferencia: 0.12, pesoRanking: 2.9 },
+    { id: "kim-min-jae", nome: "Kim Min-jae", anoNascimento: 1996, clube: "bayern-munich", posicao: "ZCD", idadeAposentadoria: 40, destinos: ["inter", "real-madrid"], chanceTransferencia: 0.1, pesoRanking: 2.8 },
+    { id: "jamal-musiala", nome: "Jamal Musiala", anoNascimento: 2003, clube: "bayern-munich", posicao: "PE", idadeAposentadoria: 40, destinos: ["real-madrid", "manchester-city"], chanceTransferencia: 0.1, pesoRanking: 3.6 },
+    { id: "joshua-kimmich", nome: "Joshua Kimmich", anoNascimento: 1995, clube: "bayern-munich", posicao: "MC", idadeAposentadoria: 40, destinos: ["real-madrid", "manchester-city"], chanceTransferencia: 0.1, pesoRanking: 3.2 },
+    { id: "osimhen", nome: "Victor Osimhen", anoNascimento: 1998, clube: "napoli", posicao: "CA", idadeAposentadoria: 39, destinos: ["real-madrid", "paris-saint-germain"], chanceTransferencia: 0.12, pesoRanking: 3.7 },
+    { id: "dusan-vlahovic", nome: "Dušan Vlahović", anoNascimento: 2000, clube: "juventus", posicao: "CA", idadeAposentadoria: 39, destinos: ["real-madrid", "manchester-city"], chanceTransferencia: 0.12, pesoRanking: 3.1 },
+    { id: "alexander-isak", nome: "Alexander Isak", anoNascimento: 1999, clube: "newcastle", posicao: "CA", idadeAposentadoria: 40, destinos: ["arsenal", "liverpool"], chanceTransferencia: 0.12, pesoRanking: 3.2 },
+    { id: "heung-min-son", nome: "Heung-Min Son", anoNascimento: 1992, clube: "tottenham", posicao: "PE", idadeAposentadoria: 39, destinos: ["al-nassr", "inter-miami"], chanceTransferencia: 0.1, pesoRanking: 3.0 },
+    { id: "kieran-trippier", nome: "Kieran Trippier", anoNascimento: 1990, clube: "newcastle", posicao: "LD", idadeAposentadoria: 39, destinos: ["arsenal", "real-madrid"], chanceTransferencia: 0.08, pesoRanking: 2.6 },
+    { id: "martinelli", nome: "Gabriel Martinelli", anoNascimento: 2001, clube: "arsenal", posicao: "PE", idadeAposentadoria: 39, destinos: ["barcelona", "manchester-city"], chanceTransferencia: 0.12, pesoRanking: 2.9 },
+    { id: "gabriel-jesus", nome: "Gabriel Jesus", anoNascimento: 1997, clube: "arsenal", posicao: "CA", idadeAposentadoria: 39, destinos: ["inter", "milan"], chanceTransferencia: 0.1, pesoRanking: 2.9 },
+    { id: "ivan-toney", nome: "Ivan Toney", anoNascimento: 1996, clube: "brentford", posicao: "CA", idadeAposentadoria: 38, destinos: ["arsenal", "chelsea"], chanceTransferencia: 0.1, pesoRanking: 2.7 },
+    { id: "sergio-busquets", nome: "Sergio Busquets", anoNascimento: 1988, clube: "inter-miami", posicao: "MC", idadeAposentadoria: 40, destinos: ["barcelona", "real-madrid"], chanceTransferencia: 0.08, pesoRanking: 2.8 },
+    { id: "alvaro-morata", nome: "Álvaro Morata", anoNascimento: 1992, clube: "milan", posicao: "CA", idadeAposentadoria: 39, destinos: ["barcelona", "inter"], chanceTransferencia: 0.1, pesoRanking: 2.8 },
+    { id: "franck-kessie", nome: "Franck Kessié", anoNascimento: 1996, clube: "barcelona", posicao: "MC", idadeAposentadoria: 40, destinos: ["milan", "al-nassr"], chanceTransferencia: 0.12, pesoRanking: 2.8 },
+    { id: "khvicha-kvaratskhelia", nome: "Khvicha Kvaratskhelia", anoNascimento: 2001, clube: "napoli", posicao: "PE", idadeAposentadoria: 40, destinos: ["paris-saint-germain", "real-madrid"], chanceTransferencia: 0.12, pesoRanking: 3.3 },
+    { id: "sadio-mane", nome: "Sadio Mané", anoNascimento: 1992, clube: "al-nassr", posicao: "PE", idadeAposentadoria: 39, destinos: ["liverpool", "bayern-munich"], chanceTransferencia: 0.1, pesoRanking: 3.1 },
+    { id: "michael-olise", nome: "Michael Olise", anoNascimento: 2001, clube: "chelsea", posicao: "PE", idadeAposentadoria: 40, destinos: ["manchester-city", "real-madrid"], chanceTransferencia: 0.12, pesoRanking: 3.1 },
+    { id: "pedro-neto", nome: "Pedro Neto", anoNascimento: 2000, clube: "chelsea", posicao: "PE", idadeAposentadoria: 39, destinos: ["arsenal", "manchester-city"], chanceTransferencia: 0.12, pesoRanking: 2.7 },
+    { id: "leo-paredes", nome: "Leandro Paredes", anoNascimento: 1994, clube: "paris-saint-germain", posicao: "MC", idadeAposentadoria: 39, destinos: ["inter", "juventus"], chanceTransferencia: 0.09, pesoRanking: 2.7 },
+    { id: "ruben-neves", nome: "Rúben Neves", anoNascimento: 1997, clube: "al-nassr", posicao: "MC", idadeAposentadoria: 39, destinos: ["barcelona", "manchester-city"], chanceTransferencia: 0.1, pesoRanking: 2.8 },
+    { id: "samuel-umtiti", nome: "Samuel Umtiti", anoNascimento: 1993, clube: "inter-miami", posicao: "ZCD", idadeAposentadoria: 38, destinos: ["barcelona", "milan"], chanceTransferencia: 0.08, pesoRanking: 2.6 },
+    { id: "milan-skriniar", nome: "Milan Škriniar", anoNascimento: 1995, clube: "inter", posicao: "ZCD", idadeAposentadoria: 39, destinos: ["real-madrid", "paris-saint-germain"], chanceTransferencia: 0.1, pesoRanking: 2.8 },
+    { id: "nicolas-otamendi", nome: "Nicolás Otamendi", anoNascimento: 1988, clube: "inter-miami", posicao: "ZCD", idadeAposentadoria: 40, destinos: ["benfica", "porto"], chanceTransferencia: 0.08, pesoRanking: 2.5 },
+    { id: "jordan-henderson", nome: "Jordan Henderson", anoNascimento: 1990, clube: "al-nassr", posicao: "MC", idadeAposentadoria: 38, destinos: ["liverpool", "newcastle"], chanceTransferencia: 0.08, pesoRanking: 2.6 },
+  ];
+
   function hashIdentificador(texto) {
     return Array.from(String(texto)).reduce(
       (hash, caractere) => (hash * 31 + caractere.charCodeAt(0)) >>> 0,
@@ -4201,11 +4295,40 @@
 
   function criarElencoLiga(clube) {
     const base = hashIdentificador(clube.id);
-    return POSICOES_ELENCO_LIGA.map((posicao, indice) => ({
+    const elenco = POSICOES_ELENCO_LIGA.map((posicao, indice) => ({
       id: `liga:${estado.ano}:${clube.id}:${indice}`,
       nome: `${NOMES_JOGADORES_LIGA[(base + indice * 5) % NOMES_JOGADORES_LIGA.length]} ${SOBRENOMES_JOGADORES_LIGA[(base + indice * 11) % SOBRENOMES_JOGADORES_LIGA.length]}`,
       posicao,
       clubeId: clube.id,
+    }));
+    return elenco.concat(obterJogadoresReaisDoClube(clube.id, estado.ano));
+  }
+
+  function clubeJogadorRealNaTemporada(jogador, ano) {
+    const anoAposentadoria = jogador.anoNascimento + jogador.idadeAposentadoria;
+    if (ano < 2026 || ano > anoAposentadoria) return "";
+
+    let clubeId = jogador.clube;
+    for (let anoTransferencia = 2027; anoTransferencia <= ano; anoTransferencia++) {
+      const sortear = criarSorteadorRanking(`${jogador.id}:${anoTransferencia}`);
+      if (sortear() >= jogador.chanceTransferencia) continue;
+      const destinos = [...new Set([jogador.clube, ...jogador.destinos])]
+        .filter((id) => id !== clubeId && CLUBES.some((clube) => clube.id === id));
+      if (destinos.length) clubeId = destinos[Math.floor(sortear() * destinos.length)];
+    }
+    return clubeId;
+  }
+
+  function obterJogadoresReaisDoClube(clubeId, ano) {
+    return JOGADORES_REAIS.filter(
+      (jogador) => clubeJogadorRealNaTemporada(jogador, Number(ano)) === clubeId,
+    ).map((jogador) => ({
+      id: `real:${jogador.id}`,
+      nome: jogador.nome,
+      posicao: jogador.posicao,
+      clubeId,
+      idade: Number(ano) - jogador.anoNascimento,
+      pesoRanking: Number(jogador.pesoRanking) || 1,
     }));
   }
 
@@ -4221,6 +4344,9 @@
     clubesLiga.forEach((clube) => {
       if (!Array.isArray(estado.elencosLiga[clube.id]) || !estado.elencosLiga[clube.id].length)
         estado.elencosLiga[clube.id] = criarElencoLiga(clube);
+      estado.elencosLiga[clube.id] = estado.elencosLiga[clube.id]
+        .filter((jogador) => !String(jogador.id).startsWith("real:"))
+        .concat(obterJogadoresReaisDoClube(clube.id, estado.ano));
     });
 
     const elencoMeuClube = estado.elencosLiga[estado.clubeId];
@@ -4413,11 +4539,16 @@
     const jogadores = new Map();
     const pesosGols = { GOL: 0.01, ZCE: 0.18, ZCD: 0.18, LE: 0.28, LD: 0.28, ME: 0.8, MC: 0.7, MD: 0.8, PE: 2.2, CA: 3.2, PD: 2.2 };
     const pesosAssistencias = { GOL: 0.05, ZCE: 0.25, ZCD: 0.25, LE: 0.65, LD: 0.65, ME: 2.6, MC: 2.2, MD: 2.6, PE: 1.8, CA: 0.7, PD: 1.8 };
+    const calcularPesoRanking = (jogador, pesos) => {
+      const pesoBase = pesos[jogador.posicao] || 1;
+      const multiplicadorReal = Number(jogador.pesoRanking) || 1;
+      return pesoBase * multiplicadorReal;
+    };
     const escolherJogador = (elenco, pesos, aleatorio) => {
-      const pesoTotal = elenco.reduce((total, jogador) => total + (pesos[jogador.posicao] || 1), 0);
+      const pesoTotal = elenco.reduce((total, jogador) => total + calcularPesoRanking(jogador, pesos), 0);
       let sorteio = aleatorio() * pesoTotal;
       for (const jogador of elenco) {
-        sorteio -= pesos[jogador.posicao] || 1;
+        sorteio -= calcularPesoRanking(jogador, pesos);
         if (sorteio < 0) return jogador;
       }
       return elenco[elenco.length - 1];
