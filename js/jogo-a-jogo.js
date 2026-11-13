@@ -5370,7 +5370,7 @@
         disponibilidade.amarelos[chaveEquipe] = 0;
         estado.eventos.push({
           tipo: "cartao-vermelho",
-          jogo: partida.numero,
+          jogo: estado.estatisticas.jogos,
           jogosPerdidos: jogosSuspensao,
         });
         jogosSuspensaoCartao = jogosSuspensao;
@@ -5391,7 +5391,7 @@
           disponibilidade.amarelos[chaveEquipe] = 0;
           estado.eventos.push({
             tipo: "suspensao-amarelos",
-            jogo: partida.numero,
+            jogo: estado.estatisticas.jogos,
             jogosPerdidos: 1,
           });
           jogosSuspensaoCartao = 1;
@@ -5550,7 +5550,7 @@
         );
         estado.eventos.push({
           tipo: tipoLesao,
-          jogo: partida.numero,
+          jogo: estado.estatisticas.jogos,
           jogosPerdidos: jogosLesao,
         });
         eventoLesaoAtual = { tipo: tipoLesao, jogosPerdidos: jogosLesao };
@@ -5585,9 +5585,15 @@
     };
     estado.eventos = estado.eventos || [];
     if (hatTrick)
-      estado.eventos.push({ tipo: "hat-trick", jogo: partida.numero });
+      estado.eventos.push({
+        tipo: "hat-trick",
+        jogo: estado.estatisticas.jogos,
+      });
     if (amarelo)
-      estado.eventos.push({ tipo: "cartao-amarelo", jogo: partida.numero });
+      estado.eventos.push({
+        tipo: "cartao-amarelo",
+        jogo: estado.estatisticas.jogos,
+      });
     estado.feed.unshift({
       titulo: `${partida.competicao} · ${resumo}`,
       texto: detalhes,
