@@ -754,6 +754,9 @@
   let fluxoDecisao = null;
   let loadingEl = null;
   let filaModaisPartida = [];
+  let simulandoTemporada = false;
+  let adiarPromocaoBaseAteFim = false;
+  let promocaoBasePendente = null;
 
   function mostrarCarregamento(texto = "Simulando...") {
     if (!loadingEl) {
@@ -5642,8 +5645,10 @@
       }
     }
 
-    salvar();
-    renderizar();
+    if (!opcoesPenaltis?.simulacaoEmLote) {
+      salvar();
+      renderizar();
+    }
 
     // NOVO: se acabaram os seus jogos, mas a IA tem jogos pendentes, simula a IA na hora
     const temJogoMeu = estado.partidas.some(
@@ -6785,34 +6790,71 @@
       if (!confirmado) return;
     }
 
-    if (!simulacaoAutomatica) bloquearAcoesPartida();
+    if (comLoading) await mostrarCarregamento("Simulando o restante da temporada...");
+    simulandoTemporada = true;
+    adiarPromocaoBaseAteFim = !simulacaoAutomatica && !simulandoCarreira;
+    promocaoBasePendente = null;
+    bloqueioAcoesPartida = true;
 
-    let indice;
-    // ALTERAÇÃO AQUI: adicionado "&& p.tipo !== 'grupo-ia'" no while
-    while (
-      (indice = estado.partidas.findIndex(
-        (p) => p.status === "agendada" && !ehPartidaDeIA(p),
-      )) >= 0
-    ) {
-      const partida = estado.partidas[indice];
-      // Pênaltis em modo automático (sem interação e sem animação)
-      await simularPartida(indice, false, null, { interativo: false });
-      if (partida.status === "agendada") {
-        informar(
-          "A simulação foi interrompida porque um jogo do calendário não pôde ser resolvido.",
-          true,
-        );
-        return;
+    try {
+      let indice;
+      let partidasSimuladas = 0;
+      while (
+        (indice = estado.partidas.findIndex(
+          (p) => p.status === "agendada" && !ehPartidaDeIA(p),
+        )) >= 0
+      ) {
+        const partida = estado.partidas[indice];
+        await simularPartida(indice, false, null, {
+          interativo: false,
+          simulacaoEmLote: true,
+        });
+        if (partida.status === "agendada") {
+          informar(
+            "A simulação foi interrompida porque um jogo do calendário não pôde ser resolvido.",
+            true,
+          );
+          return;
+        }
+        partidasSimuladas++;
+        if (partidasSimuladas % 20 === 0) {
+          salvar();
+          await new Promise((resolver) => requestAnimationFrame(resolver));
+        }
       }
+
+      salvar();
+      if (
+        !estado.partidas.some((p) => p.status === "agendada") &&
+        !estado.salvaOficialmente
+      )
+        await finalizarTemporadaOficial();
+    } finally {
+      bloqueioAcoesPartida = false;
+      simulandoTemporada = false;
+      adiarPromocaoBaseAteFim = false;
+      if (comLoading) ocultarCarregamento();
+      renderizar();
     }
 
-    salvar();
-    renderizar();
-    if (
-      !estado.partidas.some((p) => p.status === "agendada") &&
-      !estado.salvaOficialmente
-    )
-      await finalizarTemporadaOficial();
+    if (promocaoBasePendente) {
+      const promocao = promocaoBasePendente;
+      promocaoBasePendente = null;
+      const aceitou = await perguntarPromocaoDaBase(
+        promocao.temporada,
+        promocao.clubeBase,
+      );
+      if (aceitou) {
+        const carreira =
+          typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : {};
+        if (String(carreira.id) === String(promocao.carreiraId)) {
+          carreira.subiuProfissional = true;
+          carreira.clubeBaseDestinoPendente = "";
+          if (typeof salvarCarreiraAtual === "function")
+            salvarCarreiraAtual(carreira);
+        }
+      }
+    }
 
     // ─── NOVO: processar fila (troféus conquistados em auto-simulação) ───
     if (!simulacaoAutomatica && filaModaisPartida.length > 0) {
@@ -7078,15 +7120,24 @@
       const promovidoAgora =
         destaqueBase &&
         (simulandoCarreira ||
-          (await perguntarPromocaoDaBase(
-            temporada,
-            obterClube(estado.clubeId),
-          )));
+          (simulandoTemporada && !adiarPromocaoBaseAteFim) ||
+          (!simulandoTemporada &&
+            (await perguntarPromocaoDaBase(
+              temporada,
+              obterClube(estado.clubeId),
+            ))));
+      if (destaqueBase && adiarPromocaoBaseAteFim) {
+        promocaoBasePendente = {
+          temporada,
+          clubeBase: obterClube(estado.clubeId),
+          carreiraId: estado.carreiraId,
+        };
+      }
       if (promovidoAgora) carreira.subiuProfissional = true;
       let aposentarPorLimiteBase = false;
       if (!promovidoAgora && temporada.base && estado.idade >= 20) {
         const clubeDestino = sortearClubeFracoDaLigaDaBase(temporada.clube);
-        const decisao = simulandoCarreira
+        const decisao = simulandoCarreira || simulandoTemporada
           ? "destino"
           : await perguntarDestinoOuAposentadoriaBase(temporada, clubeDestino);
         if (decisao === "destino" && clubeDestino) {
@@ -8326,7 +8377,7 @@
       .addEventListener?.("change", ajustarAccordionsMobile);
     $("jja-iniciar")?.addEventListener("click", iniciarOuAvancar);
     $("jja-simular-restantes")?.addEventListener("click", () =>
-      simularRestantes(false),
+      simularRestantes(false, true),
     );
     $("jja-simular-carreira")?.addEventListener("click", () =>
       simularFimCarreira(),
