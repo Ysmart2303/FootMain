@@ -3683,7 +3683,31 @@
       if (!Number.isFinite(Number(carreira.rompimentosContratoUsados)))
         carreira.rompimentosContratoUsados = 0;
 
-      if (temporadaInicial && simulandoCarreira && carreira.subiuProfissional) {
+      if (simulandoCarreira && carreira.clubeBaseDestinoPendente) {
+        const clubeDestino = obterClube(carreira.clubeBaseDestinoPendente);
+        if (!clubeDestino)
+          throw new Error("O clube escolhido para sair da base não existe mais.");
+        contratoEscolhido = criarOfertaContrato(
+          clubeDestino,
+          idade,
+          idadeLimite,
+          ultimaTemporada,
+          historicoCarreira,
+        );
+        contratoEscolhido = await confirmarContratoFechado(
+          contratoEscolhido,
+          ultimaTemporada?.clube || carreira.clube,
+        );
+        clubeId = contratoEscolhido.clube;
+        carreira.clube = clubeId;
+        carreira.subiuProfissional = true;
+        carreira.clubeBaseDestinoPendente = "";
+        carreira.anosContratoRestantes = Math.max(
+          0,
+          Number(contratoEscolhido.anosContrato) || 0,
+        );
+        carreira.salarioAtual = Number(contratoEscolhido.salarioProposto) || 0;
+      } else if (temporadaInicial && simulandoCarreira && carreira.subiuProfissional) {
         const clubesOfertados = sortearClubesParaCarreira(
           3,
           "",
@@ -3726,7 +3750,7 @@
         carreira.salarioAtual = Number(contratoEscolhido.salarioProposto) || 0;
       } else if (temporadaInicial) {
         contratoEscolhido = await escolherContratoParaTemporada(
-          "",
+          ultimaTemporada?.clube || carreira.clube,
           true,
           idade,
           idadeLimite,
@@ -4007,6 +4031,7 @@
           : `carreira-${Date.now()}`;
       carreira.clube = "";
       carreira.clubeAlvo = "";
+      carreira.clubeBaseDestinoPendente = "";
       carreira.anosContratoRestantes = 0;
       carreira.rompimentosContratoUsados = 0;
       carreira.salarioAtual = 0;
@@ -6438,6 +6463,18 @@
             obterClube(estado.clubeId),
           )));
       if (promovidoAgora) carreira.subiuProfissional = true;
+      let aposentarPorLimiteBase = false;
+      if (!promovidoAgora && temporada.base && estado.idade >= 20) {
+        const clubeDestino = sortearClubeFracoDaLigaDaBase(temporada.clube);
+        const decisao = simulandoCarreira
+          ? "destino"
+          : await perguntarDestinoOuAposentadoriaBase(temporada, clubeDestino);
+        if (decisao === "destino" && clubeDestino) {
+          carreira.clubeBaseDestinoPendente = clubeDestino.id;
+        } else {
+          aposentarPorLimiteBase = true;
+        }
+      }
       carreira.anosContratoRestantes = Math.max(
         0,
         (Number(carreira.anosContratoRestantes) || 0) - 1,
@@ -6506,6 +6543,10 @@
           [...historicoCarreira, temporada],
           temporada.posicao,
         );
+      }
+      if (aposentarPorLimiteBase && typeof aposentarVoluntariamente === "function") {
+        await aposentarVoluntariamente(true);
+        renderizar();
       }
       limparInformacao();
     } catch (erro) {

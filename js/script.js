@@ -106,6 +106,22 @@ function jogadorMerecePromocaoDaBase(temporada) {
   return participacoes >= 10 || (venceuCopinha && destaqueCopinha);
 }
 
+function sortearClubeFracoDaLigaDaBase(clubeBaseId) {
+  const clubeBase = CLUBES_BASE.find((clube) => clube.id === clubeBaseId);
+  const clubeReferencia = obterClube(clubeBase?.clubePrincipal);
+  if (!clubeReferencia) return null;
+  const potencias = getConfig().clubes?.potencias || {};
+  const clubesFracos = CLUBES.filter(
+    (clube) => clube.tipo !== "base" && clube.liga === clubeReferencia.liga,
+  )
+    .sort(
+      (a, b) =>
+        (Number(potencias[a.id]) || 60) - (Number(potencias[b.id]) || 60),
+    )
+    .slice(0, 5);
+  return clubesFracos[Math.floor(Math.random() * clubesFracos.length)] || null;
+}
+
 function obterOfertaBase(clube, temporadaAnterior = null) {
   return {
     ...clube,
@@ -1140,6 +1156,7 @@ function obterCarreiraAtual() {
     nacionalidade: "",
     baseClube: "",
     subiuProfissional: false,
+    clubeBaseDestinoPendente: "",
     clubeAlvo: "",
     anosContratoRestantes: 0,
     rompimentosContratoUsados: 0,
@@ -1190,6 +1207,10 @@ function obterCarreiraAtual() {
         typeof carreira.subiuProfissional === "boolean"
           ? carreira.subiuProfissional
           : !!carreira.clube && !ehClubeBase(carreira.clube),
+      clubeBaseDestinoPendente:
+        obterClube(carreira.clubeBaseDestinoPendente)?.tipo !== "base"
+          ? obterClube(carreira.clubeBaseDestinoPendente)?.id || ""
+          : "",
       clubeAlvo: !ehClubeBase(carreira.clubeAlvo)
         ? obterClube(carreira.clubeAlvo)?.id || ""
         : "",
@@ -1266,6 +1287,10 @@ function salvarCarreiraAtual(carreira) {
         ? carreiraAtual.baseClube
         : "",
       subiuProfissional: !!carreiraAtual.subiuProfissional,
+      clubeBaseDestinoPendente:
+        obterClube(carreiraAtual.clubeBaseDestinoPendente)?.tipo !== "base"
+          ? obterClube(carreiraAtual.clubeBaseDestinoPendente)?.id || ""
+          : "",
       clubeAlvo: !ehClubeBase(carreiraAtual.clubeAlvo)
         ? obterClube(carreiraAtual.clubeAlvo)?.id || ""
         : "",
@@ -5447,6 +5472,74 @@ function perguntarPromocaoDaBase(temporada, clubeBase) {
   });
 }
 
+function perguntarDestinoOuAposentadoriaBase(temporada, clubeDestino) {
+  const overlay = document.getElementById("modal-confirmacao");
+  const tituloEl = document.getElementById("modal-titulo");
+  const mensagemEl = document.getElementById("modal-mensagem");
+  const btnAposentar = document.getElementById("modal-cancelar");
+  const btnDestino = document.getElementById("modal-confirmar");
+  const opcoesEl = document.getElementById("modal-opcoes-clube");
+  const filtroLiga = document.getElementById("filtro-liga-clube-alvo");
+  const icone = overlay?.querySelector(".modal-icone");
+
+  if (!overlay || !tituloEl || !mensagemEl || !btnAposentar || !btnDestino) {
+    return Promise.resolve(
+      window.confirm(
+        `A formação Sub-20 terminou. Ir para ${clubeDestino?.nome || "um clube mais fraco"}? (Cancelar = aposentar)`,
+      )
+        ? "destino"
+        : "aposentar",
+    );
+  }
+
+  return new Promise((resolve) => {
+    const estadoAnterior = {
+      titulo: tituloEl.textContent,
+      mensagem: mensagemEl.textContent,
+      aposentar: btnAposentar.textContent,
+      destino: btnDestino.textContent,
+      classeDestino: btnDestino.className,
+      icone: icone?.textContent,
+      opcoesOcultas: opcoesEl?.hidden,
+      filtroOculto: filtroLiga?.hidden,
+    };
+    const fechar = (decisao) => {
+      overlay.hidden = true;
+      btnAposentar.removeEventListener("click", aoAposentar);
+      btnDestino.removeEventListener("click", aoDestino);
+      document.removeEventListener("keydown", aoTeclar);
+      tituloEl.textContent = estadoAnterior.titulo;
+      mensagemEl.textContent = estadoAnterior.mensagem;
+      btnAposentar.textContent = estadoAnterior.aposentar;
+      btnDestino.textContent = estadoAnterior.destino;
+      btnDestino.className = estadoAnterior.classeDestino;
+      if (icone) icone.textContent = estadoAnterior.icone;
+      if (opcoesEl) opcoesEl.hidden = estadoAnterior.opcoesOcultas;
+      if (filtroLiga) filtroLiga.hidden = estadoAnterior.filtroOculto;
+      resolve(decisao);
+    };
+    const aoAposentar = () => fechar("aposentar");
+    const aoDestino = () => fechar("destino");
+    const aoTeclar = (evento) => {
+      if (evento.key === "Enter") aoDestino();
+    };
+
+    tituloEl.textContent = "Fim da formação Sub-20";
+    mensagemEl.textContent = `${temporada.nome} chegou aos ${temporada.idade} anos sem promoção. Você pode iniciar no ${clubeDestino?.nome || "um dos clubes mais fracos da liga"} na próxima temporada ou encerrar a carreira agora.`;
+    btnAposentar.textContent = "Aposentar carreira";
+    btnDestino.textContent = `Ir para ${clubeDestino?.nome || "outro clube"}`;
+    btnDestino.className = "modal-btn modal-btn--confirmar modal-btn--promocao";
+    if (icone) icone.textContent = "⚽";
+    if (opcoesEl) opcoesEl.hidden = true;
+    if (filtroLiga) filtroLiga.hidden = true;
+    btnAposentar.addEventListener("click", aoAposentar);
+    btnDestino.addEventListener("click", aoDestino);
+    document.addEventListener("keydown", aoTeclar);
+    overlay.hidden = false;
+    btnDestino.focus();
+  });
+}
+
 function exibirEscolhaClube(
   opcoes,
   titulo,
@@ -5750,10 +5843,15 @@ async function confirmarContratoFechado(
   clubeAnterior = "",
   contratoAtivo = false,
 ) {
-  if (!contrato || (contratoAtivo && contrato.clube === clubeAnterior))
-    return contrato;
-  await exibirConfirmacaoContrato(contrato);
-  return contrato;
+  if (!contrato) return contrato;
+  const contratoNormalizado = {
+    ...contrato,
+    clube: contrato.clube || contrato.id || "",
+  };
+  if (contratoAtivo && contratoNormalizado.clube === clubeAnterior)
+    return contratoNormalizado;
+  await exibirConfirmacaoContrato(contratoNormalizado);
+  return contratoNormalizado;
 }
 
 async function escolherContratoParaTemporada(
@@ -5764,6 +5862,29 @@ async function escolherContratoParaTemporada(
   carreiraAtual,
   clubePreferidoExtra = "",
 ) {
+  if (carreiraAtual.clubeBaseDestinoPendente) {
+    const clubeDestino = obterClube(carreiraAtual.clubeBaseDestinoPendente);
+    carreiraAtual.clubeBaseDestinoPendente = "";
+    if (clubeDestino) {
+      const historico = obterHistoricoDaCarreira(carreiraAtual.nome, {
+        nome: carreiraAtual.posicao,
+      });
+      const oferta = criarOfertaContrato(
+        clubeDestino,
+        idade,
+        idadeLimite,
+        historico[historico.length - 1] || null,
+        historico,
+      );
+      const contrato = await confirmarContratoFechado(
+        { ...oferta, rompeContrato: false },
+        clubeAtual,
+      );
+      if (contrato) carreiraAtual.subiuProfissional = true;
+      return contrato;
+    }
+  }
+
   if (!carreiraAtual.subiuProfissional) {
     const bases = obterBasesDaNacionalidade(carreiraAtual.nacionalidade);
     const baseInicial = bases.find(
@@ -6453,6 +6574,7 @@ async function gerar() {
       carreiraAtual.id = gerarIdRanking();
       carreiraAtual.clube = "";
       carreiraAtual.subiuProfissional = false;
+      carreiraAtual.clubeBaseDestinoPendente = "";
       carreiraAtual.anosContratoRestantes = 0;
       carreiraAtual.rompimentosContratoUsados = 0;
       carreiraAtual.aposentadoriaSelecao = false;
@@ -6462,6 +6584,7 @@ async function gerar() {
     if (historico.length === 0) {
       carreiraAtual.clube = "";
       carreiraAtual.subiuProfissional = false;
+      carreiraAtual.clubeBaseDestinoPendente = "";
       carreiraAtual.anosContratoRestantes = 0;
     }
     carreiraAtual.nome = nome;
@@ -6591,6 +6714,19 @@ async function gerar() {
         obterClube(contratoEscolhido.clube),
       ));
     if (promovidoAgora) carreiraAtual.subiuProfissional = true;
+    let aposentarPorLimiteBase = false;
+    if (!promovidoAgora && temporada.base && idade >= 20) {
+      const clubeDestino = sortearClubeFracoDaLigaDaBase(temporada.clube);
+      const decisao = await perguntarDestinoOuAposentadoriaBase(
+        temporada,
+        clubeDestino,
+      );
+      if (decisao === "destino" && clubeDestino) {
+        carreiraAtual.clubeBaseDestinoPendente = clubeDestino.id;
+      } else {
+        aposentarPorLimiteBase = true;
+      }
+    }
 
     // Persistir o salário negociado
     if (
@@ -6673,6 +6809,7 @@ async function gerar() {
         `💔 ${nome} sofreu uma lesão gravíssima e precisou encerrar a carreira aos ${idade} anos.`,
       );
     }
+    if (aposentarPorLimiteBase) await aposentarVoluntariamente(true);
   } catch (erro) {
     console.error("[FootMain] Erro em gerar():", erro);
     const detalhe =
@@ -6777,6 +6914,7 @@ async function simularTudo() {
       carreiraAtual.id = gerarIdRanking();
       carreiraAtual.clube = "";
       carreiraAtual.subiuProfissional = false;
+      carreiraAtual.clubeBaseDestinoPendente = "";
       carreiraAtual.anosContratoRestantes = 0;
       carreiraAtual.rompimentosContratoUsados = 0;
       carreiraAtual.aposentadoriaSelecao = false;
@@ -6807,6 +6945,7 @@ async function simularTudo() {
       historico = [];
       carreiraAtual.clube = "";
       carreiraAtual.subiuProfissional = false;
+      carreiraAtual.clubeBaseDestinoPendente = "";
       carreiraAtual.anosContratoRestantes = 0;
     }
     salvarCarreiraAtual(carreiraAtual);
@@ -6952,6 +7091,16 @@ async function simularTudo() {
             historico,
           );
         anosContratoRestantes = obterDuracaoContrato(idade + 1, idadeLimite);
+      } else if (temporada.base && idade >= 20) {
+        const clubeDestino = sortearClubeFracoDaLigaDaBase(temporada.clube);
+        if (clubeDestino) {
+          carreiraAtual.subiuProfissional = true;
+          clubeAtual = clubeDestino.id;
+          anosContratoRestantes = obterDuracaoContrato(
+            idade + 1,
+            idadeLimite,
+          );
+        }
       }
       if (temporada.base) carreiraAtual.baseClube = temporada.clube;
       idade = Number(historico[historico.length - 1].idade) + 1;
@@ -7206,7 +7355,7 @@ function configurarComparacao() {
 }
 
 async function aposentarVoluntariamente(jaConfirmada = false) {
-  if (processamentoEmAndamento) return;
+  if (processamentoEmAndamento && !jaConfirmada) return;
   const carreira = obterCarreiraAtual();
   const carreiraFinalizada = lerRanking().some(
     (c) => String(c.id) === String(carreira.id),
