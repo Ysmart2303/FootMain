@@ -13,6 +13,30 @@ const REGIOES_SELECOES = {
 };
 
 const OVERALL_PADRAO = 50;
+let footmainLoadingOverlay = null;
+
+async function mostrarCarregamentoFootMain(texto = "Processando...") {
+  if (!footmainLoadingOverlay) {
+    footmainLoadingOverlay = document.createElement("div");
+    footmainLoadingOverlay.className = "footmain-loading-overlay";
+    footmainLoadingOverlay.hidden = true;
+    footmainLoadingOverlay.setAttribute("role", "status");
+    footmainLoadingOverlay.setAttribute("aria-live", "polite");
+    footmainLoadingOverlay.setAttribute("aria-busy", "true");
+    footmainLoadingOverlay.innerHTML = `
+      <div class="footmain-loading-spinner" aria-hidden="true"></div>
+      <p class="footmain-loading-texto"></p>`;
+    document.body.append(footmainLoadingOverlay);
+  }
+  footmainLoadingOverlay.querySelector(".footmain-loading-texto").textContent =
+    texto;
+  footmainLoadingOverlay.hidden = false;
+  await new Promise((resolver) => requestAnimationFrame(() => resolver()));
+}
+
+function ocultarCarregamentoFootMain() {
+  if (footmainLoadingOverlay) footmainLoadingOverlay.hidden = true;
+}
 
 const LIGAS_NACIONAIS_BASE = {
   espanha: "La Liga",
@@ -512,6 +536,10 @@ const ALIASES_ESCUDOS_CLUBES = {
 };
 
 const CACHE_INDICE_ESCUDOS_POR_PAIS = new Map();
+const CACHE_MAPA_ESCUDOS_POR_PAIS = new Map();
+const PAISES_ESCUDOS_EM_RESOLUCAO = new Set();
+const CACHE_ESCUDOS_GENERICOS = new Map();
+const CACHE_CADASTRO_ESCUDOS_POR_ID = new Map();
 const REPO_ESCUDOS_BASE =
   "https://raw.githubusercontent.com/JoseArroyave/football-logos/refs/heads/main/logos";
 
@@ -540,14 +568,24 @@ function criarEscudoGenericoSvg(nome = "Clube") {
       .map((parte) => parte[0] || "")
       .join("")
       .toUpperCase() || "FC";
+  if (CACHE_ESCUDOS_GENERICOS.has(iniciais))
+    return CACHE_ESCUDOS_GENERICOS.get(iniciais);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 72"><path d="M5 5h54v35c0 13-13 22-27 28C18 62 5 53 5 40z" fill="#17452f" stroke="#65c98a" stroke-width="3"/><path d="M12 12h40v27c0 9-9 16-20 21-11-5-20-12-20-21z" fill="#10291f"/><text x="32" y="39" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" font-weight="700" fill="#e8fff0">${iniciais.replace(/[&<>"']/g, "")}</text></svg>`;
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+  const url = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+  CACHE_ESCUDOS_GENERICOS.set(iniciais, url);
+  return url;
 }
 
 function obterCadastroClubeParaEscudo(clube) {
   if (!clube) return {};
+  const chaveCache = clube.id ? String(clube.id) : "";
+  if (chaveCache && CACHE_CADASTRO_ESCUDOS_POR_ID.has(chaveCache))
+    return { ...clube, ...CACHE_CADASTRO_ESCUDOS_POR_ID.get(chaveCache) };
   const cadastroPorId = obterClubeParaExibicao(clube.id);
-  if (cadastroPorId) return { ...clube, ...cadastroPorId };
+  if (cadastroPorId) {
+    if (chaveCache) CACHE_CADASTRO_ESCUDOS_POR_ID.set(chaveCache, cadastroPorId);
+    return { ...clube, ...cadastroPorId };
+  }
   if (clube.nome) {
     const todosClubes = [
       ...(typeof CLUBES !== "undefined" ? CLUBES : []),
@@ -557,13 +595,17 @@ function obterCadastroClubeParaEscudo(clube) {
     const cadastroPorNome = todosClubes.find(
       (item) => normalizarNomeParaEscudo(item.nome) === nomeNormalizado,
     );
-    if (cadastroPorNome) return { ...clube, ...cadastroPorNome };
+    if (cadastroPorNome) {
+      if (chaveCache)
+        CACHE_CADASTRO_ESCUDOS_POR_ID.set(chaveCache, cadastroPorNome);
+      return { ...clube, ...cadastroPorNome };
+    }
   }
   return clube;
 }
 
-function obterPaisEscudoClube(clube) {
-  const cadastro = obterCadastroClubeParaEscudo(clube);
+function obterPaisEscudoClube(clube, cadastro = null) {
+  cadastro ||= obterCadastroClubeParaEscudo(clube);
   const paisInformado = String(cadastro.pais || "")
     .toLowerCase()
     .trim();
@@ -640,8 +682,8 @@ async function obterIndiceEscudosPais(pais) {
   return CACHE_INDICE_ESCUDOS_POR_PAIS.get(pais);
 }
 
-function encontrarArquivoEscudo(clube, arquivos) {
-  const cadastro = obterCadastroClubeParaEscudo(clube);
+function encontrarArquivoEscudo(clube, arquivos, mapa = null) {
+  const cadastro = mapa ? clube : obterCadastroClubeParaEscudo(clube);
   const chaves = [
     cadastro?.nome,
     cadastro?.id,
@@ -650,11 +692,8 @@ function encontrarArquivoEscudo(clube, arquivos) {
     .filter(Boolean)
     .map(normalizarNomeParaEscudo)
     .filter(Boolean);
-  const mapa = new Map(
-    arquivos.map((arquivo) => [
-      normalizarNomeParaEscudo(arquivo.nome),
-      arquivo,
-    ]),
+  mapa ||= new Map(
+    arquivos.map((arquivo) => [normalizarNomeParaEscudo(arquivo.nome), arquivo]),
   );
   for (const chave of chaves) {
     const encontrado = mapa.get(chave);
@@ -664,9 +703,19 @@ function encontrarArquivoEscudo(clube, arquivos) {
 }
 
 function resolverEscudosPendentes(pais) {
-  if (!pais || typeof document === "undefined") return;
+  if (
+    !pais ||
+    typeof document === "undefined" ||
+    PAISES_ESCUDOS_EM_RESOLUCAO.has(pais) ||
+    CACHE_MAPA_ESCUDOS_POR_PAIS.has(pais)
+  )
+    return;
+  PAISES_ESCUDOS_EM_RESOLUCAO.add(pais);
   obterIndiceEscudosPais(pais).then((arquivos) => {
-    if (!arquivos.length) return;
+    const mapa = new Map(
+      arquivos.map((arquivo) => [normalizarNomeParaEscudo(arquivo.nome), arquivo]),
+    );
+    CACHE_MAPA_ESCUDOS_POR_PAIS.set(pais, mapa);
     document
       .querySelectorAll(
         `img[data-escudo-pais="${pais}"][data-escudo-pendente="1"]`,
@@ -676,13 +725,13 @@ function resolverEscudosPendentes(pais) {
           id: imagem.dataset.escudoId,
           nome: imagem.dataset.escudoNome,
         };
-        const encontrado = encontrarArquivoEscudo(clube, arquivos);
+        const encontrado = encontrarArquivoEscudo(clube, arquivos, mapa);
+        imagem.dataset.escudoPendente = "0";
         if (encontrado) {
-          imagem.dataset.escudoPendente = "0";
           imagem.src = encontrado.url;
         }
       });
-  });
+  }).finally(() => PAISES_ESCUDOS_EM_RESOLUCAO.delete(pais));
 }
 
 function obterUrlEscudoClube(clube) {
@@ -694,15 +743,20 @@ function obterUrlEscudoClube(clube) {
 
 function htmlEscudoClube(clube, tamanho = "pequeno", classeExtra = "") {
   const nome = clube?.nome || "Clube não identificado";
-  const pais = obterPaisEscudoClube(clube);
-  const fallback = criarEscudoGenericoSvg(nome);
-  const url = obterUrlEscudoClube(clube);
-  const classes = `escudo-clube escudo-clube--${tamanho}${classeExtra ? ` ${classeExtra}` : ""}`;
   const cadastroEscudo = obterCadastroClubeParaEscudo(clube);
-  const atributosBusca = pais
+  const pais = obterPaisEscudoClube(clube, cadastroEscudo);
+  const fallback = criarEscudoGenericoSvg(nome);
+  let url = obterUrlEscudoClube(clube);
+  const classes = `escudo-clube escudo-clube--${tamanho}${classeExtra ? ` ${classeExtra}` : ""}`;
+  const arquivosPais = pais ? CACHE_MAPA_ESCUDOS_POR_PAIS.get(pais) : null;
+  if (arquivosPais) {
+    const encontrado = encontrarArquivoEscudo(cadastroEscudo, [], arquivosPais);
+    if (encontrado) url = encontrado.url;
+  }
+  const atributosBusca = pais && !arquivosPais
     ? `data-escudo-pais="${escaparHTML(pais)}" data-escudo-id="${escaparHTML(cadastroEscudo?.id || clube?.id || "")}" data-escudo-nome="${escaparHTML(cadastroEscudo?.nome || nome)}" data-escudo-pendente="1"`
     : "";
-  if (pais) resolverEscudosPendentes(pais);
+  if (pais && !arquivosPais) resolverEscudosPendentes(pais);
   return `<img class="${classes}" src="${escaparHTML(url)}" alt="Escudo ${escaparHTML(nome)}" loading="lazy" decoding="async" ${atributosBusca} onerror="this.onerror=null;this.src='${fallback}'">`;
 }
 
@@ -7057,6 +7111,7 @@ async function gerar() {
     if (!carreiraFinalizada) {
       await perguntarAposentadoriaSelecao(idade);
     }
+    await mostrarCarregamentoFootMain("Gerando a temporada...");
     const temporada = criarTemporada(
       nome,
       idade,
@@ -7066,6 +7121,7 @@ async function gerar() {
       nacionalidade,
       contratoEscolhido.clube,
     );
+    ocultarCarregamentoFootMain();
     temporada.base = ehClubeBase(contratoEscolhido.clube);
     if (temporada.base)
       temporada.campeaoCopinha = temporada.trofeusColetivos.includes("Copinha");
@@ -7184,6 +7240,7 @@ async function gerar() {
       "erro",
     );
   } finally {
+    ocultarCarregamentoFootMain();
     processamentoEmAndamento = false;
   }
 }
@@ -7260,6 +7317,8 @@ async function simularTudo() {
       alert(dadosValidos.mensagem);
       return;
     }
+
+    await mostrarCarregamentoFootMain("Simulando a carreira completa...");
 
     if (resumoFinal) resumoFinal.hidden = true;
 
@@ -7519,6 +7578,7 @@ async function simularTudo() {
       "Ocorreu um erro ao simular a carreira. Veja o console (F12) para detalhes.",
     );
   } finally {
+    ocultarCarregamentoFootMain();
     processamentoEmAndamento = false;
   }
 }

@@ -3681,6 +3681,7 @@
     const contratoAtivo =
       !temporadaInicial && Number(carreira.anosContratoRestantes) > 0;
     let contratoEscolhido = null;
+    let carregamentoTemporadaAtivo = false;
     try {
       carreira.nome = nome;
       carreira.posicaoDetalhe = posicao;
@@ -3873,6 +3874,8 @@
         );
         return;
       }
+      await mostrarCarregamento("Montando calendário e temporada...");
+      carregamentoTemporadaAtivo = true;
       if (typeof salvarCarreiraAtual === "function")
         salvarCarreiraAtual(carreira);
       const posicaoDetalhe = posicao;
@@ -4006,6 +4009,8 @@
       prepararElencosLiga();
       salvar();
       renderizar();
+      ocultarCarregamento();
+      carregamentoTemporadaAtivo = false;
       const convocado = estado.estatisticas.convocado
         ? ` Convocado para ${SELECOES.find((s) => s.id === nacionalidade)?.nome || "a seleção"}; partidas internacionais adicionadas ao calendário.`
         : "";
@@ -4013,6 +4018,7 @@
         `Temporada ${ano} iniciada por contrato com ${clube.nome}.${convocado}`,
       );
     } catch (erro) {
+      if (carregamentoTemporadaAtivo) ocultarCarregamento();
       console.error("Falha ao preparar temporada jogo a jogo:", erro);
       informar(
         `Não foi possível iniciar a temporada: ${erro.message || erro}`,
@@ -6632,7 +6638,20 @@
     }
 
     bloquearAcoesPartida();
-    await simularPartida(indice, true, null, { interativo: false });
+    await simularPartidaComCarregamento(indice, "Simulando partida...");
+  }
+
+  async function simularPartidaComCarregamento(
+    indice,
+    texto = "Simulando partida...",
+    interacao = null,
+  ) {
+    await mostrarCarregamento(texto);
+    try {
+      await simularPartida(indice, true, interacao, { interativo: false });
+    } finally {
+      ocultarCarregamento();
+    }
   }
 
   async function simularAteFimLesao() {
@@ -6655,6 +6674,7 @@
     bloqueioAcoesPartida = true;
     let partidasSimuladas = 0;
     try {
+      await mostrarCarregamento("Simulando partidas até o fim da lesão...");
       while (
         !estado.disponibilidade?.lesaoCarreira &&
         Number(estado.disponibilidade?.jogosLesao) > 0
@@ -6685,6 +6705,7 @@
             : `Lesão encerrada após simular ${partidasSimuladas} partida(s).`,
       );
     } finally {
+      ocultarCarregamento();
       bloqueioAcoesPartida = false;
       renderizar();
     }
@@ -6715,7 +6736,7 @@
       Number(disponibilidade.suspensoes?.[chaveEquipe]) > 0;
     if (indisponivel) {
       bloquearAcoesPartida();
-      await simularPartida(indice, true, null, { interativo: false });
+      await simularPartidaComCarregamento(indice);
       return;
     }
     const times = clubesDisponiveis();
@@ -6727,7 +6748,7 @@
     const adversario = times.find((clube) => clube.id === partida.adversarioId);
     if (!meuClube || (!pelaSelecao && !adversario)) {
       bloquearAcoesPartida();
-      await simularPartida(indice, true, null, { interativo: false });
+      await simularPartidaComCarregamento(indice);
       return;
     }
     const forcaTime = pelaSelecao
@@ -6740,34 +6761,38 @@
     const participou = Math.random() < chanceJogar;
     if (!participou) {
       bloquearAcoesPartida();
-      await simularPartida(
+      await simularPartidaComCarregamento(
         indice,
-        true,
+        "Preparando a partida...",
         { participou: false },
-        { interativo: false },
       );
       return;
     }
-    fluxoDecisao = {
-      indice,
-      participou: true,
-      lances: criarLancesDaPartida(),
-      indiceLance: 0,
-      escolhaConfirmada: false,
-      decisaoRespondida: false,
-      resultado: {
-        gols: 0,
-        assistencias: 0,
-        golsEvitados: 0,
-        golsEquipeCriados: 0,
-        driblesCompletos: 0,
-        desarmes: 0,
-        defesas: 0,
-        jogadasCriadas: 0,
-      },
-    };
-    decisaoEmAndamento = true;
-    renderizar();
+    await mostrarCarregamento("Preparando a partida...");
+    try {
+      fluxoDecisao = {
+        indice,
+        participou: true,
+        lances: criarLancesDaPartida(),
+        indiceLance: 0,
+        escolhaConfirmada: false,
+        decisaoRespondida: false,
+        resultado: {
+          gols: 0,
+          assistencias: 0,
+          golsEvitados: 0,
+          golsEquipeCriados: 0,
+          driblesCompletos: 0,
+          desarmes: 0,
+          defesas: 0,
+          jogadasCriadas: 0,
+        },
+      };
+      decisaoEmAndamento = true;
+      renderizar();
+    } finally {
+      ocultarCarregamento();
+    }
     exibirLanceDecisao();
   }
 
