@@ -1129,7 +1129,7 @@
                         const qualificado = cutoff && i < cutoff;
                         return `<tr class="${t.id === estado.clubeId ? "meu-clube" : ""} ${qualificado ? "qualificado" : ""}">
                             <td>${i + 1}</td>
-                            <td>${escapar(t.nome)}</td>
+                            <td class="jja-clube-celula">${htmlEscudoClube(clubesDisponiveis().find((clube) => clube.id === t.id) || { id: t.id, nome: t.nome, liga: estado.liga }, "pequeno")}${escapar(t.nome)}</td>
                             <td><strong>${t.pts}</strong></td>
                             <td>${t.pj}</td>
                             <td class="hide-mobile">${t.v}</td>
@@ -7745,7 +7745,8 @@
                 .slice(0, 3)
                 .join("")
                 .toUpperCase();
-              return `<tr><td>${jogador.posicao}</td><td>${escapar(jogador.nome)}</td><td><span class="jja-ranking-clube" title="${escapar(jogador.clube)}"><span class="jja-ranking-sigla" aria-hidden="true">${escapar(sigla)}</span><span>${escapar(jogador.clube)}</span></span></td><td><strong>${jogador[metrica]}</strong></td></tr>`;
+              const clubeRanking = CLUBES.find((item) => item.nome.toLocaleLowerCase("pt-BR") === String(jogador.clube).toLocaleLowerCase("pt-BR"));
+              return `<tr><td>${jogador.posicao}</td><td>${escapar(jogador.nome)}</td><td><span class="jja-ranking-clube" title="${escapar(jogador.clube)}">${htmlEscudoClube(clubeRanking || { nome: jogador.clube }, "mini")}<span>${escapar(jogador.clube)}</span></span></td><td><strong>${jogador[metrica]}</strong></td></tr>`;
             })
             .join("")}</tbody></table></div>`
         : `<p class="jja-ranking-vazio">Nenhum ${rotulo.toLowerCase()} registrado nesta temporada.</p>`;
@@ -7957,7 +7958,7 @@
         const classe = t.id === estado.clubeId ? "meu-clube" : "";
         return `<tr class="${classe}"${attrs}>
                 <td>${posicao}</td>
-                <td>${escapar(t.nome)}</td>
+                <td class="jja-clube-celula">${htmlEscudoClube(clubesDisponiveis().find((clube) => clube.id === t.id) || { id: t.id, nome: t.nome, liga: ligaParaZonas }, "pequeno")}${escapar(t.nome)}</td>
                 <td>${t.j}</td>
                 <td>${t.gp - t.gc}</td>
                 <td><strong>${t.pts}</strong></td>
@@ -8014,7 +8015,12 @@
 
           return `<div class="jja-jogo ${p.status === "concluida" ? "jja-jogo--feito" : ""}">
                 <span class="jja-jogo-num">${p.data ? new Date(p.data).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : String(p.numero).padStart(2, "0")}</span>
-                <span class="jja-jogo-adversario">${ehPartidaFinal(p) ? "🏆 " : ""}${escapar(p.competicao)} · ${escapar(nomeCasa || "Equipe")} × ${escapar(nomeFora || "Adversário")}</span>                
+                <span class="jja-jogo-adversario">
+                  ${ehPartidaFinal(p) ? "🏆 " : ""}${escapar(p.competicao)} ·
+                  <span class="jja-confronto-equipe">${htmlEscudoClube(p.casa ? clube : adv || { nome: nomeCasa }, "mini")}${escapar(nomeCasa || "Equipe")}</span>
+                  <span aria-hidden="true">×</span>
+                  <span class="jja-confronto-equipe">${htmlEscudoClube(p.casa ? adv || { nome: nomeFora } : clube, "mini")}${escapar(nomeFora || "Adversário")}</span>
+                </span>
                 <span class="jja-jogo-resultado">${escapar(status)}</span>
             </div>`;
         })

@@ -403,6 +403,309 @@ function obterClube(clubeId) {
   return CLUBES.find((clube) => clube.id === clubeId) || null;
 }
 
+function obterClubeParaExibicao(clubeId) {
+  return (
+    obterClube(clubeId) ||
+    (typeof CLUBES_REGIONAIS !== "undefined"
+      ? CLUBES_REGIONAIS.find((clube) => clube.id === clubeId)
+      : null) ||
+    null
+  );
+}
+
+// Escudos remotos: a identificação usa o país da liga e uma busca normalizada
+// no índice de arquivos do repositório. Assim, "São Paulo", "Sao Paulo FC"
+// e "São Paulo Futebol Clube" podem apontar para o mesmo arquivo.
+const MAPA_PAIS_ESCUDOS_POR_LIGA = {
+  "Premier League": "england",
+  "La Liga": "spain",
+  "Serie A": "italy",
+  Bundesliga: "germany",
+  "Ligue 1": "france",
+  Brasileirão: "brazil",
+  Paulistão: "brazil",
+  Carioca: "brazil",
+  Mineiro: "brazil",
+  Gauchão: "brazil",
+  Baianão: "brazil",
+  Cearense: "brazil",
+  Pernambucano: "brazil",
+  "Primeira Liga": "portugal",
+  Eredivisie: "netherlands",
+  "Scottish Premiership": "scotland",
+  "Belgian Pro League": "belgium",
+  "Austrian Bundesliga": "austria",
+  "Swiss Super League": "switzerland",
+  "Süper Lig": "turkey",
+  "Russian Premier League": "russia",
+  "Ukrainian Premier League": "ukraine",
+  "Argentine Primera División": "argentina",
+  "Chilean Primera División": "chile",
+  "Colombian Primera A": "colombia",
+  "Ecuadorian Serie A": "ecuador",
+  "Paraguayan Primera División": "paraguay",
+  "Uruguayan Primera División": "uruguay",
+  "Liga MX": "mexico",
+  MLS: "usa",
+  "Saudi Pro League": "saudi-arabia",
+  "Chinese Super League": "china",
+  "J1 League": "japan",
+  "K League 1": "south-korea",
+  "Australian A-League": "australia",
+  "Greek Super League": "greece",
+  "Egyptian Premier League": "egypt",
+  "Moroccan Botola": "morocco",
+  "South African Premier Division": "south-africa",
+};
+
+// Aliases para nomes que costumam variar entre bases de dados e repositórios.
+// O identificador interno do FootMain é a chave, portanto renomear a equipe
+// na interface não quebra o vínculo do escudo.
+const ALIASES_ESCUDOS_CLUBES = {
+  "sao-paulo": ["Sao Paulo FC", "Sao Paulo Futebol Clube"],
+  santos: ["Santos FC", "Santos Futebol Clube"],
+  flamengo: ["CR Flamengo", "Clube de Regatas do Flamengo"],
+  palmeiras: ["SE Palmeiras", "Sociedade Esportiva Palmeiras"],
+  corinthians: ["SC Corinthians Paulista", "Sport Club Corinthians Paulista"],
+  gremio: ["Gremio FBPA", "Gremio Foot-Ball Porto Alegrense"],
+  internacional: [
+    "SC Internacional",
+    "Sport Club Internacional",
+    "Internacional RS",
+  ],
+  "atletico-mg": ["Atletico Mineiro", "Clube Atletico Mineiro", "Atletico-MG"],
+  cruzeiro: ["Cruzeiro EC", "Cruzeiro Esporte Clube"],
+  botafogo: ["Botafogo FR", "Botafogo de Futebol e Regatas"],
+  vasco: ["Vasco da Gama", "CR Vasco da Gama"],
+  fluminense: ["Fluminense FC", "Fluminense Football Club"],
+  bahia: ["EC Bahia", "Esporte Clube Bahia"],
+  fortaleza: ["Fortaleza EC", "Fortaleza Esporte Clube"],
+  ceara: ["Ceara SC", "Ceara Sporting Club"],
+  sport: ["Sport Recife", "Sport Club do Recife"],
+  vitoria: ["EC Vitoria", "Esporte Clube Vitoria"],
+  bragantino: ["Red Bull Bragantino", "RB Bragantino"],
+  inter: ["Inter Milan", "Internazionale", "FC Internazionale Milano"],
+  milan: ["AC Milan"],
+  roma: ["AS Roma"],
+  lazio: ["SS Lazio"],
+  napoli: ["SSC Napoli"],
+  juventus: ["Juventus FC"],
+  "bayern-munich": ["Bayern Munich", "FC Bayern Munich", "Bayern Munchen"],
+  "paris-saint-germain": ["PSG", "Paris SG"],
+  "atletico-madrid": ["Atletico Madrid", "Atletico de Madrid"],
+  "athletic-bilbao": ["Athletic Bilbao", "Athletic Club Bilbao"],
+  tottenham: ["Tottenham Hotspur", "Spurs"],
+  newcastle: ["Newcastle United FC"],
+  "west-ham": ["West Ham United"],
+  wolves: ["Wolverhampton Wanderers", "Wolves"],
+  bournemouth: ["AFC Bournemouth"],
+  brighton: ["Brighton and Hove Albion", "Brighton & Hove Albion"],
+  "nottingham-forest": ["Nottingham Forest FC"],
+  "manchester-city": ["Man City"],
+  "manchester-united": ["Man United", "Man Utd"],
+  barcelona: ["FC Barcelona"],
+  "real-madrid": ["Real Madrid CF"],
+  ajax: ["AFC Ajax"],
+  porto: ["FC Porto", "Futebol Clube do Porto"],
+  benfica: ["SL Benfica", "Sport Lisboa e Benfica"],
+  "sporting-cp": ["Sporting CP", "Sporting Clube de Portugal"],
+};
+
+const CACHE_INDICE_ESCUDOS_POR_PAIS = new Map();
+const REPO_ESCUDOS_BASE =
+  "https://raw.githubusercontent.com/JoseArroyave/football-logos/refs/heads/main/logos";
+
+function normalizarNomeParaEscudo(valor = "") {
+  return String(valor)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(
+      /\b(football club|soccer club|futebol clube|football|club|fc|sc|ec|ac|cf|sad)\b/g,
+      " ",
+    )
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function criarEscudoGenericoSvg(nome = "Clube") {
+  const iniciais =
+    String(nome)
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((parte) => parte[0] || "")
+      .join("")
+      .toUpperCase() || "FC";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 72"><path d="M5 5h54v35c0 13-13 22-27 28C18 62 5 53 5 40z" fill="#17452f" stroke="#65c98a" stroke-width="3"/><path d="M12 12h40v27c0 9-9 16-20 21-11-5-20-12-20-21z" fill="#10291f"/><text x="32" y="39" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" font-weight="700" fill="#e8fff0">${iniciais.replace(/[&<>"']/g, "")}</text></svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+function obterCadastroClubeParaEscudo(clube) {
+  if (!clube) return {};
+  const cadastroPorId = obterClubeParaExibicao(clube.id);
+  if (cadastroPorId) return { ...clube, ...cadastroPorId };
+  if (clube.nome) {
+    const todosClubes = [
+      ...(typeof CLUBES !== "undefined" ? CLUBES : []),
+      ...(typeof CLUBES_REGIONAIS !== "undefined" ? CLUBES_REGIONAIS : []),
+    ];
+    const nomeNormalizado = normalizarNomeParaEscudo(clube.nome);
+    const cadastroPorNome = todosClubes.find(
+      (item) => normalizarNomeParaEscudo(item.nome) === nomeNormalizado,
+    );
+    if (cadastroPorNome) return { ...clube, ...cadastroPorNome };
+  }
+  return clube;
+}
+
+function obterPaisEscudoClube(clube) {
+  const cadastro = obterCadastroClubeParaEscudo(clube);
+  const paisInformado = String(cadastro.pais || "")
+    .toLowerCase()
+    .trim();
+  const aliasesPais = {
+    brasil: "brazil",
+    brazil: "brazil",
+    inglaterra: "england",
+    england: "england",
+    espanha: "spain",
+    spain: "spain",
+    italia: "italy",
+    italy: "italy",
+    alemanha: "germany",
+    germany: "germany",
+    franca: "france",
+    france: "france",
+    "estados unidos": "usa",
+    "united states": "usa",
+    usa: "usa",
+    "coreia do sul": "south-korea",
+    "south korea": "south-korea",
+    "arabia saudita": "saudi-arabia",
+    "saudi arabia": "saudi-arabia",
+  };
+  return (
+    aliasesPais[paisInformado] ||
+    paisInformado ||
+    MAPA_PAIS_ESCUDOS_POR_LIGA[cadastro.liga] ||
+    ""
+  );
+}
+
+async function obterIndiceEscudosPais(pais) {
+  if (!pais) return [];
+  if (!CACHE_INDICE_ESCUDOS_POR_PAIS.has(pais)) {
+    const requisicao = fetch(
+      `https://api.github.com/repos/JoseArroyave/football-logos/contents/logos/${encodeURIComponent(pais)}?ref=main`,
+      {
+        headers: { Accept: "application/vnd.github+json" },
+      },
+    )
+      .then((resposta) => {
+        if (!resposta.ok)
+          throw new Error(
+            `Índice de escudos indisponível (${resposta.status})`,
+          );
+        return resposta.json();
+      })
+      .then((arquivos) =>
+        Array.isArray(arquivos)
+          ? arquivos
+              .filter(
+                (arquivo) =>
+                  arquivo.type === "file" && /\.svg$/i.test(arquivo.name),
+              )
+              .map((arquivo) => ({
+                nome: arquivo.name.replace(/\.svg$/i, ""),
+                url:
+                  arquivo.download_url ||
+                  `${REPO_ESCUDOS_BASE}/${encodeURIComponent(pais)}/${encodeURIComponent(arquivo.name)}`,
+              }))
+          : [],
+      )
+      .catch((erro) => {
+        console.warn(
+          `[FootMain] Não foi possível consultar escudos de ${pais}:`,
+          erro,
+        );
+        // Evita repetir requisições a cada renderização se a API estiver fora do ar.
+        return [];
+      });
+    CACHE_INDICE_ESCUDOS_POR_PAIS.set(pais, requisicao);
+  }
+  return CACHE_INDICE_ESCUDOS_POR_PAIS.get(pais);
+}
+
+function encontrarArquivoEscudo(clube, arquivos) {
+  const cadastro = obterCadastroClubeParaEscudo(clube);
+  const chaves = [
+    cadastro?.nome,
+    cadastro?.id,
+    ...(ALIASES_ESCUDOS_CLUBES[cadastro?.id] || []),
+  ]
+    .filter(Boolean)
+    .map(normalizarNomeParaEscudo)
+    .filter(Boolean);
+  const mapa = new Map(
+    arquivos.map((arquivo) => [
+      normalizarNomeParaEscudo(arquivo.nome),
+      arquivo,
+    ]),
+  );
+  for (const chave of chaves) {
+    const encontrado = mapa.get(chave);
+    if (encontrado) return encontrado;
+  }
+  return null;
+}
+
+function resolverEscudosPendentes(pais) {
+  if (!pais || typeof document === "undefined") return;
+  obterIndiceEscudosPais(pais).then((arquivos) => {
+    if (!arquivos.length) return;
+    document
+      .querySelectorAll(
+        `img[data-escudo-pais="${pais}"][data-escudo-pendente="1"]`,
+      )
+      .forEach((imagem) => {
+        const clube = {
+          id: imagem.dataset.escudoId,
+          nome: imagem.dataset.escudoNome,
+        };
+        const encontrado = encontrarArquivoEscudo(clube, arquivos);
+        if (encontrado) {
+          imagem.dataset.escudoPendente = "0";
+          imagem.src = encontrado.url;
+        }
+      });
+  });
+}
+
+function obterUrlEscudoClube(clube) {
+  if (!clube) return criarEscudoGenericoSvg("FC");
+  if (clube.escudo || clube.logo || clube.logoUrl)
+    return clube.escudo || clube.logo || clube.logoUrl;
+  return criarEscudoGenericoSvg(clube.nome || "Clube");
+}
+
+function htmlEscudoClube(clube, tamanho = "pequeno", classeExtra = "") {
+  const nome = clube?.nome || "Clube não identificado";
+  const pais = obterPaisEscudoClube(clube);
+  const fallback = criarEscudoGenericoSvg(nome);
+  const url = obterUrlEscudoClube(clube);
+  const classes = `escudo-clube escudo-clube--${tamanho}${classeExtra ? ` ${classeExtra}` : ""}`;
+  const cadastroEscudo = obterCadastroClubeParaEscudo(clube);
+  const atributosBusca = pais
+    ? `data-escudo-pais="${escaparHTML(pais)}" data-escudo-id="${escaparHTML(cadastroEscudo?.id || clube?.id || "")}" data-escudo-nome="${escaparHTML(cadastroEscudo?.nome || nome)}" data-escudo-pendente="1"`
+    : "";
+  if (pais) resolverEscudosPendentes(pais);
+  return `<img class="${classes}" src="${escaparHTML(url)}" alt="Escudo ${escaparHTML(nome)}" loading="lazy" decoding="async" ${atributosBusca} onerror="this.onerror=null;this.src='${fallback}'">`;
+}
+
 const MAPA_TROFEUS_POR_LIGA = {
   // Europa
   "Premier League": {
@@ -2266,12 +2569,22 @@ function obterIconeTrofeu(nome) {
 }
 
 function renderSalaTrofeus(temporadas) {
-  const lista = temporadas.flatMap((t) => [
-    ...mapearTrofeusTemporada(t, "trofeusColetivos"),
-    ...mapearTrofeusTemporada(t, "trofeusIndividuais"),
-  ]);
-  const contagem = lista.reduce((acc, nome) => {
-    acc[nome] = (acc[nome] || 0) + 1;
+  const lista = temporadas.flatMap((temporada) => {
+    const clube = obterClubeParaExibicao(temporada.clube);
+    return [
+      ...mapearTrofeusTemporada(temporada, "trofeusColetivos"),
+      ...mapearTrofeusTemporada(temporada, "trofeusIndividuais"),
+    ].map((nome) => ({ nome, clube }));
+  });
+  const contagem = lista.reduce((acc, item) => {
+    if (!acc[item.nome]) acc[item.nome] = { qtd: 0, clubes: [] };
+    acc[item.nome].qtd += 1;
+    if (
+      item.clube &&
+      !acc[item.nome].clubes.some((clube) => clube.id === item.clube.id)
+    ) {
+      acc[item.nome].clubes.push(item.clube);
+    }
     return acc;
   }, {});
   if (!Object.keys(contagem).length) {
@@ -2279,8 +2592,8 @@ function renderSalaTrofeus(temporadas) {
   }
 
   const trofeus = Object.entries(contagem)
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR"))
-    .map(([nome, qtd]) => ({ nome, qtd }));
+    .sort((a, b) => b[1].qtd - a[1].qtd || a[0].localeCompare(b[0], "pt-BR"))
+    .map(([nome, dados]) => ({ nome, qtd: dados.qtd, clubes: dados.clubes }));
 
   // Troféus "grandes" ganham um brilho dourado extra na estante.
   const ehDestaque = (nome) =>
@@ -2303,12 +2616,22 @@ function renderSalaTrofeus(temporadas) {
                 <div class="estante-trofeus">
                     ${prateleira
                       .map(
-                        ({ nome, qtd }) => `
+                        ({ nome, qtd, clubes }) => `
                         <div class="trofeu-item${ehDestaque(nome) ? " trofeu-item--destaque" : ""}" 
-                            title="${escaparHTML(nome)}">
+                            title="${escaparHTML(nome)}${clubes.length ? ` · ${escaparHTML(clubes.map((clube) => clube.nome).join(", "))}` : ""}">
                             ${qtd > 1 ? `<span class="trofeu-badge">${qtd}x</span>` : ""}
                             <span class="trofeu-icone" aria-hidden="true">${obterIconeTrofeu(nome)}</span>
                             <div class="trofeu-placa">${escaparHTML(nome)}</div>
+                            ${
+                              clubes.length
+                                ? `<div class="trofeu-clubes">${clubes
+                                    .slice(0, 4)
+                                    .map((clube) =>
+                                      htmlEscudoClube(clube, "mini"),
+                                    )
+                                    .join("")}</div>`
+                                : ""
+                            }
                         </div>
                     `,
                       )
@@ -2410,7 +2733,7 @@ function renderDetalhesCarreira(carreira) {
             ...mapearTrofeusTemporada(temporada, "trofeusColetivos"),
             ...mapearTrofeusTemporada(temporada, "trofeusIndividuais"),
           ];
-          const clube = obterClube(temporada.clube);
+          const clube = obterClubeParaExibicao(temporada.clube);
           const trofeusHtml = trofeus.length
             ? trofeus
                 .map(
@@ -2425,7 +2748,7 @@ function renderDetalhesCarreira(carreira) {
                 <div class="trajetoria-temporada-header">
                     <span class="trajetoria-ano">${escaparHTML(temporada.ano)}</span>
                     <span class="trajetoria-idade">${escaparHTML(temporada.idade)} anos</span>
-                    <span class="trajetoria-clube">${escaparHTML(clube?.nome || "Sem clube")}</span>
+                    <span class="trajetoria-clube">${clube ? htmlEscudoClube(clube, "pequeno") : ""}${escaparHTML(clube?.nome || "Sem clube")}</span>
                 </div>
                 <div class="trajetoria-stats">
                     <span><strong>${temporada.jogos}</strong> jogos</span>
@@ -3617,7 +3940,7 @@ function renderRanking() {
       );
       const hatTricks = contarHatTricks(carreira.temporadas || []);
       const selecao = SELECOES.find((s) => s.id === carreira.nacionalidade);
-      const clube = obterClube(carreira.clube);
+      const clube = obterClubeParaExibicao(carreira.clube);
 
       const reputacaoMax = Math.max(
         0,
@@ -3657,7 +3980,7 @@ function renderRanking() {
                       <div class="ranking-badges">
                           <span class="badge badge--pos">${escaparHTML(carreira.posicao)}</span>
                           <span class="badge badge--selecao">${escaparHTML(selecao?.nome || "Sem seleção")}</span>
-                          <span class="badge badge--clube">${escaparHTML(clube?.nome || "Sem clube")}</span>
+                          <span class="badge badge--clube">${clube ? htmlEscudoClube(clube, "mini") : ""}${escaparHTML(clube?.nome || "Sem clube")}</span>
                       </div>
                   </div>
                   <div class="ranking-pontos">
@@ -3725,7 +4048,7 @@ function atualizarResumoJogador(
   const selecao = SELECOES.find((item) => item.id === nacionalidade);
   const perfilCaps = document.getElementById("perfil-caps");
   const perfilClube = document.getElementById("perfil-clube");
-  const clube = obterClube(clubeId);
+  const clube = obterClubeParaExibicao(clubeId);
   const perfilContrato = document.getElementById("perfil-contrato");
   const carreiraAtual = obterCarreiraAtual();
   const limiteRompimentos = getConfig().geral.limiteRompimentosContrato;
@@ -3740,8 +4063,15 @@ function atualizarResumoJogador(
     const t = somarTotaisHistorico(h);
     perfilCaps.textContent = `${t.caps} jogos · ${t.golsSelecao} gols`;
   }
-  if (perfilClube)
+  if (perfilClube) {
     perfilClube.textContent = clube ? clube.nome : "Ainda não escolhido";
+    perfilClube.classList.add("resumo-clube-com-escudo");
+    if (clube)
+      perfilClube.insertAdjacentHTML(
+        "afterbegin",
+        htmlEscudoClube(clube, "medio"),
+      );
+  }
   if (perfilContrato) {
     const contrato =
       carreiraAtual.anosContratoRestantes > 0
@@ -3898,7 +4228,7 @@ function renderHistorico() {
       );
       const premios = contarPremios(temporada);
       const hatTricks = contarHatTricks([temporada]);
-      const clube = obterClube(temporada.clube);
+      const clube = obterClubeParaExibicao(temporada.clube);
 
       return `
             <li class="temporada-card">
@@ -3913,7 +4243,7 @@ function renderHistorico() {
                     </div>
                     <div class="temporada-badges">
                         <span class="badge badge--pos">${escaparHTML(temporada.posicao)}</span>
-                        <span class="badge badge--clube">${escaparHTML(clube?.nome || "Sem clube")}</span>
+                        <span class="badge badge--clube">${clube ? htmlEscudoClube(clube, "mini") : ""}${escaparHTML(clube?.nome || "Sem clube")}</span>
                         <span class="badge badge--over">OVR ${temporada.overall}</span>
                         ${(Number(temporada.reputacao) || 0) > 0 ? `<span class="badge badge--rep">Rep ${temporada.reputacao}</span>` : ""}
                         ${(Number(temporada.valorMercado) || 0) > 0 ? `<span class="badge badge--valor">${formatarValorCompacto(temporada.valorMercado)}</span>` : ""}
@@ -4250,9 +4580,15 @@ function mostrarResumoFinal(
   if (resumoSelecao)
     resumoSelecao.textContent = selecao ? selecao.nome : "Não definida";
   const resumoClube = document.getElementById("resumo-clube");
-  if (resumoClube)
-    resumoClube.textContent =
-      obterClube(carreiraAtual.clube)?.nome || "Não definido";
+  if (resumoClube) {
+    const clubeResumo = obterClubeParaExibicao(carreiraAtual.clube);
+    resumoClube.textContent = clubeResumo?.nome || "Não definido";
+    resumoClube.classList.add("resumo-clube-com-escudo");
+    resumoClube.insertAdjacentHTML(
+      "afterbegin",
+      clubeResumo ? htmlEscudoClube(clubeResumo, "medio") : "",
+    );
+  }
 
   const idadeEncerramento =
     historico.length > 0
@@ -5672,6 +6008,7 @@ function exibirEscolhaClube(
           return `
                   <label class="opcao-clube${clube.desabilitado ? " opcao-clube--desabilitada" : ""}">
                       <input type="radio" name="escolha-clube" value="${escaparHTML(clube.id)}" ${clube.id === clubeSelecionadoAtual ? "checked" : ""} ${clube.desabilitado ? "disabled" : ""}>
+                      ${htmlEscudoClube(clube, "medio")}
                       <span>
                           <strong>${escaparHTML(clube.nome)}</strong>
                           ${detalheTexto ? `<small>${detalheTexto}</small>` : ""}
@@ -7124,10 +7461,7 @@ async function simularTudo() {
         if (clubeDestino) {
           carreiraAtual.subiuProfissional = true;
           clubeAtual = clubeDestino.id;
-          anosContratoRestantes = obterDuracaoContrato(
-            idade + 1,
-            idadeLimite,
-          );
+          anosContratoRestantes = obterDuracaoContrato(idade + 1, idadeLimite);
         }
       }
       if (temporada.base) carreiraAtual.baseClube = temporada.clube;

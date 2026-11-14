@@ -4145,7 +4145,8 @@ html[data-theme="light"] .trofeu-badge {
 
 @media (max-width: 400px) {
     .trofeu-icone { font-size: 1.7rem; }
-    .trofeu-placa { font-size: 0.5rem; -webkit-line-clamp: 1; }
+    .trofeu-placa { font-size: 0.5rem; 
+    -webkit-line-clamp: 1; }
 }
 
 .trofeu-item { cursor: pointer; }
@@ -5300,3 +5301,29 @@ html[data-theme="light"] .jja-tabela-grupo tr.meu-clube { background: #e1f0e2; c
     #clube-alvo.clube-alvo-btn { min-height: 44px; }
     #posi .jogador-campo { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
 }
+
+
+/* Escudos de clubes: tamanhos consistentes e sem distorção. */
+.escudo-clube {
+    display: inline-block;
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+    vertical-align: middle;
+}
+.escudo-clube--mini { width: 20px; height: 20px; }
+.escudo-clube--pequeno { width: 26px; height: 26px; }
+.escudo-clube--medio { width: 42px; height: 42px; }
+.opcao-clube .escudo-clube { align-self: center; }
+.badge--clube { display: inline-flex; align-items: center; gap: 5px; }
+.resumo-clube-com-escudo { display: inline-flex; align-items: center; gap: 8px; }
+.jja-clube-celula { display: table-cell; vertical-align: middle; }
+.jja-clube-celula .escudo-clube { margin-right: 7px; }
+.jja-confronto-equipe { display: inline-flex; align-items: center; gap: 4px; margin: 2px 3px 2px 0; }
+.jja-jogo-adversario .escudo-clube { vertical-align: middle; }
+.jja-ranking-clube .escudo-clube { width: 22px; height: 22px; }
+.trajetoria-clube { display: inline-flex; align-items: center; gap: 6px; }
+
+.trofeu-clubes { display: flex; justify-content: center; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
+.trofeu-clubes .escudo-clube { width: 18px; height: 18px; }

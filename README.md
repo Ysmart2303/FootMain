@@ -223,3 +223,7 @@ Este projeto é de código aberto para fins educacionais e de portfólio. Sinta-
 "O futebol é o esporte mais popular do mundo — e agora você pode simular uma carreira inteira no navegador."
 
 </div>
+
+## Escudos dos clubes
+
+Os escudos são carregados sob demanda a partir do repositório público [JoseArroyave/football-logos](https://github.com/JoseArroyave/football-logos), usando arquivos SVG hospedados no GitHub. O FootMain consulta uma vez por país o índice de arquivos da fonte e compara os nomes com normalização de acentos, pontuação e sufixos (por exemplo, “São Paulo” e “Sao Paulo FC”), além de aliases associados ao ID interno do clube. O índice fica em memória durante a sessão; a coleção inteira não é baixada nem armazenada no projeto. Quando não há correspondência ou a API externa não responde, a interface apresenta um escudo genérico. Os escudos são marcas de seus respectivos clubes; consulte as condições e os direitos aplicáveis antes de distribuir ou utilizar o projeto comercialmente.
