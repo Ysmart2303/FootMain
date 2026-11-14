@@ -805,6 +805,10 @@
     filaModaisPartida.push({ tipo: "trofeu", competicao, tipoTrofeu });
   }
 
+  function enfileirarPremioIndividual(titulo) {
+    filaModaisPartida.push({ tipo: "premio-individual", titulo });
+  }
+
   function enfileirarEvento(tipoEvento, mensagem, icone) {
     filaModaisPartida.push({ tipo: "evento", tipoEvento, mensagem, icone });
   }
@@ -814,6 +818,8 @@
       const item = filaModaisPartida.shift();
       if (item.tipo === "trofeu") {
         await exibirModalTrofeu(item.competicao, item.tipoTrofeu);
+      } else if (item.tipo === "premio-individual") {
+        await exibirModalTrofeu(item.titulo, "individual");
       } else if (item.tipo === "evento") {
         await exibirModalEvento(item.tipoEvento, item.mensagem, item.icone);
       }
@@ -832,10 +838,16 @@
       }
 
       titulo.textContent = competicao;
+      const chamada = modal.querySelector(".jja-trofeu-chamada");
+      if (chamada)
+        chamada.textContent =
+          tipoTrofeu === "individual" ? "PRÊMIO INDIVIDUAL" : "CAMPEÃO";
       msg.textContent =
-        tipoTrofeu === "selecao"
-          ? "Parabéns! Você defendeu sua seleção e trouxe mais esse título para casa!"
-          : "Parabéns! Mais uma conquista inesquecível na sua carreira!";
+        tipoTrofeu === "individual"
+          ? "Parabéns! Seu desempenho na temporada garantiu este prêmio individual."
+          : tipoTrofeu === "selecao"
+            ? "Parabéns! Você defendeu sua seleção e trouxe mais esse título para casa!"
+            : "Parabéns! Mais uma conquista inesquecível na sua carreira!";
 
       modal.hidden = false;
       continuar.focus();
@@ -7072,6 +7084,7 @@
           e.assistencias >= 15 ||
           e.gols + e.assistencias >= 25,
       );
+          temporada.trofeusIndividuais.forEach(enfileirarPremioIndividual);
       estado.trofeusColetivos = temporada.trofeusColetivos;
       estado.trofeusIndividuais = temporada.trofeusIndividuais;
       const reputacao =
