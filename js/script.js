@@ -2213,6 +2213,8 @@ function gerarTrofeusTemporada(
   convocado = false,
   atributos = null,
   simularCopinha = true,
+  rankingLiga = null,
+  jogadorId = "",
 ) {
   const cfg = getConfig();
   const t = cfg.titulos;
@@ -2388,11 +2390,30 @@ function gerarTrofeusTemporada(
   }
 
   // ====== Prêmios individuais existentes ======
+  const posicaoArtilharia = rankingLiga?.artilharia?.findIndex(
+    (jogador) => jogador.id === jogadorId,
+  );
+  const posicaoAssistencias = rankingLiga?.assistencias?.findIndex(
+    (jogador) => jogador.id === jogadorId,
+  );
+  const pontosRanking = [posicaoArtilharia, posicaoAssistencias].reduce(
+    (total, posicaoRanking) =>
+      total +
+      (posicaoRanking >= 0 && posicaoRanking < 10
+        ? 10 - posicaoRanking
+        : 0),
+    0,
+  );
+  const chanceBolaDeOuro = Math.min(
+    1,
+    t.chanceBolaDeOuro * multIndividuais +
+      pontosRanking * 0.025 +
+      Math.min(5, trofeusColetivos.length) * 0.06,
+  );
   if (
     categoriaPosicao(posicao) !== "go" &&
-    trofeusColetivos.length >= 2 &&
-    (gols >= 20 || assistencias >= 15 || gols + assistencias >= 25) &&
-    sortearPremio(t.chanceBolaDeOuro * multIndividuais)
+    pontosRanking > 0 &&
+    sortearPremio(chanceBolaDeOuro)
   ) {
     trofeusIndividuais.push("Bola de Ouro");
   }

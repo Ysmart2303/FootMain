@@ -7045,6 +7045,8 @@
         !!e.convocado,
         temporada.atributos,
         false,
+        temporada.rankingLiga,
+        estado.carreiraId,
       );
 
       const tabela = estado.tabela
