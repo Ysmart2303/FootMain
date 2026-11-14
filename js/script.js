@@ -711,33 +711,55 @@ function resolverEscudosPendentes(pais) {
   )
     return;
   PAISES_ESCUDOS_EM_RESOLUCAO.add(pais);
-  obterIndiceEscudosPais(pais).then((arquivos) => {
-    const mapa = new Map(
-      arquivos.map((arquivo) => [normalizarNomeParaEscudo(arquivo.nome), arquivo]),
-    );
-    CACHE_MAPA_ESCUDOS_POR_PAIS.set(pais, mapa);
-    document
-      .querySelectorAll(
-        `img[data-escudo-pais="${pais}"][data-escudo-pendente="1"]`,
-      )
-      .forEach((imagem) => {
-        const clube = {
-          id: imagem.dataset.escudoId,
-          nome: imagem.dataset.escudoNome,
-        };
-        const encontrado = encontrarArquivoEscudo(clube, arquivos, mapa);
-        imagem.dataset.escudoPendente = "0";
-        if (encontrado) {
-          imagem.src = encontrado.url;
-        }
-      });
-  }).finally(() => PAISES_ESCUDOS_EM_RESOLUCAO.delete(pais));
+  obterIndiceEscudosPais(pais)
+    .then((arquivos) => {
+      const mapa = new Map(
+        arquivos.map((arquivo) => [normalizarNomeParaEscudo(arquivo.nome), arquivo]),
+      );
+      CACHE_MAPA_ESCUDOS_POR_PAIS.set(pais, mapa);
+      document
+        .querySelectorAll(
+          `img[data-escudo-pais="${pais}"][data-escudo-pendente="1"]`,
+        )
+        .forEach((imagem) => {
+          const clube = {
+            id: imagem.dataset.escudoId,
+            nome: imagem.dataset.escudoNome,
+          };
+          const encontrado = encontrarArquivoEscudo(clube, arquivos, mapa);
+          imagem.dataset.escudoPendente = "0";
+          if (encontrado) {
+            imagem.src = encontrado.url;
+          } else {
+            imagem.src = criarEscudoGenericoSvg(imagem.dataset.escudoNome || "Clube");
+          }
+        });
+    })
+    .catch(() => {
+      document
+        .querySelectorAll(
+          `img[data-escudo-pais="${pais}"][data-escudo-pendente="1"]`,
+        )
+        .forEach((imagem) => {
+          imagem.dataset.escudoPendente = "0";
+          imagem.src = criarEscudoGenericoSvg(
+            imagem.dataset.escudoNome || "Clube",
+          );
+        });
+    })
+    .finally(() => PAISES_ESCUDOS_EM_RESOLUCAO.delete(pais));
 }
 
 function obterUrlEscudoClube(clube) {
   if (!clube) return criarEscudoGenericoSvg("FC");
-  if (clube.escudo || clube.logo || clube.logoUrl)
-    return clube.escudo || clube.logo || clube.logoUrl;
+  const urlDireta = clube.escudo || clube.logo || clube.logoUrl;
+  if (
+    typeof urlDireta === "string" &&
+    urlDireta.trim() !== "" &&
+    /^(https?:\/\/|data:)/i.test(urlDireta.trim())
+  ) {
+    return urlDireta;
+  }
   return criarEscudoGenericoSvg(clube.nome || "Clube");
 }
 
@@ -757,7 +779,7 @@ function htmlEscudoClube(clube, tamanho = "pequeno", classeExtra = "") {
     ? `data-escudo-pais="${escaparHTML(pais)}" data-escudo-id="${escaparHTML(cadastroEscudo?.id || clube?.id || "")}" data-escudo-nome="${escaparHTML(cadastroEscudo?.nome || nome)}" data-escudo-pendente="1"`
     : "";
   if (pais && !arquivosPais) resolverEscudosPendentes(pais);
-  return `<img class="${classes}" src="${escaparHTML(url)}" alt="Escudo ${escaparHTML(nome)}" loading="lazy" decoding="async" ${atributosBusca} onerror="this.onerror=null;this.src='${fallback}'">`;
+  return `<img class="${classes}" src="${escaparHTML(url || fallback)}" alt="Escudo ${escaparHTML(nome)}" loading="lazy" decoding="async" ${atributosBusca} onerror="this.onerror=null;this.src='${fallback}'">`;
 }
 
 const MAPA_TROFEUS_POR_LIGA = {
