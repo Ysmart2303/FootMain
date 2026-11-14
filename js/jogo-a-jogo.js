@@ -753,6 +753,7 @@
   let decisaoEmAndamento = false;
   let fluxoDecisao = null;
   let loadingEl = null;
+  let carregamentoAtivo = false;
   let filaModaisPartida = [];
   let simulandoTemporada = false;
   let adiarPromocaoBaseAteFim = false;
@@ -771,6 +772,7 @@
                 <p class="footmain-loading-texto"></p>`;
       document.body.append(loadingEl);
     }
+    carregamentoAtivo = true;
     loadingEl.querySelector(".footmain-loading-texto").textContent = texto;
     loadingEl.hidden = false;
     // Libera o frame para o navegador pintar o overlay antes da simulação bloquear a thread.
@@ -778,7 +780,14 @@
   }
 
   function ocultarCarregamento() {
+    carregamentoAtivo = false;
     if (loadingEl) loadingEl.hidden = true;
+  }
+
+  async function aguardarCarregamentoLiberado() {
+    while (carregamentoAtivo) {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
   }
 
   function bloquearAcoesPartida() {
@@ -815,6 +824,7 @@
 
   async function processarFilaModais() {
     while (filaModaisPartida.length > 0) {
+      await aguardarCarregamentoLiberado();
       const item = filaModaisPartida.shift();
       if (item.tipo === "trofeu") {
         await exibirModalTrofeu(item.competicao, item.tipoTrofeu);
@@ -826,7 +836,8 @@
     }
   }
 
-  function exibirModalTrofeu(competicao, tipoTrofeu) {
+  async function exibirModalTrofeu(competicao, tipoTrofeu) {
+    await aguardarCarregamentoLiberado();
     return new Promise((resolve) => {
       const modal = $("jja-modal-trofeu");
       const titulo = $("jja-trofeu-titulo");
@@ -874,7 +885,8 @@
     });
   }
 
-  function exibirModalEvento(tipoEvento, mensagem, icone) {
+  async function exibirModalEvento(tipoEvento, mensagem, icone) {
+    await aguardarCarregamentoLiberado();
     return new Promise((resolve) => {
       const modal = $("jja-modal-evento");
       const iconeEl = $("jja-evento-icone");
@@ -1308,6 +1320,31 @@
       Number(ultimaTemporada.idade) >= idadeLimite ||
       constaNoRanking
     );
+  }
+
+  function limitarAnoInicial(ano, fallback = 2026) {
+    const numero = Number(ano);
+    const anoValido = Number.isFinite(numero) && numero !== 0 ? numero : fallback;
+    return Math.min(2026, Math.max(2000, Math.floor(anoValido)));
+  }
+
+  function atualizarCampoAnoInicial(carreira, historico) {
+    const campo = $("ano-inicial-carreira");
+    if (!campo) return;
+    const temporadas = Array.isArray(historico) ? historico : [];
+    const progressoAtivo =
+      estado && String(estado.carreiraId) === String(carreira?.id);
+    const carreiraAtiva =
+      !carreiraEncerrada(carreira || {}, temporadas) &&
+      (temporadas.length > 0 || progressoAtivo);
+    if (carreiraAtiva) {
+      const anoSalvo =
+        Number(carreira?.anoInicial) ||
+        Number(temporadas[0]?.ano) ||
+        Number(estado?.ano);
+      if (anoSalvo) campo.value = String(limitarAnoInicial(anoSalvo));
+    }
+    campo.disabled = carreiraAtiva;
   }
 
   function temporadaEmAndamento(carreira) {
@@ -4043,6 +4080,25 @@
     const carreira =
       typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : {};
     const historico = obterHistoricoCarreira(carreira);
+    const novaCarreira = carreiraEncerrada(carreira, historico) || !historico.length;
+    const campoAnoInicial = $("ano-inicial-carreira");
+    if (novaCarreira) {
+      const configAno =
+        typeof getConfig === "function"
+          ? Number(getConfig()?.geral?.anoInicial)
+          : Number(typeof ANO_INICIAL !== "undefined" ? ANO_INICIAL : 2026);
+      const anoInformado = campoAnoInicial?.value || configAno;
+      ANO_INICIAL = limitarAnoInicial(anoInformado, configAno || 2026);
+      carreira.anoInicial = ANO_INICIAL;
+    } else {
+      const anoSalvo = Number(carreira.anoInicial) || Number(historico[0]?.ano) || 2026;
+      ANO_INICIAL = limitarAnoInicial(anoSalvo);
+      carreira.anoInicial = ANO_INICIAL;
+    }
+    if (campoAnoInicial) {
+      campoAnoInicial.value = String(ANO_INICIAL);
+      campoAnoInicial.disabled = !novaCarreira;
+    }
     if (carreiraEncerrada(carreira, historico)) {
       const idadeInicial = Math.max(16, Number($("idade").value) || 18);
       const idadeLimite = Math.max(
@@ -4099,7 +4155,14 @@
       if (resultados) resultados.hidden = false;
       renderizar();
     }
+    if (campoAnoInicial) campoAnoInicial.disabled = true;
     await iniciar();
+    atualizarCampoAnoInicial(
+      typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : carreira,
+      obterHistoricoCarreira(
+        typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : carreira,
+      ),
+    );
   }
   async function aposentarJogador() {
     if (decisaoEmAndamento) return;
@@ -4143,6 +4206,12 @@
 
     // Já confirmamos acima; evita a segunda confirmação dentro de aposentarVoluntariamente().
     await aposentarVoluntariamente(true);
+    atualizarCampoAnoInicial(
+      typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : carreira,
+      obterHistoricoCarreira(
+        typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : carreira,
+      ),
+    );
     renderizar();
   }
 
@@ -4305,6 +4374,57 @@
     { id: "milan-skriniar", nome: "Milan Škriniar", anoNascimento: 1995, clube: "inter", posicao: "ZCD", idadeAposentadoria: 39, destinos: ["real-madrid", "paris-saint-germain"], chanceTransferencia: 0.1, pesoRanking: 2.8 },
     { id: "nicolas-otamendi", nome: "Nicolás Otamendi", anoNascimento: 1988, clube: "inter-miami", posicao: "ZCD", idadeAposentadoria: 40, destinos: ["benfica", "porto"], chanceTransferencia: 0.08, pesoRanking: 2.5 },
     { id: "jordan-henderson", nome: "Jordan Henderson", anoNascimento: 1990, clube: "al-nassr", posicao: "MC", idadeAposentadoria: 38, destinos: ["liverpool", "newcastle"], chanceTransferencia: 0.08, pesoRanking: 2.6 },
+    { id: "zinedine-zidane", nome: "Zinedine Zidane", anoNascimento: 1972, clube: "real-madrid", posicao: "MC", idadeAposentadoria: 34, pesoRanking: 4.2, pesoRankingPico: 8.5, anoInicioProfissional: 1989, anosPico: [2000, 2006], clubesHistoricos: [{ inicio: 2000, fim: 2001, clube: "juventus" }, { inicio: 2002, fim: 2006, clube: "real-madrid" }] },
+    { id: "ronaldo-nazario", nome: "Ronaldo Nazário", anoNascimento: 1976, clube: "real-madrid", posicao: "CA", idadeAposentadoria: 35, pesoRanking: 4.4, pesoRankingPico: 9, anoInicioProfissional: 1993, anosPico: [1997, 2002], clubesHistoricos: [{ inicio: 2000, fim: 2002, clube: "inter" }, { inicio: 2003, fim: 2007, clube: "real-madrid" }, { inicio: 2008, fim: 2008, clube: "milan" }, { inicio: 2009, fim: 2011, clube: "corinthians" }] },
+    { id: "ronaldinho-gaucho", nome: "Ronaldinho Gaúcho", anoNascimento: 1980, clube: "flamengo", posicao: "ME", idadeAposentadoria: 35, pesoRanking: 4, pesoRankingPico: 8.5, anoInicioProfissional: 1998, anosPico: [2004, 2006], clubesHistoricos: [{ inicio: 2001, fim: 2003, clube: "paris-saint-germain" }, { inicio: 2004, fim: 2008, clube: "barcelona" }, { inicio: 2009, fim: 2010, clube: "milan" }, { inicio: 2011, fim: 2012, clube: "flamengo" }, { inicio: 2013, fim: 2014, clube: "santos" }] },
+    { id: "luis-figo", nome: "Luís Figo", anoNascimento: 1972, clube: "inter", posicao: "PD", idadeAposentadoria: 36, pesoRanking: 3.6, pesoRankingPico: 7.2, anoInicioProfissional: 1989, anosPico: [2000, 2002], clubesHistoricos: [{ inicio: 2000, fim: 2000, clube: "barcelona" }, { inicio: 2001, fim: 2005, clube: "real-madrid" }, { inicio: 2006, fim: 2009, clube: "inter" }] },
+    { id: "thierry-henry", nome: "Thierry Henry", anoNascimento: 1977, clube: "barcelona", posicao: "CA", idadeAposentadoria: 37, pesoRanking: 4, pesoRankingPico: 8, anoInicioProfissional: 1994, anosPico: [2002, 2006], clubesHistoricos: [{ inicio: 2000, fim: 2007, clube: "arsenal" }, { inicio: 2008, fim: 2010, clube: "barcelona" }, { inicio: 2011, fim: 2014, clube: "arsenal" }] },
+    { id: "david-beckham", nome: "David Beckham", anoNascimento: 1975, clube: "real-madrid", posicao: "MD", idadeAposentadoria: 38, pesoRanking: 3.4, pesoRankingPico: 6.8, anoInicioProfissional: 1992, anosPico: [2000, 2003], clubesHistoricos: [{ inicio: 2000, fim: 2003, clube: "manchester-united" }, { inicio: 2004, fim: 2007, clube: "real-madrid" }, { inicio: 2008, fim: 2009, clube: "milan" }] },
+    { id: "raul-gonzalez", nome: "Raúl González", anoNascimento: 1977, clube: "real-madrid", posicao: "CA", idadeAposentadoria: 37, pesoRanking: 3.8, pesoRankingPico: 7.5, anoInicioProfissional: 1994, anosPico: [2000, 2002], clubesHistoricos: [{ inicio: 2000, fim: 2010, clube: "real-madrid" }, { inicio: 2011, fim: 2012, clube: "schalke-04" }] },
+    { id: "francesco-totti", nome: "Francesco Totti", anoNascimento: 1976, clube: "roma", posicao: "CA", idadeAposentadoria: 40, pesoRanking: 3.7, pesoRankingPico: 7.2, anoInicioProfissional: 1993, anosPico: [2000, 2007], clubesHistoricos: [{ inicio: 2000, fim: 2017, clube: "roma" }] },
+    { id: "alessandro-del-piero", nome: "Alessandro Del Piero", anoNascimento: 1974, clube: "juventus", posicao: "CA", idadeAposentadoria: 39, pesoRanking: 3.6, pesoRankingPico: 7, anoInicioProfissional: 1991, anosPico: [2000, 2003], clubesHistoricos: [{ inicio: 2000, fim: 2012, clube: "juventus" }] },
+    { id: "paolo-maldini", nome: "Paolo Maldini", anoNascimento: 1968, clube: "milan", posicao: "ZCE", idadeAposentadoria: 41, pesoRanking: 3.6, pesoRankingPico: 7, anoInicioProfissional: 1985, anosPico: [2000, 2005], clubesHistoricos: [{ inicio: 2000, fim: 2009, clube: "milan" }] },
+    { id: "andriy-shevchenko", nome: "Andriy Shevchenko", anoNascimento: 1976, clube: "milan", posicao: "CA", idadeAposentadoria: 35, pesoRanking: 3.8, pesoRankingPico: 7.8, anoInicioProfissional: 1994, anosPico: [2000, 2004], clubesHistoricos: [{ inicio: 2000, fim: 2006, clube: "milan" }, { inicio: 2007, fim: 2008, clube: "chelsea" }, { inicio: 2009, fim: 2009, clube: "milan" }] },
+    { id: "pavel-nedved", nome: "Pavel Nedvěd", anoNascimento: 1972, clube: "juventus", posicao: "ME", idadeAposentadoria: 36, pesoRanking: 3.5, pesoRankingPico: 7.4, anoInicioProfissional: 1991, anosPico: [2001, 2004], clubesHistoricos: [{ inicio: 2000, fim: 2001, clube: "lazio" }, { inicio: 2002, fim: 2009, clube: "juventus" }] },
+    { id: "oliver-kahn", nome: "Oliver Kahn", anoNascimento: 1969, clube: "bayern-munich", posicao: "GOL", idadeAposentadoria: 39, pesoRanking: 3.2, pesoRankingPico: 6.8, anoInicioProfissional: 1987, anosPico: [2000, 2002], clubesHistoricos: [{ inicio: 2000, fim: 2008, clube: "bayern-munich" }] },
+    { id: "michael-ballack", nome: "Michael Ballack", anoNascimento: 1976, clube: "chelsea", posicao: "MC", idadeAposentadoria: 36, pesoRanking: 3.4, pesoRankingPico: 7, anoInicioProfissional: 1995, anosPico: [2002, 2006], clubesHistoricos: [{ inicio: 2000, fim: 2002, clube: "bayer-leverkusen" }, { inicio: 2003, fim: 2006, clube: "bayern-munich" }, { inicio: 2007, fim: 2010, clube: "chelsea" }, { inicio: 2011, fim: 2012, clube: "bayer-leverkusen" }] },
+    { id: "deco", nome: "Deco", anoNascimento: 1977, clube: "barcelona", posicao: "MC", idadeAposentadoria: 35, pesoRanking: 3.3, pesoRankingPico: 7.2, anoInicioProfissional: 1997, anosPico: [2003, 2006], clubesHistoricos: [{ inicio: 2000, fim: 2003, clube: "porto" }, { inicio: 2004, fim: 2008, clube: "barcelona" }, { inicio: 2009, fim: 2010, clube: "chelsea" }] },
+    { id: "roberto-carlos", nome: "Roberto Carlos", anoNascimento: 1973, clube: "real-madrid", posicao: "LE", idadeAposentadoria: 39, pesoRanking: 3.3, pesoRankingPico: 6.6, anoInicioProfissional: 1991, anosPico: [2000, 2003], clubesHistoricos: [{ inicio: 2000, fim: 2007, clube: "real-madrid" }, { inicio: 2008, fim: 2009, clube: "fenerbahce" }, { inicio: 2010, fim: 2011, clube: "corinthians" }] },
+    { id: "cafu", nome: "Cafu", anoNascimento: 1970, clube: "milan", posicao: "LD", idadeAposentadoria: 38, pesoRanking: 3.2, pesoRankingPico: 6.6, anoInicioProfissional: 1989, anosPico: [2000, 2004], clubesHistoricos: [{ inicio: 2000, fim: 2003, clube: "roma" }, { inicio: 2004, fim: 2008, clube: "milan" }] },
+    { id: "patrick-vieira", nome: "Patrick Vieira", anoNascimento: 1976, clube: "inter", posicao: "MC", idadeAposentadoria: 35, pesoRanking: 3.2, pesoRankingPico: 6.5, anoInicioProfissional: 1994, anosPico: [2000, 2004], clubesHistoricos: [{ inicio: 2000, fim: 2005, clube: "arsenal" }, { inicio: 2006, fim: 2006, clube: "juventus" }, { inicio: 2007, fim: 2010, clube: "inter" }, { inicio: 2011, fim: 2011, clube: "manchester-city" }] },
+    { id: "claude-makelele", nome: "Claude Makélélé", anoNascimento: 1973, clube: "chelsea", posicao: "MC", idadeAposentadoria: 37, pesoRanking: 3, pesoRankingPico: 6.4, anoInicioProfissional: 1990, anosPico: [2001, 2006], clubesHistoricos: [{ inicio: 2000, fim: 2000, clube: "real-madrid" }, { inicio: 2001, fim: 2003, clube: "real-madrid" }, { inicio: 2004, fim: 2008, clube: "chelsea" }, { inicio: 2009, fim: 2011, clube: "paris-saint-germain" }] },
+    { id: "rio-ferdinand", nome: "Rio Ferdinand", anoNascimento: 1978, clube: "manchester-united", posicao: "ZCD", idadeAposentadoria: 36, pesoRanking: 3.1, pesoRankingPico: 6.4, anoInicioProfissional: 1996, anosPico: [2002, 2009], clubesHistoricos: [{ inicio: 2000, fim: 2001, clube: "west-ham" }, { inicio: 2002, fim: 2014, clube: "manchester-united" }] },
+    { id: "carles-puyol", nome: "Carles Puyol", anoNascimento: 1978, clube: "barcelona", posicao: "ZCD", idadeAposentadoria: 36, pesoRanking: 3, pesoRankingPico: 6.4, anoInicioProfissional: 1999, anosPico: [2006, 2010], clubesHistoricos: [{ inicio: 2000, fim: 2014, clube: "barcelona" }] },
+    { id: "kaka", nome: "Kaká", anoNascimento: 1982, clube: "milan", posicao: "ME", idadeAposentadoria: 35, pesoRanking: 3.8, pesoRankingPico: 8.4, anoInicioProfissional: 2001, anosPico: [2006, 2007], clubesHistoricos: [{ inicio: 2001, fim: 2003, clube: "sao-paulo" }, { inicio: 2004, fim: 2009, clube: "milan" }, { inicio: 2010, fim: 2013, clube: "real-madrid" }, { inicio: 2014, fim: 2014, clube: "milan" }] },
+    { id: "xavi-hernandez", nome: "Xavi Hernández", anoNascimento: 1980, clube: "barcelona", posicao: "MC", idadeAposentadoria: 39, pesoRanking: 3.6, pesoRankingPico: 7.8, anoInicioProfissional: 1998, anosPico: [2008, 2012], clubesHistoricos: [{ inicio: 2000, fim: 2015, clube: "barcelona" }] },
+    { id: "andres-iniesta", nome: "Andrés Iniesta", anoNascimento: 1984, clube: "barcelona", posicao: "MC", idadeAposentadoria: 39, pesoRanking: 3.7, pesoRankingPico: 8, anoInicioProfissional: 2002, anosPico: [2009, 2012], clubesHistoricos: [{ inicio: 2002, fim: 2018, clube: "barcelona" }] },
+    { id: "samuel-etoo", nome: "Samuel Eto'o", anoNascimento: 1981, clube: "barcelona", posicao: "CA", idadeAposentadoria: 37, pesoRanking: 3.8, pesoRankingPico: 7.8, anoInicioProfissional: 1997, anosPico: [2005, 2010], clubesHistoricos: [{ inicio: 2000, fim: 2004, clube: "mallorca" }, { inicio: 2005, fim: 2009, clube: "barcelona" }, { inicio: 2010, fim: 2011, clube: "inter" }, { inicio: 2012, fim: 2013, clube: "chelsea" }] },
+    { id: "didier-drogba", nome: "Didier Drogba", anoNascimento: 1978, clube: "chelsea", posicao: "CA", idadeAposentadoria: 40, pesoRanking: 3.7, pesoRankingPico: 7.6, anoInicioProfissional: 1998, anosPico: [2004, 2012], clubesHistoricos: [{ inicio: 2000, fim: 2002, clube: "guingamp" }, { inicio: 2003, fim: 2004, clube: "marseille" }, { inicio: 2005, fim: 2012, clube: "chelsea" }, { inicio: 2013, fim: 2014, clube: "galatasaray" }, { inicio: 2015, fim: 2015, clube: "chelsea" }] },
+    { id: "frank-lampard", nome: "Frank Lampard", anoNascimento: 1978, clube: "chelsea", posicao: "MC", idadeAposentadoria: 38, pesoRanking: 3.6, pesoRankingPico: 7.4, anoInicioProfissional: 1995, anosPico: [2004, 2010], clubesHistoricos: [{ inicio: 2000, fim: 2001, clube: "west-ham" }, { inicio: 2002, fim: 2014, clube: "chelsea" }, { inicio: 2015, fim: 2016, clube: "manchester-city" }] },
+    { id: "steven-gerrard", nome: "Steven Gerrard", anoNascimento: 1980, clube: "liverpool", posicao: "MC", idadeAposentadoria: 36, pesoRanking: 3.6, pesoRankingPico: 7.4, anoInicioProfissional: 1998, anosPico: [2005, 2009], clubesHistoricos: [{ inicio: 2000, fim: 2015, clube: "liverpool" }] },
+    { id: "wayne-rooney", nome: "Wayne Rooney", anoNascimento: 1985, clube: "manchester-united", posicao: "CA", idadeAposentadoria: 35, pesoRanking: 3.8, pesoRankingPico: 7.8, anoInicioProfissional: 2002, anosPico: [2009, 2012], clubesHistoricos: [{ inicio: 2002, fim: 2004, clube: "everton" }, { inicio: 2005, fim: 2017, clube: "manchester-united" }, { inicio: 2018, fim: 2018, clube: "everton" }] },
+    { id: "zlatan-ibrahimovic", nome: "Zlatan Ibrahimović", anoNascimento: 1981, clube: "milan", posicao: "CA", idadeAposentadoria: 41, pesoRanking: 3.9, pesoRankingPico: 7.8, anoInicioProfissional: 1999, anosPico: [2004, 2016], clubesHistoricos: [{ inicio: 2000, fim: 2001, clube: "ajax" }, { inicio: 2002, fim: 2004, clube: "juventus" }, { inicio: 2005, fim: 2006, clube: "inter" }, { inicio: 2007, fim: 2009, clube: "inter" }, { inicio: 2010, fim: 2011, clube: "milan" }, { inicio: 2012, fim: 2016, clube: "paris-saint-germain" }, { inicio: 2017, fim: 2018, clube: "manchester-united" }, { inicio: 2019, fim: 2020, clube: "milan" }, { inicio: 2021, fim: 2023, clube: "milan" }] },
+    { id: "arjen-robben", nome: "Arjen Robben", anoNascimento: 1984, clube: "bayern-munich", posicao: "PD", idadeAposentadoria: 35, pesoRanking: 3.5, pesoRankingPico: 7.4, anoInicioProfissional: 2000, anosPico: [2010, 2014], clubesHistoricos: [{ inicio: 2000, fim: 2002, clube: "chelsea" }, { inicio: 2003, fim: 2004, clube: "chelsea" }, { inicio: 2005, fim: 2007, clube: "chelsea" }, { inicio: 2008, fim: 2009, clube: "real-madrid" }, { inicio: 2010, fim: 2019, clube: "bayern-munich" }] },
+    { id: "franck-ribery", nome: "Franck Ribéry", anoNascimento: 1983, clube: "bayern-munich", posicao: "PE", idadeAposentadoria: 39, pesoRanking: 3.5, pesoRankingPico: 7.2, anoInicioProfissional: 2000, anosPico: [2008, 2013], clubesHistoricos: [{ inicio: 2000, fim: 2004, clube: "galatasaray" }, { inicio: 2005, fim: 2006, clube: "marseille" }, { inicio: 2007, fim: 2019, clube: "bayern-munich" }, { inicio: 2020, fim: 2021, clube: "fiorentina" }] },
+    { id: "david-villa", nome: "David Villa", anoNascimento: 1981, clube: "barcelona", posicao: "CA", idadeAposentadoria: 37, pesoRanking: 3.7, pesoRankingPico: 7.4, anoInicioProfissional: 2000, anosPico: [2008, 2011], clubesHistoricos: [{ inicio: 2000, fim: 2003, clube: "valencia" }, { inicio: 2004, fim: 2010, clube: "valencia" }, { inicio: 2011, fim: 2013, clube: "barcelona" }, { inicio: 2014, fim: 2014, clube: "atletico-madrid" }] },
+    { id: "fernando-torres", nome: "Fernando Torres", anoNascimento: 1984, clube: "liverpool", posicao: "CA", idadeAposentadoria: 35, pesoRanking: 3.6, pesoRankingPico: 7.4, anoInicioProfissional: 2001, anosPico: [2008, 2009], clubesHistoricos: [{ inicio: 2001, fim: 2007, clube: "atletico-madrid" }, { inicio: 2008, fim: 2010, clube: "liverpool" }, { inicio: 2011, fim: 2014, clube: "chelsea" }, { inicio: 2015, fim: 2015, clube: "milan" }, { inicio: 2016, fim: 2018, clube: "atletico-madrid" }] },
+    { id: "alexandre-pato", nome: "Alexandre Pato", anoNascimento: 1989, clube: "sao-paulo", posicao: "CA", idadeAposentadoria: 35, pesoRanking: 3.2, pesoRankingPico: 7, anoInicioProfissional: 2006, anosPico: [2009, 2011], clubesHistoricos: [{ inicio: 2007, fim: 2012, clube: "milan" }, { inicio: 2013, fim: 2013, clube: "corinthians" }, { inicio: 2014, fim: 2015, clube: "sao-paulo" }, { inicio: 2016, fim: 2016, clube: "chelsea" }, { inicio: 2017, fim: 2017, clube: "sao-paulo" }, { inicio: 2018, fim: 2020, clube: "sao-paulo" }] },
+    { id: "cesc-fabregas", nome: "Cesc Fàbregas", anoNascimento: 1987, clube: "chelsea", posicao: "MC", idadeAposentadoria: 36, pesoRanking: 3.5, pesoRankingPico: 7.3, anoInicioProfissional: 2003, anosPico: [2008, 2012], clubesHistoricos: [{ inicio: 2003, fim: 2011, clube: "arsenal" }, { inicio: 2012, fim: 2014, clube: "barcelona" }, { inicio: 2015, fim: 2018, clube: "chelsea" }, { inicio: 2019, fim: 2022, clube: "monaco" }] },
+    { id: "sergio-aguero", nome: "Sergio Agüero", anoNascimento: 1988, clube: "manchester-city", posicao: "CA", idadeAposentadoria: 33, pesoRanking: 3.8, pesoRankingPico: 8, anoInicioProfissional: 2003, anosPico: [2012, 2019], clubesHistoricos: [{ inicio: 2003, fim: 2006, clube: "atletico-madrid" }, { inicio: 2007, fim: 2011, clube: "atletico-madrid" }, { inicio: 2012, fim: 2021, clube: "manchester-city" }, { inicio: 2022, fim: 2022, clube: "barcelona" }] },
+    { id: "gareth-bale", nome: "Gareth Bale", anoNascimento: 1989, clube: "real-madrid", posicao: "PD", idadeAposentadoria: 33, pesoRanking: 3.7, pesoRankingPico: 7.8, anoInicioProfissional: 2006, anosPico: [2013, 2018], clubesHistoricos: [{ inicio: 2007, fim: 2013, clube: "tottenham" }, { inicio: 2014, fim: 2020, clube: "real-madrid" }, { inicio: 2021, fim: 2021, clube: "tottenham" }, { inicio: 2022, fim: 2022, clube: "real-madrid" }] },
+    { id: "angel-di-maria", nome: "Ángel Di María", anoNascimento: 1988, clube: "benfica", posicao: "PD", idadeAposentadoria: 38, pesoRanking: 3.7, pesoRankingPico: 7.5, anoInicioProfissional: 2005, anosPico: [2014, 2022], clubesHistoricos: [{ inicio: 2007, fim: 2010, clube: "benfica" }, { inicio: 2011, fim: 2014, clube: "real-madrid" }, { inicio: 2015, fim: 2015, clube: "manchester-united" }, { inicio: 2016, fim: 2022, clube: "paris-saint-germain" }, { inicio: 2023, fim: 2023, clube: "juventus" }, { inicio: 2024, fim: 2025, clube: "benfica" }] },
+    { id: "eden-hazard", nome: "Eden Hazard", anoNascimento: 1991, clube: "real-madrid", posicao: "PE", idadeAposentadoria: 32, pesoRanking: 3.7, pesoRankingPico: 7.8, anoInicioProfissional: 2007, anosPico: [2015, 2019], clubesHistoricos: [{ inicio: 2007, fim: 2012, clube: "lille" }, { inicio: 2013, fim: 2019, clube: "chelsea" }, { inicio: 2020, fim: 2023, clube: "real-madrid" }] },
+    { id: "karim-benzema", nome: "Karim Benzema", anoNascimento: 1987, clube: "al-ittihad", posicao: "CA", idadeAposentadoria: 40, pesoRanking: 3.9, pesoRankingPico: 8.4, anoInicioProfissional: 2004, anosPico: [2021, 2022], clubesHistoricos: [{ inicio: 2005, fim: 2009, clube: "lyon" }, { inicio: 2010, fim: 2023, clube: "real-madrid" }, { inicio: 2024, fim: 2025, clube: "al-ittihad" }] },
+    { id: "philippe-coutinho", nome: "Philippe Coutinho", anoNascimento: 1992, clube: "vasco", posicao: "ME", idadeAposentadoria: 36, pesoRanking: 3.4, pesoRankingPico: 7.5, anoInicioProfissional: 2009, anosPico: [2017, 2018], clubesHistoricos: [{ inicio: 2009, fim: 2010, clube: "vasco" }, { inicio: 2011, fim: 2012, clube: "inter" }, { inicio: 2013, fim: 2013, clube: "liverpool" }, { inicio: 2014, fim: 2017, clube: "liverpool" }, { inicio: 2018, fim: 2019, clube: "barcelona" }, { inicio: 2020, fim: 2020, clube: "bayern-munich" }, { inicio: 2021, fim: 2021, clube: "barcelona" }] },
+    { id: "sergio-ramos-historico", nome: "Sergio Ramos", anoNascimento: 1986, clube: "real-madrid", posicao: "ZCD", idadeAposentadoria: 39, pesoRanking: 3.5, pesoRankingPico: 7.3, anoInicioProfissional: 2003, anosPico: [2010, 2017], clubesHistoricos: [{ inicio: 2004, fim: 2005, clube: "sevilla" }, { inicio: 2006, fim: 2021, clube: "real-madrid" }, { inicio: 2022, fim: 2023, clube: "paris-saint-germain" }, { inicio: 2024, fim: 2025, clube: "sevilla" }] },
+    { id: "thiago-silva", nome: "Thiago Silva", anoNascimento: 1984, clube: "chelsea", posicao: "ZCD", idadeAposentadoria: 41, pesoRanking: 3.2, pesoRankingPico: 6.8, anoInicioProfissional: 2002, anosPico: [2012, 2015], clubesHistoricos: [{ inicio: 2006, fim: 2008, clube: "milan" }, { inicio: 2009, fim: 2012, clube: "milan" }, { inicio: 2013, fim: 2020, clube: "paris-saint-germain" }, { inicio: 2021, fim: 2024, clube: "chelsea" }, { inicio: 2025, fim: 2025, clube: "fluminense" }] },
+    { id: "luka-modric-historico", nome: "Luka Modrić", anoNascimento: 1985, clube: "milan", posicao: "MC", idadeAposentadoria: 41, pesoRanking: 3.4, pesoRankingPico: 7.5, anoInicioProfissional: 2003, anosPico: [2016, 2018], clubesHistoricos: [{ inicio: 2008, fim: 2012, clube: "tottenham" }, { inicio: 2013, fim: 2025, clube: "real-madrid" }] },
+    { id: "robert-lewandowski-historico", nome: "Robert Lewandowski", anoNascimento: 1988, clube: "barcelona", posicao: "CA", idadeAposentadoria: 40, pesoRanking: 3.8, pesoRankingPico: 8.2, anoInicioProfissional: 2006, anosPico: [2015, 2021], clubesHistoricos: [{ inicio: 2008, fim: 2010, clube: "le-poznan" }, { inicio: 2011, fim: 2014, clube: "borussia-dortmund" }, { inicio: 2015, fim: 2022, clube: "bayern-munich" }, { inicio: 2023, fim: 2025, clube: "barcelona" }] },
+    { id: "mohamed-salah-historico", nome: "Mohamed Salah", anoNascimento: 1992, clube: "liverpool", posicao: "PD", idadeAposentadoria: 39, pesoRanking: 3.6, pesoRankingPico: 7.8, anoInicioProfissional: 2010, anosPico: [2018, 2025], clubesHistoricos: [{ inicio: 2012, fim: 2013, clube: "basel" }, { inicio: 2014, fim: 2015, clube: "chelsea" }, { inicio: 2016, fim: 2016, clube: "roma" }, { inicio: 2017, fim: 2025, clube: "liverpool" }] },
+    { id: "kevin-de-bruyne-historico", nome: "Kevin De Bruyne", anoNascimento: 1991, clube: "napoli", posicao: "MC", idadeAposentadoria: 39, pesoRanking: 3.6, pesoRankingPico: 7.8, anoInicioProfissional: 2008, anosPico: [2018, 2023], clubesHistoricos: [{ inicio: 2009, fim: 2012, clube: "chelsea" }, { inicio: 2013, fim: 2014, clube: "wolfsburg" }, { inicio: 2015, fim: 2025, clube: "manchester-city" }] },
+    { id: "harry-kane-historico", nome: "Harry Kane", anoNascimento: 1993, clube: "bayern-munich", posicao: "CA", idadeAposentadoria: 40, pesoRanking: 3.6, pesoRankingPico: 7.8, anoInicioProfissional: 2010, anosPico: [2017, 2024], clubesHistoricos: [{ inicio: 2011, fim: 2012, clube: "tottenham" }, { inicio: 2013, fim: 2023, clube: "tottenham" }, { inicio: 2024, fim: 2025, clube: "bayern-munich" }] },
+    { id: "antoine-griezmann-historico", nome: "Antoine Griezmann", anoNascimento: 1991, clube: "atletico-madrid", posicao: "CA", idadeAposentadoria: 39, pesoRanking: 3.5, pesoRankingPico: 7.4, anoInicioProfissional: 2009, anosPico: [2016, 2018], clubesHistoricos: [{ inicio: 2010, fim: 2014, clube: "real-sociedad" }, { inicio: 2015, fim: 2019, clube: "atletico-madrid" }, { inicio: 2020, fim: 2021, clube: "barcelona" }, { inicio: 2022, fim: 2025, clube: "atletico-madrid" }] },
+    { id: "heung-min-son-historico", nome: "Heung-Min Son", anoNascimento: 1992, clube: "tottenham", posicao: "PE", idadeAposentadoria: 39, pesoRanking: 3.3, pesoRankingPico: 7.2, anoInicioProfissional: 2010, anosPico: [2020, 2022], clubesHistoricos: [{ inicio: 2010, fim: 2013, clube: "hamburger-sv" }, { inicio: 2014, fim: 2015, clube: "bayer-leverkusen" }, { inicio: 2016, fim: 2025, clube: "tottenham" }] },
   ];
 
   function hashIdentificador(texto) {
@@ -4335,13 +4455,12 @@
   }
 
   function calcularPesoRankingReal(jogador, ano) {
-    const pesoBase = Number(jogador.pesoRanking) || 1;
+    const pesoBase = Math.sqrt(Number(jogador.pesoRanking) || 1);
     const estaNoAuge =
       jogador.anosPico &&
       Number(ano) >= jogador.anosPico[0] &&
       Number(ano) <= jogador.anosPico[1];
-    if (estaNoAuge)
-      return Number(jogador.pesoRankingPico) || pesoBase * 1.6;
+    if (estaNoAuge) return Number(jogador.pesoRankingPico) || pesoBase * 1.6;
     return pesoBase * calcularMultiplicadorAuge(Number(ano) - jogador.anoNascimento);
   }
 
@@ -4395,25 +4514,49 @@
   }
 
   function obterJogadoresReaisDoClube(clubeId, ano) {
-    return JOGADORES_REAIS.filter(
-      (jogador) => clubeJogadorRealNaTemporada(jogador, Number(ano)) === clubeId,
-    ).map((jogador) => ({
+    const anoNumerico = Number(ano);
+    const porNome = new Map();
+    JOGADORES_REAIS.forEach((jogador) => {
+      const clubeTemporada = clubeJogadorRealNaTemporada(jogador, anoNumerico);
+      if (!clubeTemporada) return;
+      const nomeNormalizado = String(jogador.nome || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLocaleLowerCase("pt-BR")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+      const existente = porNome.get(nomeNormalizado);
+      const preferirCadastroAtual =
+        anoNumerico >= 2026 && !jogador.clubesHistoricos;
+      if (
+        !existente ||
+        (preferirCadastroAtual && existente.jogador.clubesHistoricos)
+      ) {
+        porNome.set(nomeNormalizado, { jogador, clubeId: clubeTemporada });
+      }
+    });
+    return [...porNome.values()]
+      .filter((registro) => registro.clubeId === clubeId)
+      .map(({ jogador }) => ({
       id: `real:${jogador.id}`,
       nome: jogador.nome,
       posicao: jogador.posicao,
       clubeId,
-      idade: Number(ano) - jogador.anoNascimento,
-      pesoRanking: calcularPesoRankingReal(jogador, Number(ano)),
-    }));
+      idade: anoNumerico - jogador.anoNascimento,
+      pesoRanking: calcularPesoRankingReal(jogador, anoNumerico),
+      }));
   }
 
   function chaveIdentidadeRanking(jogadorId, nome) {
+    const id = String(jogadorId || "").trim();
     const nomeNormalizado = String(nome || "")
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLocaleLowerCase("pt-BR")
       .replace(/[^a-z0-9]+/g, " ")
       .trim();
+    if (id.startsWith("real:")) return `real:${nomeNormalizado || id}`;
+    if (id) return `id:${id}`;
     return nomeNormalizado || String(jogadorId || "");
   }
 
@@ -4611,7 +4754,7 @@
     ).length;
     const cache = estado.rankingGlobalOutrasLigas;
     if (
-      cache?.versao === 3 &&
+      cache?.versao === 6 &&
       cache?.ano === estado.ano &&
       cache?.rodadas === rodadasConcluidas &&
       Array.isArray(cache.jogadores)
@@ -4664,8 +4807,8 @@
           if (!casa || !fora) return;
           const aleatorio = criarSorteadorRanking(`${estado.ano}:${liga}:${indiceRodada}:${casaId}:${foraId}`);
           const delta = (forcaClube(casa) - forcaClube(fora)) / 25;
-          const golsCasa = sortearPoissonRanking(Math.max(0.25, 1.3 + delta * 0.48), aleatorio);
-          const golsFora = sortearPoissonRanking(Math.max(0.25, 1.2 - delta * 0.42), aleatorio);
+          const golsCasa = sortearPoissonRanking(Math.max(0.25, 1.8 + delta * 0.48), aleatorio);
+          const golsFora = sortearPoissonRanking(Math.max(0.25, 1.7 - delta * 0.42), aleatorio);
           [[casaId, golsCasa], [foraId, golsFora]].forEach(([clubeId, gols]) => {
             const elenco = elencos.get(clubeId) || [];
             for (let indice = 0; indice < gols; indice++) {
@@ -4681,7 +4824,7 @@
       });
     });
     estado.rankingGlobalOutrasLigas = {
-      versao: 3,
+      versao: 6,
       ano: estado.ano,
       rodadas: rodadasConcluidas,
       jogadores: [...jogadores.values()],
@@ -6425,6 +6568,10 @@
     return embaralhados.slice(0, Math.min(quantidade, embaralhados.length));
   }
   function exibirLanceDecisao() {
+    if (!fluxoDecisao || !Array.isArray(fluxoDecisao.lances) || !fluxoDecisao.lances.length) {
+      encerrarDecisoesPartida(true);
+      return;
+    }
     const lance = fluxoDecisao.lances[fluxoDecisao.indiceLance];
     const modal = $("jja-modal-decisao");
     const opcoes = $("jja-decisao-opcoes");
@@ -6865,10 +7012,17 @@
     }
     await mostrarCarregamento("Preparando a partida...");
     try {
+      const lances = criarLancesDaPartida();
+      if (!Array.isArray(lances) || !lances.length) {
+        await simularPartidaComCarregamento(indice, "Preparando a partida...", {
+          participou: true,
+        });
+        return;
+      }
       fluxoDecisao = {
         indice,
         participou: true,
-        lances: criarLancesDaPartida(),
+        lances,
         indiceLance: 0,
         escolhaConfirmada: false,
         decisaoRespondida: false,
@@ -7335,6 +7489,7 @@
       );
       const carreiraEncerradaAgora =
         estado.idade >= estado.idadeLimite || temporada.lesaoCarreira;
+      atualizarCampoAnoInicial(carreira, [...historicoCarreira, temporada]);
       if (carreiraEncerradaAgora && typeof mostrarResumoFinal === "function") {
         mostrarResumoFinal(
           estado.nome,
@@ -7346,6 +7501,7 @@
       }
       if (aposentarPorLimiteBase && typeof aposentarVoluntariamente === "function") {
         await aposentarVoluntariamente(true);
+        atualizarCampoAnoInicial(carreira, [...historicoCarreira, temporada]);
         renderizar();
       }
       limparInformacao();
@@ -8242,6 +8398,7 @@
         );
         mostrarDesempenhoTemporada(temporadaFinal);
       }
+      atualizarCampoAnoInicial(carreira, historico);
       informar(
         `Fim da carreira simulada até ${temporadaFinal?.idade || estado?.idade || "a última temporada"} anos. O Histórico contém o resumo de cada temporada.`,
       );
@@ -8431,6 +8588,21 @@
 
   function inicializar() {
     carregar();
+    const campoAnoInicial = $("ano-inicial-carreira");
+    if (campoAnoInicial) {
+      const anoConfigurado =
+        typeof getConfig === "function"
+          ? Number(getConfig()?.geral?.anoInicial)
+          : Number(typeof ANO_INICIAL !== "undefined" ? ANO_INICIAL : 2026);
+      campoAnoInicial.min = "2000";
+      campoAnoInicial.max = "2026";
+      campoAnoInicial.value = String(limitarAnoInicial(anoConfigurado));
+      campoAnoInicial.addEventListener("change", () => {
+        campoAnoInicial.value = String(
+          limitarAnoInicial(campoAnoInicial.value, anoConfigurado),
+        );
+      });
+    }
     if (estado) {
       prepararElencosLiga();
       salvar();
@@ -8439,6 +8611,7 @@
       typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : {};
     const historicoCarreira = obterHistoricoCarreira(carreira);
     const temCarreiraSalva = historicoCarreira.length > 0;
+    atualizarCampoAnoInicial(carreira, historicoCarreira);
     if (temCarreiraSalva || estado) {
       $("nome").value = estado?.nome || carreira.nome || "";
       const idadeProximaTemporada =

@@ -38,6 +38,18 @@ function ocultarCarregamentoFootMain() {
   if (footmainLoadingOverlay) footmainLoadingOverlay.hidden = true;
 }
 
+async function aguardarCarregamentosFootMain() {
+  while (
+    [...document.querySelectorAll(".footmain-loading-overlay")].some(
+      (overlay) => !overlay.hidden,
+    )
+  ) {
+    await new Promise((resolver) => requestAnimationFrame(resolver));
+  }
+}
+
+window.aguardarCarregamentosFootMain = aguardarCarregamentosFootMain;
+
 const LIGAS_NACIONAIS_BASE = {
   espanha: "La Liga",
   argentina: "Argentine Primera División",
@@ -1822,7 +1834,8 @@ function salvarRanking(ranking) {
   );
 }
 
-function confirmarAcao(mensagem, titulo = "Confirmar ação") {
+async function confirmarAcao(mensagem, titulo = "Confirmar ação") {
+  await aguardarCarregamentosFootMain();
   return new Promise((resolve) => {
     const overlay = document.getElementById("modal-confirmacao");
     const tituloEl = document.getElementById("modal-titulo");
@@ -1873,7 +1886,8 @@ function confirmarAcao(mensagem, titulo = "Confirmar ação") {
   });
 }
 
-function escolherAcaoContrato(clube, temporadasRestantes) {
+async function escolherAcaoContrato(clube, temporadasRestantes) {
+  await aguardarCarregamentosFootMain();
   return new Promise((resolve) => {
     const overlay = document.getElementById("modal-confirmacao");
     const caixa = overlay?.querySelector(".modal-caixa");
@@ -5856,7 +5870,8 @@ function criarTemporada(
   };
 }
 
-function perguntarPromocaoDaBase(temporada, clubeBase) {
+async function perguntarPromocaoDaBase(temporada, clubeBase) {
+  await aguardarCarregamentosFootMain();
   const overlay = document.getElementById("modal-confirmacao");
   const tituloEl = document.getElementById("modal-titulo");
   const mensagemEl = document.getElementById("modal-mensagem");
@@ -5933,7 +5948,8 @@ function perguntarPromocaoDaBase(temporada, clubeBase) {
   });
 }
 
-function perguntarDestinoOuAposentadoriaBase(temporada, clubeDestino) {
+async function perguntarDestinoOuAposentadoriaBase(temporada, clubeDestino) {
+  await aguardarCarregamentosFootMain();
   const overlay = document.getElementById("modal-confirmacao");
   const tituloEl = document.getElementById("modal-titulo");
   const mensagemEl = document.getElementById("modal-mensagem");
@@ -6001,13 +6017,14 @@ function perguntarDestinoOuAposentadoriaBase(temporada, clubeDestino) {
   });
 }
 
-function exibirEscolhaClube(
+async function exibirEscolhaClube(
   opcoes,
   titulo,
   mensagem,
   clubeSelecionado = "",
   exibirFiltroLiga = false,
 ) {
+  await aguardarCarregamentosFootMain();
   const overlay = document.getElementById("modal-confirmacao");
   const tituloEl = document.getElementById("modal-titulo");
   const mensagemEl = document.getElementById("modal-mensagem");
@@ -6227,7 +6244,8 @@ function criarOfertaContrato(
   };
 }
 
-function exibirConfirmacaoContrato(contrato) {
+async function exibirConfirmacaoContrato(contrato) {
+  await aguardarCarregamentosFootMain();
   const overlay = document.getElementById("modal-confirmacao");
   const tituloEl = document.getElementById("modal-titulo");
   const mensagemEl = document.getElementById("modal-mensagem");

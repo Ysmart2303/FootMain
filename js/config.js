@@ -3,7 +3,7 @@
  */
 
 const STORAGE_KEY_CONFIG = "footmain_config_v1";
-const VERSAO_APP = "2.7.6";
+const VERSAO_APP = "2.8.2";
 
 /* ---------- Definições base (as "de fábrica") ---------- */
 const POSICOES_PADRAO = {
@@ -283,6 +283,7 @@ const CLUBES = [
     // LIGUE 1
     { id: "paris-saint-germain", nome: "Paris Saint-Germain", liga: "Ligue 1" },
     { id: "marseille", nome: "Marseille", liga: "Ligue 1" },
+    { id: "guingamp", nome: "Guingamp", liga: "Ligue 1" },
     { id: "monaco", nome: "Monaco", liga: "Ligue 1" },
     { id: "lille", nome: "Lille", liga: "Ligue 1" },
     { id: "lyon", nome: "Lyon", liga: "Ligue 1" },
@@ -323,6 +324,10 @@ const CLUBES = [
     { id: "bragantino", nome: "Red Bull Bragantino", liga: "Brasileirão" },
     { id: "juventude", nome: "Juventude", liga: "Brasileirão" },
     { id: "mirassol", nome: "Mirassol", liga: "Brasileirão" },
+
+    // EKSTRAKLASA
+    { id: "le-poznan", nome: "Lech Poznań", liga: "Ekstraklasa" },
+    { id: "legia-varsovia", nome: "Legia Varsóvia", liga: "Ekstraklasa" },
 
     // ============================================================
 // EUROPA — LIGAS ADICIONAIS
@@ -1203,7 +1208,7 @@ function salvarConfig(config) {
  */
 function aplicarConfiguracoes() {
     const config = carregarConfig();
-    ANO_INICIAL = Math.max(1, Math.floor(Number(config.geral.anoInicial) || 2026));
+    ANO_INICIAL = Math.min(2026, Math.max(2000, Math.floor(Number(config.geral.anoInicial) || 2026)));
     IDADE_LIMITE_PADRAO = Math.max(1, Math.floor(Number(config.geral.idadeLimitePadrao) || 40));
     posicoes = JSON.parse(JSON.stringify(POSICOES_PADRAO));
     window.CONFIG_ATUAL = config;

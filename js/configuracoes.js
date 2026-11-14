@@ -7,7 +7,7 @@ const SCHEMA_CONFIG = [
         icone: "👤",
         descricao: "Defina quantas vezes o jogador pode romper um contrato antes do vencimento (limite máximo: 10).",
         campos: [
-            { caminho: "geral.anoInicial",          label: "Ano inicial",             tipo: "number", min: 1950, max: 2200, passo: 1 },
+            { caminho: "geral.anoInicial",          label: "Ano inicial",             tipo: "number", min: 2000, max: 2026, passo: 1 },
             { caminho: "geral.idadeInicialPadrao",  label: "Idade inicial padrão",    tipo: "number", min: 10,   max: 40,   passo: 1 },
             { caminho: "geral.idadeLimitePadrao",   label: "Idade limite padrão",     tipo: "number", min: 20,   max: 80,   passo: 1 },
             { caminho: "geral.limiteRompimentosContrato", label: "Limite de rompimentos de contrato", tipo: "number", min: 0, max: 10, passo: 1 },
