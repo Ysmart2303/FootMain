@@ -830,6 +830,8 @@
         await exibirModalTrofeu(item.competicao, item.tipoTrofeu);
       } else if (item.tipo === "premio-individual") {
         await exibirModalTrofeu(item.titulo, "individual");
+      } else if (item.tipo === "bola-de-ouro") {
+        await exibirModalBolaDeOuro(item.ranking);
       } else if (item.tipo === "evento") {
         await exibirModalEvento(item.tipoEvento, item.mensagem, item.icone);
       }
@@ -878,6 +880,80 @@
       };
       const aoClicarFora = (e) => {
         if (e.target === modal) fechar();
+      };
+      continuar.addEventListener("click", fechar);
+      document.addEventListener("keydown", aoTeclar);
+      modal.addEventListener("click", aoClicarFora);
+    });
+  }
+
+  async function exibirModalBolaDeOuro(ranking) {
+    await aguardarCarregamentoLiberado();
+    return new Promise((resolve) => {
+      const modal = $("jja-modal-bola-de-ouro");
+      const mensagem = $("jja-bola-de-ouro-mensagem");
+      const vitorias = $("jja-bola-de-ouro-vitorias");
+      const lista = $("jja-bola-de-ouro-lista");
+      const continuar = $("jja-bola-de-ouro-continuar");
+      if (!modal || !lista || !continuar) {
+        resolve();
+        return;
+      }
+
+      mensagem.textContent = ranking.venceuNestaTemporada
+        ? "Você foi indicado entre os 10 melhores do mundo e venceu a Bola de Ouro nesta temporada."
+        : "Você foi indicado entre os 10 melhores do mundo.";
+      vitorias.hidden = ranking.totalVitorias < 1;
+      if (ranking.totalVitorias > 0) {
+        const vezes = ranking.totalVitorias === 1 ? "vez" : "vezes";
+        vitorias.textContent = `Bola de Ouro na carreira: ${ranking.totalVitorias} ${vezes}`;
+      }
+
+      lista.replaceChildren();
+      ranking.jogadores.forEach((jogador, indice) => {
+        const item = document.createElement("li");
+        const colocacao = document.createElement("span");
+        const identidade = document.createElement("span");
+        const nome = document.createElement("strong");
+        const clube = document.createElement("small");
+        const pontos = document.createElement("strong");
+
+        item.className = "jja-bola-de-ouro-linha";
+        if (jogador.ehUsuario) item.classList.add("jja-bola-de-ouro-usuario");
+        colocacao.className = "jja-bola-de-ouro-colocacao";
+        identidade.className = "jja-bola-de-ouro-identidade";
+        pontos.className = "jja-bola-de-ouro-pontos";
+        colocacao.textContent = String(indice + 1).padStart(2, "0");
+        nome.textContent = jogador.nome;
+        clube.textContent = jogador.clube;
+        pontos.textContent = Number(jogador.pontuacao).toLocaleString("pt-BR", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+
+        identidade.append(nome, clube);
+        item.append(colocacao, identidade, pontos);
+        lista.append(item);
+      });
+
+      modal.hidden = false;
+      continuar.focus();
+
+      const fechar = () => {
+        modal.hidden = true;
+        continuar.removeEventListener("click", fechar);
+        document.removeEventListener("keydown", aoTeclar);
+        modal.removeEventListener("click", aoClicarFora);
+        resolve();
+      };
+      const aoTeclar = (evento) => {
+        if (evento.key === "Escape" || evento.key === "Enter") {
+          evento.preventDefault();
+          fechar();
+        }
+      };
+      const aoClicarFora = (evento) => {
+        if (evento.target === modal) fechar();
       };
       continuar.addEventListener("click", fechar);
       document.addEventListener("keydown", aoTeclar);
@@ -5155,7 +5231,11 @@
     return { titulosPorClube, tiposTitulos };
   }
 
-  function premiarBolaDeOuro(temporada, estatisticas) {
+  function premiarBolaDeOuro(
+    temporada,
+    estatisticas,
+    historicoCarreira = [],
+  ) {
     const rankings = obterRankingsCompeticao("global");
     const candidatos = new Map();
     [rankings.artilharia, rankings.assistencias].forEach((lista) => {
@@ -5228,15 +5308,35 @@
         );
       });
 
+    const posicaoUsuario = avaliados.findIndex(
+      (jogador) => jogador.id === idUsuario,
+    );
     temporada.trofeusIndividuais = (temporada.trofeusIndividuais || []).filter(
       (titulo) => titulo !== "Bola de Ouro",
     );
     const clubeUsuario = obterClube(estado.clubeId);
     const usuarioEmClubeProfissional =
       !!clubeUsuario && clubeUsuario.tipo !== "base";
-    if (usuarioEmClubeProfissional && avaliados[0]?.id === idUsuario) {
+    const venceuNestaTemporada =
+      usuarioEmClubeProfissional && posicaoUsuario === 0;
+    if (venceuNestaTemporada) {
       temporada.trofeusIndividuais.push("Bola de Ouro");
     }
+
+    const vitoriasAnteriores = historicoCarreira.filter((item) =>
+      (item.trofeusIndividuais || []).includes("Bola de Ouro"),
+    ).length;
+    return {
+      jogadores: avaliados.slice(0, 10).map((jogador) => ({
+        nome: jogador.nome || "Jogador",
+        clube: jogador.clube?.nome || jogador.clubeId || "Clube não informado",
+        pontuacao: jogador.pontuacao,
+        ehUsuario: jogador.id === idUsuario,
+      })),
+      posicaoUsuario: posicaoUsuario + 1,
+      venceuNestaTemporada,
+      totalVitorias: vitoriasAnteriores + (venceuNestaTemporada ? 1 : 0),
+    };
   }
 
   function localizarConfrontoLiga(partida, casaId, foraId) {
@@ -7648,8 +7748,23 @@
       temporada.trofeusIndividuais = (
         trofeusCalculados.trofeusIndividuais || []
       ).filter((titulo) => titulo !== "Bola de Ouro");
-      premiarBolaDeOuro(temporada, e);
-      temporada.trofeusIndividuais.forEach(enfileirarPremioIndividual);
+      const rankingBolaDeOuro = premiarBolaDeOuro(
+        temporada,
+        e,
+        historicoCarreira,
+      );
+      temporada.trofeusIndividuais
+        .filter((titulo) => titulo !== "Bola de Ouro")
+        .forEach(enfileirarPremioIndividual);
+      if (
+        rankingBolaDeOuro.posicaoUsuario >= 1 &&
+        rankingBolaDeOuro.posicaoUsuario <= 10
+      ) {
+        filaModaisPartida.push({
+          tipo: "bola-de-ouro",
+          ranking: rankingBolaDeOuro,
+        });
+      }
       estado.trofeusColetivos = temporada.trofeusColetivos;
       estado.trofeusIndividuais = temporada.trofeusIndividuais;
       const reputacao =

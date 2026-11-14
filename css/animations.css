@@ -411,6 +411,156 @@ html[data-theme="light"] .jja-penaltis-resumo {
     box-shadow: 0 8px 24px rgba(250, 204, 21, 0.4);
 }
 
+.jja-modal-bola-de-ouro {
+    z-index: 1160;
+}
+
+.jja-bola-de-ouro-caixa {
+    width: min(620px, calc(100vw - 24px));
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+    padding: 24px;
+    border: 1px solid rgba(250, 204, 21, 0.65);
+    border-radius: 14px;
+    background: linear-gradient(155deg, #10251c, #101923 58%, #202215);
+    box-shadow: 0 24px 70px rgba(2, 8, 23, 0.55);
+    color: #f1f5f9;
+    animation: eventoEntrada .3s ease;
+}
+
+.jja-bola-de-ouro-selo {
+    display: inline-flex;
+    align-items: center;
+    min-height: 26px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    background: #eab308;
+    color: #1c1917;
+    font-size: .75rem;
+    font-weight: 900;
+}
+
+.jja-bola-de-ouro-caixa h3 {
+    margin: 10px 0 6px;
+    color: #fde047;
+    font-size: 1.45rem;
+}
+
+.jja-bola-de-ouro-caixa > p {
+    margin: 0 0 8px;
+    color: #d1d5db;
+    line-height: 1.45;
+}
+
+.jja-bola-de-ouro-caixa .jja-bola-de-ouro-vitorias {
+    color: #fde047;
+    font-weight: 800;
+}
+
+.jja-bola-de-ouro-cabecalho,
+.jja-bola-de-ouro-linha {
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr) 86px;
+    align-items: center;
+    gap: 12px;
+}
+
+.jja-bola-de-ouro-cabecalho {
+    padding: 10px 12px 7px;
+    color: #a7b3bd;
+    font-size: .7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.jja-bola-de-ouro-cabecalho span:last-child,
+.jja-bola-de-ouro-pontos {
+    text-align: right;
+}
+
+.jja-bola-de-ouro-lista {
+    display: grid;
+    gap: 5px;
+    max-height: min(52vh, 430px);
+    overflow-y: auto;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.jja-bola-de-ouro-linha {
+    min-height: 52px;
+    padding: 7px 12px;
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 6px;
+    background: rgba(15, 23, 42, 0.58);
+}
+
+.jja-bola-de-ouro-colocacao {
+    color: #facc15;
+    font-size: 1.05rem;
+    font-weight: 900;
+}
+
+.jja-bola-de-ouro-identidade {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+}
+
+.jja-bola-de-ouro-identidade strong,
+.jja-bola-de-ouro-identidade small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.jja-bola-de-ouro-identidade strong {
+    color: #f8fafc;
+    font-size: .9rem;
+}
+
+.jja-bola-de-ouro-identidade small {
+    color: #9ca3af;
+    font-size: .75rem;
+}
+
+.jja-bola-de-ouro-pontos {
+    color: #d1d5db;
+    font-variant-numeric: tabular-nums;
+}
+
+.jja-bola-de-ouro-usuario {
+    border-color: rgba(74, 222, 128, 0.65);
+    background: rgba(22, 101, 52, 0.34);
+}
+
+.jja-bola-de-ouro-usuario .jja-bola-de-ouro-identidade strong,
+.jja-bola-de-ouro-usuario .jja-bola-de-ouro-pontos {
+    color: #86efac;
+}
+
+.jja-bola-de-ouro-acoes {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
+}
+
+.jja-bola-de-ouro-acoes button {
+    min-height: 42px;
+    padding: 9px 24px;
+    border: 1px solid #eab308;
+    border-radius: 8px;
+    background: #166534;
+    color: #f0fdf4;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.jja-bola-de-ouro-acoes button:hover {
+    background: #15803d;
+}
+
 /* Confete de fundo */
 .jja-trofeu-confete {
     position: absolute;
@@ -568,6 +718,30 @@ html[data-theme="light"] .jja-evento-caixa p { color: #334155; }
 html[data-theme="light"] .jja-evento-continuar { background: #4b8155; color: #fff; }
 html[data-theme="light"] .jja-evento-continuar:hover { background: #3d7048; }
 
+html[data-theme="light"] .jja-bola-de-ouro-caixa {
+    border-color: #ca8a04;
+    background: linear-gradient(155deg, #f0fdf4, #f8fafc 58%, #fefce8);
+    color: #1f2937;
+}
+html[data-theme="light"] .jja-bola-de-ouro-caixa h3 { color: #a16207; }
+html[data-theme="light"] .jja-bola-de-ouro-caixa > p { color: #475569; }
+html[data-theme="light"] .jja-bola-de-ouro-caixa .jja-bola-de-ouro-vitorias { color: #854d0e; }
+html[data-theme="light"] .jja-bola-de-ouro-cabecalho { color: #64748b; }
+html[data-theme="light"] .jja-bola-de-ouro-linha {
+    border-color: #dbe3dc;
+    background: rgba(255, 255, 255, 0.82);
+}
+html[data-theme="light"] .jja-bola-de-ouro-identidade strong { color: #1f2937; }
+html[data-theme="light"] .jja-bola-de-ouro-identidade small,
+html[data-theme="light"] .jja-bola-de-ouro-pontos { color: #475569; }
+html[data-theme="light"] .jja-bola-de-ouro-usuario {
+    border-color: #16a34a;
+    background: #f0fdf4;
+}
+html[data-theme="light"] .jja-bola-de-ouro-usuario .jja-bola-de-ouro-identidade strong,
+html[data-theme="light"] .jja-bola-de-ouro-usuario .jja-bola-de-ouro-pontos { color: #166534; }
+html[data-theme="light"] .jja-bola-de-ouro-acoes button { color: #fff; }
+
 html[data-theme="light"] .jja-proximo.proxima-e-final {
     background: radial-gradient(ellipse at top, rgba(250, 204, 21, 0.35), transparent 65%), #fef9c3;
     border-color: #d97706;
@@ -585,4 +759,12 @@ html[data-theme="light"] .jja-proximo.proxima-e-final .jja-proximo-topo > span:f
     .jja-trofeu-caixa h3 { font-size: 1.3rem; }
     .jja-evento-caixa { padding: 20px 16px 16px; }
     .jja-evento-icone { font-size: 2.2rem; }
+    .jja-bola-de-ouro-caixa { padding: 18px 12px 14px; }
+    .jja-bola-de-ouro-cabecalho,
+    .jja-bola-de-ouro-linha { grid-template-columns: 34px minmax(0, 1fr) 68px; gap: 8px; }
+    .jja-bola-de-ouro-cabecalho,
+    .jja-bola-de-ouro-linha { padding-left: 8px; padding-right: 8px; }
+    .jja-bola-de-ouro-identidade strong { font-size: .82rem; }
+    .jja-bola-de-ouro-identidade small { font-size: .7rem; }
+    .jja-bola-de-ouro-pontos { font-size: .82rem; }
 }
