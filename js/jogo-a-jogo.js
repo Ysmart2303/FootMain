@@ -5716,7 +5716,11 @@
     }
 
     // ─── NOVO: processar fila de modais (troféus e eventos) ───
-    if (mostrarResultado && filaModaisPartida.length > 0) {
+    if (
+      mostrarResultado &&
+      !opcoesPenaltis?.adiarModais &&
+      filaModaisPartida.length > 0
+    ) {
       await processarFilaModais();
     }
   }
@@ -6660,10 +6664,14 @@
   ) {
     await mostrarCarregamento(texto);
     try {
-      await simularPartida(indice, true, interacao, { interativo: false });
+      await simularPartida(indice, true, interacao, {
+        interativo: false,
+        adiarModais: true,
+      });
     } finally {
       ocultarCarregamento();
     }
+    if (filaModaisPartida.length > 0) await processarFilaModais();
   }
 
   async function simularAteFimLesao() {
