@@ -2262,6 +2262,9 @@ function gerarTrofeusTemporada(
   );
   const fatorClube = 0.4 + forcaClube / 125;
   const nomesTrofeus = obterNomesTrofeusClube(clubeId);
+  const clubeJogador = obterClube(clubeId);
+  const jogadorEmClubeProfissional =
+    !!clubeJogador && clubeJogador.tipo !== "base";
 
   const trofeusColetivos = [];
   const trofeusIndividuais = [];
@@ -2472,7 +2475,11 @@ function gerarTrofeusTemporada(
   ) {
     trofeusIndividuais.push("Golden Boy");
   }
-  if (gols > jogos && sortearPremio(t.chanceChuteiraDeOuro * multIndividuais)) {
+  if (
+    jogadorEmClubeProfissional &&
+    gols > jogos &&
+    sortearPremio(t.chanceChuteiraDeOuro * multIndividuais)
+  ) {
     trofeusIndividuais.push("Chuteira de Ouro");
   }
   if (
@@ -2516,7 +2523,6 @@ function gerarTrofeusTemporada(
   }
   // Rei da América
   const selecaoJogador = SELECOES.find((s) => s.id === nacionalidade);
-  const clubeJogador = obterClube(clubeId);
   if (
     selecaoJogador?.regiao === "americaSul" &&
     clubeJogador &&

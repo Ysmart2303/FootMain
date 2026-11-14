@@ -5231,7 +5231,10 @@
     temporada.trofeusIndividuais = (temporada.trofeusIndividuais || []).filter(
       (titulo) => titulo !== "Bola de Ouro",
     );
-    if (avaliados[0]?.id === idUsuario) {
+    const clubeUsuario = obterClube(estado.clubeId);
+    const usuarioEmClubeProfissional =
+      !!clubeUsuario && clubeUsuario.tipo !== "base";
+    if (usuarioEmClubeProfissional && avaliados[0]?.id === idUsuario) {
       temporada.trofeusIndividuais.push("Bola de Ouro");
     }
   }
