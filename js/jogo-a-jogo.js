@@ -917,23 +917,58 @@
         const identidade = document.createElement("span");
         const nome = document.createElement("strong");
         const clube = document.createElement("small");
+        const detalhesBotao = document.createElement("button");
         const pontos = document.createElement("strong");
+        const detalhes = document.createElement("div");
 
         item.className = "jja-bola-de-ouro-linha";
         if (jogador.ehUsuario) item.classList.add("jja-bola-de-ouro-usuario");
         colocacao.className = "jja-bola-de-ouro-colocacao";
         identidade.className = "jja-bola-de-ouro-identidade";
+        detalhesBotao.className = "jja-bola-de-ouro-detalhes-botao";
         pontos.className = "jja-bola-de-ouro-pontos";
+        detalhes.className = "jja-bola-de-ouro-detalhes";
+        detalhes.hidden = true;
         colocacao.textContent = String(indice + 1).padStart(2, "0");
         nome.textContent = jogador.nome;
         clube.textContent = jogador.clube;
+        detalhesBotao.type = "button";
+        detalhesBotao.textContent = "+";
+        detalhesBotao.setAttribute("aria-expanded", "false");
+        detalhesBotao.setAttribute("aria-label", `Exibir detalhes de ${jogador.nome}`);
         pontos.textContent = Number(jogador.pontuacao).toLocaleString("pt-BR", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         });
+        const adicionarDetalhe = (rotulo, valores) => {
+          const grupo = document.createElement("div");
+          const titulo = document.createElement("strong");
+          const conteudo = document.createElement("span");
+          grupo.className = "jja-bola-de-ouro-detalhes-grupo";
+          titulo.textContent = rotulo;
+          conteudo.textContent = valores.length ? valores.join(" · ") : "Nenhum registrado";
+          grupo.append(titulo, conteudo);
+          detalhes.append(grupo);
+        };
+        adicionarDetalhe("Desempenho", [
+          `${jogador.gols} gols`,
+          `${jogador.assistencias} assistências`,
+        ]);
+        adicionarDetalhe("Títulos coletivos", jogador.titulosColetivos || []);
+        adicionarDetalhe("Títulos individuais", jogador.titulosIndividuais || []);
+        detalhesBotao.addEventListener("click", () => {
+          const expandido = detalhesBotao.getAttribute("aria-expanded") === "true";
+          detalhesBotao.setAttribute("aria-expanded", String(!expandido));
+          detalhesBotao.setAttribute(
+            "aria-label",
+            `${expandido ? "Exibir" : "Ocultar"} detalhes de ${jogador.nome}`,
+          );
+          detalhesBotao.textContent = expandido ? "+" : "−";
+          detalhes.hidden = expandido;
+        });
 
         identidade.append(nome, clube);
-        item.append(colocacao, identidade, pontos);
+        item.append(colocacao, identidade, detalhesBotao, pontos, detalhes);
         lista.append(item);
       });
 
@@ -5572,40 +5607,61 @@
   ) {
     const rankings = obterRankingsCompeticao("global");
     const candidatos = new Map();
-    [rankings.artilharia, rankings.assistencias].forEach((lista) => {
-      lista.forEach((jogador) => {
-        const candidato = candidatos.get(jogador.id) || { ...jogador };
-        candidato.gols = Math.max(candidato.gols || 0, jogador.gols || 0);
-        candidato.assistencias = Math.max(
-          candidato.assistencias || 0,
-          jogador.assistencias || 0,
-        );
-        candidatos.set(jogador.id, candidato);
-      });
+    const adicionarCandidato = (jogador) => {
+      if (!jogador?.id) return;
+      const candidato = candidatos.get(jogador.id) || {
+        ...jogador,
+        gols: 0,
+        assistencias: 0,
+      };
+      candidato.gols = Math.max(
+        Number(candidato.gols) || 0,
+        Number(jogador.gols) || 0,
+      );
+      candidato.assistencias = Math.max(
+        Number(candidato.assistencias) || 0,
+        Number(jogador.assistencias) || 0,
+      );
+      candidato.nome = jogador.nome || candidato.nome;
+      candidato.clubeId = jogador.clubeId || candidato.clubeId;
+      candidato.posicao = jogador.posicao || candidato.posicao;
+      candidatos.set(jogador.id, candidato);
+    };
+    [rankings.artilharia, rankings.assistencias].forEach((lista) =>
+      lista.forEach(adicionarCandidato),
+    );
+    obterRankingOutrasLigas().forEach(adicionarCandidato);
+    Object.entries(estado.elencosLiga || {}).forEach(([clubeId, elenco]) => {
+      (elenco || []).forEach((jogador) =>
+        adicionarCandidato({ ...jogador, clubeId }),
+      );
     });
 
     const idUsuario = estado.carreiraId;
-    const usuario = candidatos.get(idUsuario) || {
-      id: idUsuario,
-      nome: estado.nome,
-      clubeId: estado.clubeId,
-      gols: Number(estatisticas.gols) || 0,
-      assistencias: Number(estatisticas.assistencias) || 0,
-    };
-    usuario.clubeId = estado.clubeId;
-    usuario.posicao = estado.posicao;
-    usuario.gols = Math.max(usuario.gols || 0, Number(estatisticas.gols) || 0);
-    usuario.assistencias = Math.max(
-      usuario.assistencias || 0,
-      Number(estatisticas.assistencias) || 0,
-    );
-    usuario.ehUsuario = true;
-    candidatos.set(idUsuario, usuario);
+    const clubeUsuario = obterClube(estado.clubeId);
+    const usuarioElegivel = !!clubeUsuario && clubeUsuario.tipo !== "base";
+    if (usuarioElegivel) {
+      adicionarCandidato({
+        ...(candidatos.get(idUsuario) || {}),
+        id: idUsuario,
+        nome: estado.nome,
+        clubeId: estado.clubeId,
+        posicao: estado.posicao,
+        gols: Number(estatisticas.gols) || 0,
+        assistencias: Number(estatisticas.assistencias) || 0,
+        ehUsuario: true,
+      });
+    } else {
+      candidatos.delete(idUsuario);
+    }
 
     const { titulosPorClube, tiposTitulos } = obterTitulosDaTemporadaPorClube();
     const estatisticasPonderadas = obterEstatisticasPonderadasBolaDeOuro();
     const avaliados = [...candidatos.values()]
-      .filter((jogador) => jogador.id && jogador.posicao !== "GOL")
+      .filter((jogador) => {
+        const clube = obterClube(jogador.clubeId);
+        return jogador.id && clube?.tipo !== "base";
+      })
       .map((jogador) => {
         const clube = obterClube(jogador.clubeId);
         const liga = clube?.liga || "";
@@ -5635,6 +5691,14 @@
           clube,
           gols,
           assistencias,
+          titulosColetivos: titulos,
+          titulosIndividuais: jogador.ehUsuario
+            ? (temporada.trofeusIndividuais || []).filter(
+                (titulo) => titulo !== "Bola de Ouro",
+              )
+            : Array.isArray(jogador.titulosIndividuais)
+              ? jogador.titulosIndividuais
+              : [],
           pontosTitulos,
           pontuacao:
             pontosTitulos * 6 +
@@ -5665,11 +5729,8 @@
     temporada.trofeusIndividuais = (temporada.trofeusIndividuais || []).filter(
       (titulo) => titulo !== "Bola de Ouro",
     );
-    const clubeUsuario = obterClube(estado.clubeId);
-    const usuarioEmClubeProfissional =
-      !!clubeUsuario && clubeUsuario.tipo !== "base";
     const venceuNestaTemporada =
-      usuarioEmClubeProfissional && posicaoUsuario === 0;
+      usuarioElegivel && posicaoUsuario === 0;
     if (venceuNestaTemporada) {
       temporada.trofeusIndividuais.push("Bola de Ouro");
     }
@@ -5683,6 +5744,10 @@
         clube: jogador.clube?.nome || jogador.clubeId || "Clube não informado",
         pontuacao: jogador.pontuacao,
         ehUsuario: jogador.id === idUsuario,
+        gols: jogador.gols,
+        assistencias: jogador.assistencias,
+        titulosColetivos: jogador.titulosColetivos,
+        titulosIndividuais: jogador.titulosIndividuais,
       })),
       posicaoUsuario: posicaoUsuario + 1,
       venceuNestaTemporada,
