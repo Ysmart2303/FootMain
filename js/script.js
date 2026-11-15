@@ -2206,10 +2206,7 @@ function obterCompeticoesSelecao(
     ano >= ANO_BASE_COPA_DO_MUNDO_SELECOES &&
     (ano - ANO_BASE_COPA_DO_MUNDO_SELECOES) % CICLO_COPA_DO_MUNDO_SELECOES ===
       0 &&
-    (ano === ANO_BASE_COPA_DO_MUNDO_SELECOES ||
-      temporadasAnteriores.some(
-        (t) => Number(t.ano) === ano - 1 && t.classificadoCopa === true,
-      ));
+    obterClassificacaoCopaPorForca(nacionalidade).classificado;
   const anoInicioContinental = ANO_BASE_EVENTOS_SELECOES;
   const anoTorneioRegional =
     ano >= anoInicioContinental &&
@@ -2398,11 +2395,7 @@ function gerarTrofeusTemporada(
 
   // ====== Copa do Mundo / torneios de seleção (existente) ======
   const vagaCopaConquistada =
-    temporadaAtual === ANO_BASE_COPA_DO_MUNDO_SELECOES ||
-    temporadasAnteriores.some(
-      (t) =>
-        Number(t.ano) === temporadaAtual - 1 && t.classificadoCopa === true,
-    );
+    obterClassificacaoCopaPorForca(nacionalidade).classificado;
   if (
     convocado &&
     jogos >= 1 &&
@@ -5261,12 +5254,54 @@ function obterQuantidadeJogosEliminatorias(regiao, nacionalidade = "") {
   );
 }
 
-function simularClassificacaoEliminatorias(
-  nacionalidade,
-  overall,
-  temporadasAnteriores,
-  ano,
-) {
+function obterClassificacaoCopaPorForca(nacionalidade) {
+  const selecao = SELECOES.find((s) => s.id === nacionalidade);
+  if (!selecao) return { classificado: false, posicao: null, vagas: 0 };
+
+  const vagasPorRegiao = {
+    americaSul: 7,
+    europa: 16,
+    africa: 9,
+    asia: 8,
+    americaNorte: 7,
+    oceania: 1,
+  };
+  const vagas = vagasPorRegiao[selecao.regiao] || 1;
+  const potenciaSelecao = (item) => {
+    const potencia = Number(getConfig().selecao?.potencias?.[item.id]);
+    return Math.max(
+      1,
+      Math.min(100, Number.isFinite(potencia) && potencia > 0 ? potencia : 50),
+    );
+  };
+  const tabela = SELECOES.filter(
+    (item) => item.regiao === selecao.regiao && item.fifa !== false,
+  ).sort(
+    (a, b) =>
+      potenciaSelecao(b) - potenciaSelecao(a) ||
+      a.nome.localeCompare(b.nome, "pt-BR"),
+  );
+  const posicao = tabela.findIndex((item) => item.id === nacionalidade) + 1;
+  return { classificado: posicao > 0 && posicao <= vagas, posicao, vagas };
+}
+
+function obterClassificacaoCopaNaTemporada(nacionalidade, ano) {
+  const ehAnoCopa =
+    ano >= ANO_BASE_COPA_DO_MUNDO_SELECOES &&
+    (ano - ANO_BASE_COPA_DO_MUNDO_SELECOES) %
+      CICLO_COPA_DO_MUNDO_SELECOES ===
+      0;
+  const ehAnoFinalEliminatorias =
+    ano >= ANO_BASE_COPA_DO_MUNDO_SELECOES + 3 &&
+    (ano - (ANO_BASE_COPA_DO_MUNDO_SELECOES + 3)) %
+      CICLO_COPA_DO_MUNDO_SELECOES ===
+      0;
+  if (!ehAnoCopa && !ehAnoFinalEliminatorias)
+    return { classificado: false, posicao: null, vagas: 0 };
+  return obterClassificacaoCopaPorForca(nacionalidade);
+}
+
+function simularClassificacaoEliminatorias(nacionalidade, ano) {
   const selecao = SELECOES.find((s) => s.id === nacionalidade);
   if (!selecao) return { jogos: 0, classificado: false, posicao: null };
   const anoInicio =
@@ -5289,49 +5324,11 @@ function simularClassificacaoEliminatorias(
     etapa < 2 ? jogosPorAno : Math.max(0, totalJogos - jogosPorAno * 2);
   if (etapa < 2)
     return { jogos: jogosNestaTemporada, classificado: false, posicao: null };
-  const participouDasEtapasAnteriores = [0, 1].every((offset) => {
-    const temporada = temporadasAnteriores.find(
-      (t) => Number(t.ano) === anoInicio + offset,
-    );
-    return (
-      !!temporada &&
-      Number(
-        temporada.jogosSelecaoPorCompeticao?.["Eliminatórias da Copa do Mundo"],
-      ) > 0
-    );
-  });
-  if (!participouDasEtapasAnteriores)
-    return { jogos: jogosNestaTemporada, classificado: false, posicao: null };
-
-  const vagas =
-    {
-      americaSul: 7,
-      europa: 16,
-      africa: 9,
-      asia: 8,
-      americaNorte: 7,
-      oceania: 1,
-    }[selecao.regiao] || 1;
-  const selecoes = SELECOES.filter(
-    (s) => s.regiao === selecao.regiao && s.fifa !== false,
-  );
-  const pontuacao = (s) => {
-    const forca = Number(getConfig().selecao?.potencias?.[s.id]) || 50;
-    const variacao = (Math.random() - 0.5) * 24;
-    return (
-      forca +
-      variacao +
-      (s.id === nacionalidade ? (Number(overall) - 70) * 0.12 : 0)
-    );
-  };
-  const tabela = selecoes
-    .map((s) => ({ id: s.id, pontos: pontuacao(s) }))
-    .sort((a, b) => b.pontos - a.pontos);
-  const posicao = tabela.findIndex((s) => s.id === nacionalidade) + 1;
+  const classificacao = obterClassificacaoCopaPorForca(nacionalidade);
   return {
     jogos: jogosNestaTemporada,
-    classificado: posicao > 0 && posicao <= vagas,
-    posicao,
+    classificado: classificacao.classificado,
+    posicao: classificacao.posicao,
   };
 }
 
@@ -5721,28 +5718,29 @@ function simularTemporadaPorJogo(
     golsSelecaoPorCompeticao = {};
   let classificadoCopa = false,
     posicaoEliminatorias = null;
+  const anoTemporada = Number(
+    temporadasAnteriores.length
+      ? temporadasAnteriores[temporadasAnteriores.length - 1].ano + 1
+      : ANO_INICIAL,
+  );
+  const anoCopa =
+    anoTemporada >= ANO_BASE_COPA_DO_MUNDO_SELECOES &&
+    (anoTemporada - ANO_BASE_COPA_DO_MUNDO_SELECOES) %
+      CICLO_COPA_DO_MUNDO_SELECOES ===
+      0;
+  const classificacaoCopa = obterClassificacaoCopaNaTemporada(
+    nacionalidade,
+    anoTemporada,
+  );
+  classificadoCopa = classificacaoCopa.classificado;
+  posicaoEliminatorias = classificacaoCopa.posicao;
+  const qualificacao = simularClassificacaoEliminatorias(
+    nacionalidade,
+    anoTemporada,
+  );
   if (convocado) {
-    const ano = Number(
-      temporadasAnteriores.length
-        ? temporadasAnteriores[temporadasAnteriores.length - 1].ano + 1
-        : ANO_INICIAL,
-    );
-    const qualificacao = simularClassificacaoEliminatorias(
-      nacionalidade,
-      overall,
-      temporadasAnteriores,
-      ano,
-    );
-    classificadoCopa = qualificacao.classificado;
-    posicaoEliminatorias = qualificacao.posicao;
-    const anoCopa =
-      ano >= ANO_BASE_COPA_DO_MUNDO_SELECOES &&
-      (ano - ANO_BASE_COPA_DO_MUNDO_SELECOES) % CICLO_COPA_DO_MUNDO_SELECOES ===
-        0 &&
-      (ano === ANO_BASE_COPA_DO_MUNDO_SELECOES ||
-        temporadasAnteriores.some(
-          (t) => Number(t.ano) === ano - 1 && t.classificadoCopa === true,
-        ));
+    const ano = anoTemporada;
+    const anoCopaDoMundo = anoCopa && classificacaoCopa.classificado;
     const anoRegional =
       ano >= ANO_BASE_EVENTOS_SELECOES &&
       (ano - ANO_BASE_EVENTOS_SELECOES) % CICLO_COPA_DO_MUNDO_SELECOES === 0;

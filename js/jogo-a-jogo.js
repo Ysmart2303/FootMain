@@ -3653,6 +3653,12 @@
       }
     }
 
+    const anoCopaDoMundo =
+      ano >= ANO_BASE_COPA_DO_MUNDO_SELECOES &&
+      (ano - ANO_BASE_COPA_DO_MUNDO_SELECOES) %
+        CICLO_COPA_DO_MUNDO_SELECOES ===
+        0 &&
+      obterClassificacaoCopaPorForca(perfil.nacionalidade).classificado;
     const convocada = obterConvocacao({ ...perfil, ano }, carreira, historico);
     const jogosSelecao = [];
     if (convocada) {
@@ -3678,15 +3684,6 @@
         });
       });
 
-      const anoCopaDoMundo =
-        ano >= ANO_BASE_COPA_DO_MUNDO_SELECOES &&
-        (ano - ANO_BASE_COPA_DO_MUNDO_SELECOES) %
-          CICLO_COPA_DO_MUNDO_SELECOES ===
-          0 &&
-        (ano === ANO_BASE_COPA_DO_MUNDO_SELECOES ||
-          historico.some(
-            (t) => Number(t.ano) === ano - 1 && t.classificadoCopa === true,
-          ));
       const anoInicioContinental = ANO_BASE_EVENTOS_SELECOES;
       const anoTorneioRegional =
         ano >= anoInicioContinental &&
@@ -4117,6 +4114,10 @@
       partidas.forEach((partida, indice) => {
         partida.numero = indice + 1;
       });
+      const classificacaoCopa = obterClassificacaoCopaNaTemporada(
+        nacionalidade,
+        ano,
+      );
       const jogosLesaoAnterior =
         Number(ultimaTemporada?.jogosForaProximaTemporada) || 0;
       estado = {
@@ -4131,6 +4132,8 @@
         idade,
         idadeLimite,
         ano,
+        classificadoCopa: classificacaoCopa.classificado,
+        posicaoEliminatorias: classificacaoCopa.posicao,
         clubeId,
         liga: clube.liga,
         rodada: 0,
