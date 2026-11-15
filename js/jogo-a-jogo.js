@@ -5153,15 +5153,179 @@
     ["Cearense", 2],
   ]);
 
-  function calcularPesoTituloBolaDeOuro(titulo, tiposTitulos) {
-    if (PESOS_TITULOS_BOLA_DE_OURO.has(titulo)) {
-      return PESOS_TITULOS_BOLA_DE_OURO.get(titulo);
+  const FATORES_DIFICULDADE_LIGAS = new Map([
+    ["Serie A", 1.18],
+    ["La Liga", 1.17],
+    ["Premier League", 1.16],
+    ["Brasileirão", 1.15],
+    ["Bundesliga", 1.10],
+    ["Argentine Primera División", 1.07],
+    ["Primeira Liga", 1.05],
+    ["Ligue 1", 1.03],
+    ["Eredivisie", 1.02],
+    ["Süper Lig", 0.98],
+    ["Belgian Pro League", 0.96],
+    ["Scottish Premiership", 0.95],
+    ["Swiss Super League", 0.92],
+    ["Austrian Bundesliga", 0.92],
+    ["Russian Premier League", 0.91],
+    ["Ukrainian Premier League", 0.86],
+    ["Greek Super League", 0.86],
+    ["Colombian Primera A", 0.90],
+    ["Chilean Primera División", 0.86],
+    ["Uruguayan Primera División", 0.85],
+    ["Ecuadorian Serie A", 0.83],
+    ["Paraguayan Primera División", 0.81],
+    ["Liga MX", 0.94],
+    ["MLS", 0.88],
+    ["Saudi Pro League", 0.88],
+    ["J1 League", 0.86],
+    ["K League 1", 0.81],
+    ["Chinese Super League", 0.79],
+    ["Australian A-League", 0.77],
+    ["Egyptian Premier League", 0.82],
+    ["Moroccan Botola", 0.77],
+    ["South African Premier Division", 0.74],
+    ["League One", 0.66],
+    ["EFL League One", 0.66],
+    ["Série A Br", 1.15],
+    ["Liga Profesional", 1.07],
+    ["Liga BetPlay", 0.90],
+    ["Primera División", 0.85],
+    ["LigaPro", 0.83],
+    ["MLS Cup", 0.88],
+    ["A-League", 0.77],
+    ["Betway Premiership", 0.74],
+    ["Botola Pro", 0.77],
+  ]);
+
+  const TITULOS_GLOBAIS_BOLA_DE_OURO = new Set([
+    "Copa do Mundo",
+    "Copa do Mundo de Clubes",
+    "Intercontinental",
+  ]);
+
+  const FATORES_DIFICULDADE_CONTINENTAIS = new Map([
+    ["Champions League", 1.2],
+    ["Libertadores", 1.18],
+    ["Eurocopa", 1.18],
+    ["Copa América", 1.14],
+    ["CONCACAF Champions Cup", 0.98],
+    ["Copa das Nações Africanas", 0.86],
+    ["CAF Champions League", 0.82],
+    ["AFC Champions League", 0.90],
+    ["Copa da Ásia", 0.90],
+    ["Copa Ouro", 0.88],
+    ["Copa das Nações da OFC", 0.72],
+    ["Copa Sul-Americana", 1.02],
+    ["Europa League", 1.08],
+    ["Conference League", 0.96],
+    ["AFC Champions League 2", 0.78],
+    ["CAF Confederation Cup", 0.72],
+  ]);
+
+  const COMPETICOES_ESTADUAIS_BOLA_DE_OURO = new Set([
+    "Carioca",
+    "Paulistão",
+    "Gauchão",
+    "Mineiro",
+    "Baianão",
+    "Pernambucano",
+    "Cearense",
+  ]);
+
+  function obterFatorDificuldadeLiga(liga) {
+    return FATORES_DIFICULDADE_LIGAS.get(liga) || 0.78;
+  }
+
+  function obterFatorDificuldadeCompeticao(competicao, ligaFallback) {
+    if (FATORES_DIFICULDADE_LIGAS.has(competicao)) {
+      return obterFatorDificuldadeLiga(competicao);
     }
-    if (tiposTitulos.ligas.has(titulo)) return 7;
-    if (tiposTitulos.copas.has(titulo)) return 4;
-    if (/supercopa|super cup/i.test(titulo)) return 3;
-    if (/estadual|carioca|paulist[aã]o|gauch[aã]o|mineiro|baian[aã]o|pernambucano|cearense/i.test(titulo)) return 2;
-    return 1;
+    if (FATORES_DIFICULDADE_CONTINENTAIS.has(competicao)) {
+      return FATORES_DIFICULDADE_CONTINENTAIS.get(competicao);
+    }
+    const fatorLiga = obterFatorDificuldadeLiga(ligaFallback);
+    if (COMPETICOES_ESTADUAIS_BOLA_DE_OURO.has(competicao)) {
+      return fatorLiga * 0.62;
+    }
+    return fatorLiga;
+  }
+
+  function obterEstatisticasPonderadasBolaDeOuro() {
+    const estatisticas = new Map();
+    const obterJogador = (id) => {
+      if (!id) return null;
+      const chave = String(id);
+      if (!estatisticas.has(chave)) {
+        estatisticas.set(chave, {
+          gols: 0,
+          assistencias: 0,
+          golsPonderados: 0,
+          assistenciasPonderadas: 0,
+        });
+      }
+      return estatisticas.get(chave);
+    };
+    const partidasLiga = (estado?.rodadas || []).flatMap((rodada) => rodada);
+    const partidasOutras = (estado?.partidas || []).filter(
+      (partida) => partida.status === "concluida" && partida.competicao !== estado?.liga,
+    );
+
+    [...partidasLiga, ...partidasOutras].forEach((partida) => {
+      const competicao = partida.competicao || estado?.liga || "";
+      (partida.eventosIndividuais || []).forEach((evento) => {
+        const fator = obterFatorDificuldadeCompeticao(
+          competicao,
+          obterClube(evento.clubeId)?.liga,
+        );
+        const autor = obterJogador(evento.autorId);
+        if (autor) {
+          autor.gols++;
+          autor.golsPonderados += fator;
+        }
+        const assistente = obterJogador(evento.assistenteId);
+        if (assistente) {
+          assistente.assistencias++;
+          assistente.assistenciasPonderadas += fator;
+        }
+      });
+    });
+
+    obterRankingOutrasLigas().forEach((jogador) => {
+      const agregado = obterJogador(jogador.id);
+      if (!agregado) return;
+      const fator = obterFatorDificuldadeCompeticao(
+        obterClube(jogador.clubeId)?.liga || "",
+        obterClube(jogador.clubeId)?.liga,
+      );
+      const gols = Math.max(0, Number(jogador.gols) || 0);
+      const assistencias = Math.max(0, Number(jogador.assistencias) || 0);
+      agregado.gols += gols;
+      agregado.assistencias += assistencias;
+      agregado.golsPonderados += gols * fator;
+      agregado.assistenciasPonderadas += assistencias * fator;
+    });
+
+    return estatisticas;
+  }
+
+  function calcularPesoTituloBolaDeOuro(titulo, tiposTitulos, liga) {
+    let pesoBase = 1;
+    if (PESOS_TITULOS_BOLA_DE_OURO.has(titulo)) {
+      pesoBase = PESOS_TITULOS_BOLA_DE_OURO.get(titulo);
+    } else if (tiposTitulos.ligas.has(titulo)) {
+      pesoBase = 7;
+    } else if (tiposTitulos.copas.has(titulo)) {
+      pesoBase = 4;
+    } else if (/supercopa|super cup/i.test(titulo)) {
+      pesoBase = 3;
+    } else if (/estadual|carioca|paulist[aã]o|gauch[aã]o|mineiro|baian[aã]o|pernambucano|cearense/i.test(titulo)) {
+      pesoBase = 2;
+    }
+    if (TITULOS_GLOBAIS_BOLA_DE_OURO.has(titulo)) return pesoBase;
+    const fatorCompeticao = FATORES_DIFICULDADE_CONTINENTAIS.get(titulo);
+    return pesoBase * (fatorCompeticao || obterFatorDificuldadeLiga(liga));
   }
 
   function escolherCampeaoPonderado(clubes, identificador) {
@@ -5312,25 +5476,42 @@
     candidatos.set(idUsuario, usuario);
 
     const { titulosPorClube, tiposTitulos } = obterTitulosDaTemporadaPorClube();
+    const estatisticasPonderadas = obterEstatisticasPonderadasBolaDeOuro();
     const avaliados = [...candidatos.values()]
       .filter((jogador) => jogador.id && jogador.posicao !== "GOL")
       .map((jogador) => {
         const clube = obterClube(jogador.clubeId);
+        const liga = clube?.liga || "";
         const titulos = [...(titulosPorClube.get(jogador.clubeId) || [])];
         const pontosTitulos = titulos.reduce(
           (total, titulo) =>
-            total + calcularPesoTituloBolaDeOuro(titulo, tiposTitulos),
+            total + calcularPesoTituloBolaDeOuro(titulo, tiposTitulos, liga),
           0,
         );
         const gols = Math.max(0, Number(jogador.gols) || 0);
         const assistencias = Math.max(0, Number(jogador.assistencias) || 0);
+        const fatorLiga = obterFatorDificuldadeLiga(liga);
+        const desempenhoPonderado = estatisticasPonderadas.get(
+          String(jogador.id),
+        );
+        const golsPonderados =
+          (desempenhoPonderado?.golsPonderados || 0) +
+          Math.max(0, gols - (desempenhoPonderado?.gols || 0)) * fatorLiga;
+        const assistenciasPonderadas =
+          (desempenhoPonderado?.assistenciasPonderadas || 0) +
+          Math.max(
+            0,
+            assistencias - (desempenhoPonderado?.assistencias || 0),
+          ) * fatorLiga;
         return {
           ...jogador,
           clube,
           gols,
           assistencias,
           pontosTitulos,
-          pontuacao: pontosTitulos * 6 + gols * 2.2 + assistencias * 1.6,
+          pontuacao:
+            pontosTitulos * 6 +
+            golsPonderados * 2.2 + assistenciasPonderadas * 1.6,
         };
       })
       .sort((a, b) => {
