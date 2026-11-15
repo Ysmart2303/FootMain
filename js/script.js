@@ -796,6 +796,15 @@ function htmlEscudoClube(clube, tamanho = "pequeno", classeExtra = "") {
 }
 
 const MAPA_TROFEUS_POR_LIGA = {
+  // Ligas estaduais dos clubes regionais
+  Pernambucano: { liga: "Pernambucano", copa: "", continental: "" },
+  Cearense: { liga: "Cearense", copa: "", continental: "" },
+  "Baianão": { liga: "Baianão", copa: "", continental: "" },
+  Mineiro: { liga: "Mineiro", copa: "", continental: "" },
+  "Gauchão": { liga: "Gauchão", copa: "", continental: "" },
+  Carioca: { liga: "Carioca", copa: "", continental: "" },
+  "Paulistão": { liga: "Paulistão", copa: "", continental: "" },
+
   // Europa
   "Premier League": {
     liga: "Premier League",

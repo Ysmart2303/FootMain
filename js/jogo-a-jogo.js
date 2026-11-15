@@ -5182,10 +5182,18 @@
     ["J1 League", 0.86],
     ["K League 1", 0.81],
     ["Chinese Super League", 0.79],
+    ["Ekstraklasa", 0.80],
     ["Australian A-League", 0.77],
     ["Egyptian Premier League", 0.82],
     ["Moroccan Botola", 0.77],
     ["South African Premier Division", 0.74],
+    ["Carioca", 0.68],
+    ["Paulistão", 0.67],
+    ["Mineiro", 0.65],
+    ["Gauchão", 0.64],
+    ["Baianão", 0.61],
+    ["Pernambucano", 0.60],
+    ["Cearense", 0.59],
     ["League One", 0.66],
     ["EFL League One", 0.66],
     ["Série A Br", 1.15],
@@ -5239,15 +5247,15 @@
   }
 
   function obterFatorDificuldadeCompeticao(competicao, ligaFallback) {
-    if (FATORES_DIFICULDADE_LIGAS.has(competicao)) {
-      return obterFatorDificuldadeLiga(competicao);
-    }
     if (FATORES_DIFICULDADE_CONTINENTAIS.has(competicao)) {
       return FATORES_DIFICULDADE_CONTINENTAIS.get(competicao);
     }
     const fatorLiga = obterFatorDificuldadeLiga(ligaFallback);
     if (COMPETICOES_ESTADUAIS_BOLA_DE_OURO.has(competicao)) {
-      return fatorLiga * 0.62;
+      return competicao === ligaFallback ? fatorLiga : fatorLiga * 0.62;
+    }
+    if (FATORES_DIFICULDADE_LIGAS.has(competicao)) {
+      return obterFatorDificuldadeLiga(competicao);
     }
     return fatorLiga;
   }
@@ -5314,14 +5322,14 @@
     let pesoBase = 1;
     if (PESOS_TITULOS_BOLA_DE_OURO.has(titulo)) {
       pesoBase = PESOS_TITULOS_BOLA_DE_OURO.get(titulo);
+    } else if (/estadual|carioca|paulist[aã]o|gauch[aã]o|mineiro|baian[aã]o|pernambucano|cearense/i.test(titulo)) {
+      pesoBase = 2;
     } else if (tiposTitulos.ligas.has(titulo)) {
       pesoBase = 7;
     } else if (tiposTitulos.copas.has(titulo)) {
       pesoBase = 4;
     } else if (/supercopa|super cup/i.test(titulo)) {
       pesoBase = 3;
-    } else if (/estadual|carioca|paulist[aã]o|gauch[aã]o|mineiro|baian[aã]o|pernambucano|cearense/i.test(titulo)) {
-      pesoBase = 2;
     }
     if (TITULOS_GLOBAIS_BOLA_DE_OURO.has(titulo)) return pesoBase;
     const fatorCompeticao = FATORES_DIFICULDADE_CONTINENTAIS.get(titulo);
