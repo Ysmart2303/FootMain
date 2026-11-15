@@ -6769,12 +6769,28 @@
       }
     }
 
-    return (
-      cacheNomesElencoPorAno
-        .get(anoTemporada)
-        .get(`${clubeId}:${indiceJogador}`) ||
-      `${NOMES_JOGADORES_LIGA[0]} ${SOBRENOMES_JOGADORES_LIGA[0]}`
+    const nomes = cacheNomesElencoPorAno.get(anoTemporada);
+    const chave = `${clubeId}:${indiceJogador}`;
+    if (nomes.has(chave)) return nomes.get(chave);
+
+    const combinacoes = NOMES_JOGADORES_LIGA.flatMap((nome) =>
+      SOBRENOMES_JOGADORES_LIGA.map((sobrenome) => `${nome} ${sobrenome}`),
     );
+    const usados = new Set([
+      ...JOGADORES_REAIS.map((jogador) => normalizarNomeElenco(jogador.nome)),
+      normalizarNomeElenco(estado?.nome),
+      ...[...nomes.values()].map(normalizarNomeElenco),
+    ]);
+    let tentativa = hashIdentificador(`${anoTemporada}:${chave}`) % combinacoes.length;
+    for (let indice = 0; indice < combinacoes.length; indice++) {
+      const nome = combinacoes[tentativa];
+      if (!usados.has(normalizarNomeElenco(nome))) {
+        nomes.set(chave, nome);
+        return nome;
+      }
+      tentativa = (tentativa + 1) % combinacoes.length;
+    }
+    return `${combinacoes[0]} ${hashIdentificador(chave)}`;
   }
 
   function criarElencoLiga(clube) {
@@ -7216,16 +7232,15 @@
   }
 
   function obterRankingOutrasLigas() {
-    const rodadasConcluidas = (estado?.rodadas || []).filter(
-      (rodada) =>
-        rodada.length &&
-        rodada.every((partida) => partida.status === "concluido"),
-    ).length;
+    const jogosUsuario = Math.max(
+      0,
+      Math.floor(Number(estado?.estatisticas?.jogos) || 0),
+    );
     const cache = estado.rankingGlobalOutrasLigas;
     if (
-      cache?.versao === 10 &&
+      cache?.versao === 11 &&
       cache?.ano === estado.ano &&
-      cache?.rodadas === rodadasConcluidas &&
+      cache?.jogosUsuario === jogosUsuario &&
       Array.isArray(cache.jogadores)
     )
       return cache.jogadores;
@@ -7338,10 +7353,10 @@
         clubes.map((clube) => [clube.id, criarElencoLiga(clube)]),
       );
       elencos.forEach((elenco) => elenco.forEach(registrarJogador));
-      if (clubes.length < 2 || rodadasConcluidas === 0) return;
+      if (clubes.length < 2 || jogosUsuario === 0) return;
       const agenda = gerarAgendaFaseLiga(
         clubes.map((clube) => clube.id),
-        rodadasConcluidas,
+        jogosUsuario,
       );
       agenda.forEach((jogos, indiceRodada) => {
         jogos.forEach(({ casaId, foraId }) => {
@@ -7371,22 +7386,27 @@
           [
             {
               clubeId: casaId,
+              elenco: elencos.get(casaId) || [],
               escalacao: escalacaoCasa,
               gols: golsCasa,
               golsSofridos: golsFora,
             },
             {
               clubeId: foraId,
+              elenco: elencos.get(foraId) || [],
               escalacao: escalacaoFora,
               gols: golsFora,
               golsSofridos: golsCasa,
             },
           ].forEach((time) => {
-            time.escalacao.forEach((jogador) => {
+            time.elenco.forEach((jogador) => {
               const agregado = registrarJogador(jogador);
               agregado.jogos++;
               if (time.gols > time.golsSofridos) agregado.vitorias++;
               if (time.golsSofridos === 0) agregado.jogosSemSofrer++;
+            });
+            time.escalacao.forEach((jogador) => {
+              const agregado = registrarJogador(jogador);
               const posicao = String(jogador.posicao || "").toUpperCase();
               if (["ZCE", "ZCD", "LE", "LD"].includes(posicao))
                 agregado.desarmes += sortearPoissonRanking(1.7, aleatorio);
@@ -7420,9 +7440,9 @@
       });
     });
     estado.rankingGlobalOutrasLigas = {
-      versao: 10,
+      versao: 11,
       ano: estado.ano,
-      rodadas: rodadasConcluidas,
+      jogosUsuario,
       jogadores: [...jogadores.values()],
     };
     salvar();
@@ -8109,9 +8129,12 @@
 
     const { titulosPorClube, tiposTitulos } = obterTitulosDaTemporadaPorClube();
     const estatisticasPonderadas = obterEstatisticasPonderadasBolaDeOuro();
-    const totalRodadas = Math.max(1, (estado.rodadas || []).length);
-    // Exige participação em pelo menos 40% das partidas da temporada regular.
-    const minimoJogos = Math.max(1, Math.ceil(totalRodadas * 0.4));
+    const totalJogosReferencia = Math.max(
+      1,
+      Math.floor(Number(estado.estatisticas?.jogos) || 0),
+    );
+    // Exige participação em pelo menos 40% dos jogos disputados pelo usuário.
+    const minimoJogos = Math.max(1, Math.ceil(totalJogosReferencia * 0.4));
 
     const avaliados = [...candidatos.values()]
       .filter(
@@ -8181,7 +8204,7 @@
           15 * (1 - Math.exp(-Math.max(0, pontosTitulos) / 24));
         const notaParticipacao = Math.min(
           10,
-          (desempenho.jogos / totalRodadas) * 10,
+          (desempenho.jogos / totalJogosReferencia) * 10,
         );
         const pontuacao =
           desempenho.notaIndividual + notaTitulos + notaParticipacao;
@@ -9203,6 +9226,7 @@
     });
     estado.feed = estado.feed.slice(0, 12);
     if (partida.tipo === "liga") simularOutrosJogosDaRodada(partida.rodadaLiga);
+    obterRankingOutrasLigas();
 
     // ─── NOVO: enfileirar eventos para modal (só quando o jogador está acompanhando) ───
     if (mostrarResultado) {
