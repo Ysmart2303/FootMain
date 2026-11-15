@@ -412,7 +412,7 @@ html[data-theme="light"] .jja-penaltis-resumo {
 }
 
 .jja-modal-bola-de-ouro {
-    z-index: 1160;
+    z-index: 1210;
 }
 
 .jja-bola-de-ouro-caixa {
@@ -460,7 +460,7 @@ html[data-theme="light"] .jja-penaltis-resumo {
 .jja-bola-de-ouro-cabecalho,
 .jja-bola-de-ouro-linha {
     display: grid;
-    grid-template-columns: 46px minmax(0, 1fr) 86px;
+    grid-template-columns: 46px minmax(0, 1fr) 36px 86px;
     align-items: center;
     gap: 12px;
 }
@@ -471,6 +471,14 @@ html[data-theme="light"] .jja-penaltis-resumo {
     font-size: .7rem;
     font-weight: 800;
     text-transform: uppercase;
+}
+
+.jja-bola-de-ouro-cabecalho span:nth-child(2) {
+    grid-column: 2 / 4;
+}
+
+.jja-bola-de-ouro-cabecalho span:last-child {
+    grid-column: 4;
 }
 
 .jja-bola-de-ouro-cabecalho span:last-child,
@@ -494,6 +502,67 @@ html[data-theme="light"] .jja-penaltis-resumo {
     border: 1px solid rgba(148, 163, 184, 0.14);
     border-radius: 6px;
     background: rgba(15, 23, 42, 0.58);
+}
+
+.jja-bola-de-ouro-detalhes-botao {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    padding: 0;
+    border: 1px solid rgba(250, 204, 21, 0.45);
+    border-radius: 50%;
+    background: rgba(234, 179, 8, 0.12);
+    color: #fde047;
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.jja-bola-de-ouro-detalhes-botao:hover,
+.jja-bola-de-ouro-detalhes-botao:focus-visible {
+    background: rgba(234, 179, 8, 0.25);
+}
+
+.jja-bola-de-ouro-detalhes-botao:focus-visible {
+    outline: 2px solid #fde047;
+    outline-offset: 2px;
+}
+
+.jja-bola-de-ouro-detalhes {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 4px;
+    padding: 10px;
+    border-top: 1px solid rgba(250, 204, 21, 0.22);
+    border-radius: 0 0 5px 5px;
+    background: rgba(2, 8, 23, 0.32);
+}
+
+.jja-bola-de-ouro-detalhes[hidden] {
+    display: none;
+}
+
+.jja-bola-de-ouro-detalhes-grupo {
+    display: grid;
+    align-content: start;
+    gap: 4px;
+    min-width: 0;
+}
+
+.jja-bola-de-ouro-detalhes-grupo strong {
+    color: #fde68a;
+    font-size: .72rem;
+}
+
+.jja-bola-de-ouro-detalhes-grupo span {
+    color: #cbd5e1;
+    font-size: .75rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
 }
 
 .jja-bola-de-ouro-colocacao {
@@ -734,6 +803,17 @@ html[data-theme="light"] .jja-bola-de-ouro-linha {
 html[data-theme="light"] .jja-bola-de-ouro-identidade strong { color: #1f2937; }
 html[data-theme="light"] .jja-bola-de-ouro-identidade small,
 html[data-theme="light"] .jja-bola-de-ouro-pontos { color: #475569; }
+html[data-theme="light"] .jja-bola-de-ouro-detalhes-botao {
+    border-color: #ca8a04;
+    background: #fef9c3;
+    color: #854d0e;
+}
+html[data-theme="light"] .jja-bola-de-ouro-detalhes {
+    border-color: #e7d9a1;
+    background: rgba(254, 252, 232, 0.72);
+}
+html[data-theme="light"] .jja-bola-de-ouro-detalhes-grupo strong { color: #854d0e; }
+html[data-theme="light"] .jja-bola-de-ouro-detalhes-grupo span { color: #475569; }
 html[data-theme="light"] .jja-bola-de-ouro-usuario {
     border-color: #16a34a;
     background: #f0fdf4;
@@ -761,10 +841,16 @@ html[data-theme="light"] .jja-proximo.proxima-e-final .jja-proximo-topo > span:f
     .jja-evento-icone { font-size: 2.2rem; }
     .jja-bola-de-ouro-caixa { padding: 18px 12px 14px; }
     .jja-bola-de-ouro-cabecalho,
-    .jja-bola-de-ouro-linha { grid-template-columns: 34px minmax(0, 1fr) 68px; gap: 8px; }
+    .jja-bola-de-ouro-linha { grid-template-columns: 34px minmax(0, 1fr) 32px 68px; gap: 8px; }
     .jja-bola-de-ouro-cabecalho,
     .jja-bola-de-ouro-linha { padding-left: 8px; padding-right: 8px; }
     .jja-bola-de-ouro-identidade strong { font-size: .82rem; }
     .jja-bola-de-ouro-identidade small { font-size: .7rem; }
     .jja-bola-de-ouro-pontos { font-size: .82rem; }
+}
+
+@media (max-width: 600px) {
+    .jja-bola-de-ouro-caixa { max-height: calc(100dvh - 24px); }
+    .jja-bola-de-ouro-lista { max-height: min(32dvh, 280px); }
+    .jja-bola-de-ouro-detalhes { grid-template-columns: minmax(0, 1fr); }
 }
