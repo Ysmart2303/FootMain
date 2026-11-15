@@ -572,6 +572,50 @@ function normalizarNomeParaEscudo(valor = "") {
     .trim();
 }
 
+function obterUrlsDiretasEscudo(clube, pais) {
+  if (!clube || !pais) return [];
+  const nomes = [
+    clube.nome,
+    clube.id,
+    ...(ALIASES_ESCUDOS_CLUBES[clube.id] || []),
+  ].filter(Boolean);
+  const arquivos = new Set();
+  nomes.forEach((valor) => {
+    const nome = String(valor)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/&/g, " and ")
+      .replace(/[^a-zA-Z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+    if (!nome) return;
+    arquivos.add(nome);
+    const semSufixo = nome.replace(/_(?:FC|SC|EC|AC|CF|SAD)$/i, "");
+    if (semSufixo !== nome) arquivos.add(semSufixo);
+    else arquivos.add(`${nome}_FC`);
+  });
+  return [...arquivos].map(
+    (arquivo) =>
+      `${REPO_ESCUDOS_BASE}/${encodeURIComponent(pais)}/${encodeURIComponent(arquivo)}.svg`,
+  );
+}
+
+function resolverFallbackEscudo(imagem) {
+  let candidatos = [];
+  try {
+    candidatos = JSON.parse(imagem.dataset.escudoCandidatos || "[]");
+  } catch {
+    candidatos = [];
+  }
+  const proximo = Number(imagem.dataset.escudoCandidatoIndice ?? 0) + 1;
+  if (proximo < candidatos.length) {
+    imagem.dataset.escudoCandidatoIndice = String(proximo);
+    imagem.src = candidatos[proximo];
+    return;
+  }
+  imagem.onerror = null;
+  imagem.src = criarEscudoGenericoSvg(imagem.dataset.escudoNome || "Clube");
+}
+
 function criarEscudoGenericoSvg(nome = "Clube") {
   const iniciais =
     String(nome)
@@ -742,8 +786,9 @@ function resolverEscudosPendentes(pais) {
           const encontrado = encontrarArquivoEscudo(clube, arquivos, mapa);
           imagem.dataset.escudoPendente = "0";
           if (encontrado) {
+            imagem.dataset.escudoCandidatoIndice = "-1";
             imagem.src = encontrado.url;
-          } else {
+          } else if (!imagem.dataset.escudoCandidatos) {
             imagem.src = criarEscudoGenericoSvg(imagem.dataset.escudoNome || "Clube");
           }
         });
@@ -755,9 +800,8 @@ function resolverEscudosPendentes(pais) {
         )
         .forEach((imagem) => {
           imagem.dataset.escudoPendente = "0";
-          imagem.src = criarEscudoGenericoSvg(
-            imagem.dataset.escudoNome || "Clube",
-          );
+          if (!imagem.dataset.escudoCandidatos)
+            imagem.src = criarEscudoGenericoSvg(imagem.dataset.escudoNome || "Clube");
         });
     })
     .finally(() => PAISES_ESCUDOS_EM_RESOLUCAO.delete(pais));
@@ -781,18 +825,35 @@ function htmlEscudoClube(clube, tamanho = "pequeno", classeExtra = "") {
   const cadastroEscudo = obterCadastroClubeParaEscudo(clube);
   const pais = obterPaisEscudoClube(clube, cadastroEscudo);
   const fallback = criarEscudoGenericoSvg(nome);
+  const urlsDiretas = obterUrlsDiretasEscudo(cadastroEscudo, pais);
   let url = obterUrlEscudoClube(clube);
   const classes = `escudo-clube escudo-clube--${tamanho}${classeExtra ? ` ${classeExtra}` : ""}`;
   const arquivosPais = pais ? CACHE_MAPA_ESCUDOS_POR_PAIS.get(pais) : null;
+  let encontrouArquivo = false;
   if (arquivosPais) {
     const encontrado = encontrarArquivoEscudo(cadastroEscudo, [], arquivosPais);
-    if (encontrado) url = encontrado.url;
+    if (encontrado) {
+      url = encontrado.url;
+      encontrouArquivo = true;
+    }
   }
+  if (
+    urlsDiretas.length &&
+    !encontrouArquivo &&
+    !clube?.escudo &&
+    !clube?.logo &&
+    !clube?.logoUrl
+  )
+    url = urlsDiretas[0];
   const atributosBusca = pais && !arquivosPais
-    ? `data-escudo-pais="${escaparHTML(pais)}" data-escudo-id="${escaparHTML(cadastroEscudo?.id || clube?.id || "")}" data-escudo-nome="${escaparHTML(cadastroEscudo?.nome || nome)}" data-escudo-pendente="1"`
+    ? `data-escudo-pais="${escaparHTML(pais)}" data-escudo-id="${escaparHTML(cadastroEscudo?.id || clube?.id || "")}" data-escudo-pendente="1"`
     : "";
+  const atributosFallback = urlsDiretas.length
+    ? `data-escudo-candidatos="${escaparHTML(JSON.stringify(urlsDiretas))}" data-escudo-candidato-indice="${url === urlsDiretas[0] ? "0" : "-1"}"`
+    : "";
+  const atributoNomeEscudo = `data-escudo-nome="${escaparHTML(cadastroEscudo?.nome || nome)}"`;
   if (pais && !arquivosPais) resolverEscudosPendentes(pais);
-  return `<img class="${classes}" src="${escaparHTML(url || fallback)}" alt="Escudo ${escaparHTML(nome)}" loading="lazy" decoding="async" ${atributosBusca} onerror="this.onerror=null;this.src='${fallback}'">`;
+  return `<img class="${classes}" src="${escaparHTML(url || fallback)}" alt="Escudo ${escaparHTML(nome)}" loading="lazy" decoding="async" ${atributoNomeEscudo} ${atributosBusca} ${atributosFallback} onerror="resolverFallbackEscudo(this)">`;
 }
 
 const MAPA_TROFEUS_POR_LIGA = {
