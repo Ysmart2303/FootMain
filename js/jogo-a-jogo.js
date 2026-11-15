@@ -4372,9 +4372,9 @@
   ];
 
   const JOGADORES_REAIS = [
-    { id: "messi", nome: "Lionel Messi", anoNascimento: 1987, clube: "inter-miami", posicao: "PD", idadeAposentadoria: 41, destinos: ["newells-old-boys"], chanceTransferencia: 0.05, pesoRanking: 5.8, pesoRankingPico: 12, anoInicioProfissional: 2004, anosPico: [2009, 2019], clubesHistoricos: [{ inicio: 2004, fim: 2020, clube: "barcelona" }, { inicio: 2021, fim: 2022, clube: "paris-saint-germain" }, { inicio: 2023, fim: 2025, clube: "inter-miami" }] },
+    { id: "messi", nome: "Lionel Messi", anoNascimento: 1987, clube: "inter-miami", posicao: "PD", idadeAposentadoria: 41, destinos: ["newells-old-boys"], chanceTransferencia: 0.05, pesoRanking: 5.8, pesoRankingPico: 12, anoInicioProfissional: 2004, anosPico: [2009, 2022], clubesHistoricos: [{ inicio: 2004, fim: 2020, clube: "barcelona" }, { inicio: 2021, fim: 2022, clube: "paris-saint-germain" }, { inicio: 2023, fim: 2025, clube: "inter-miami" }] },
     { id: "cristiano-ronaldo", nome: "Cristiano Ronaldo", anoNascimento: 1985, clube: "al-nassr", posicao: "CA", idadeAposentadoria: 42, destinos: ["sporting-cp", "al-hilal"], chanceTransferencia: 0.08, pesoRanking: 6.2, pesoRankingPico: 12, anoInicioProfissional: 2002, anosPico: [2008, 2018], clubesHistoricos: [{ inicio: 2002, fim: 2003, clube: "sporting-cp" }, { inicio: 2004, fim: 2008, clube: "manchester-united" }, { inicio: 2009, fim: 2017, clube: "real-madrid" }, { inicio: 2018, fim: 2020, clube: "juventus" }, { inicio: 2021, fim: 2022, clube: "manchester-united" }, { inicio: 2023, fim: 2025, clube: "al-nassr" }] },
-    { id: "neymar", nome: "Neymar Jr.", anoNascimento: 1992, clube: "santos", posicao: "PE", idadeAposentadoria: 39, destinos: ["al-hilal", "inter-miami"], chanceTransferencia: 0.16, pesoRanking: 5.5, pesoRankingPico: 10.5, anoInicioProfissional: 2009, anosPico: [2011, 2017], clubesHistoricos: [{ inicio: 2009, fim: 2013, clube: "santos" }, { inicio: 2014, fim: 2017, clube: "barcelona" }, { inicio: 2018, fim: 2023, clube: "paris-saint-germain" }, { inicio: 2024, fim: 2024, clube: "al-hilal" }, { inicio: 2025, fim: 2025, clube: "santos" }] },
+    { id: "neymar", nome: "Neymar Jr.", anoNascimento: 1992, clube: "santos", posicao: "PE", idadeAposentadoria: 39, destinos: ["al-hilal", "inter-miami"], chanceTransferencia: 0.16, pesoRanking: 5.5, pesoRankingPico: 10.5, anoInicioProfissional: 2009, anosPico: [2014, 2020], clubesHistoricos: [{ inicio: 2009, fim: 2013, clube: "santos" }, { inicio: 2014, fim: 2017, clube: "barcelona" }, { inicio: 2018, fim: 2023, clube: "paris-saint-germain" }, { inicio: 2024, fim: 2024, clube: "al-hilal" }, { inicio: 2025, fim: 2025, clube: "santos" }] },
     { id: "luis-suarez", nome: "Luis Suárez", anoNascimento: 1987, clube: "inter-miami", posicao: "CA", idadeAposentadoria: 40, destinos: ["santos", "newells-old-boys"], chanceTransferencia: 0.12, pesoRanking: 3.1 },
     { id: "modric", nome: "Luka Modrić", anoNascimento: 1985, clube: "milan", posicao: "MC", idadeAposentadoria: 41, destinos: ["real-madrid", "inter"], chanceTransferencia: 0.1, pesoRanking: 2.8 },
     { id: "lewandowski", nome: "Robert Lewandowski", anoNascimento: 1988, clube: "barcelona", posicao: "CA", idadeAposentadoria: 40, destinos: ["bayern-munich", "milan"], chanceTransferencia: 0.12, pesoRanking: 3.2 },
@@ -4584,17 +4584,37 @@
       nome: obterNomeFicticio(clube.id, indice, estado.ano),
       posicao,
       clubeId: clube.id,
-      idade: 18 + ((base + indice * 7 + Number(estado.ano)) % 17),
-      pesoRanking: calcularMultiplicadorAuge(
-        18 + ((base + indice * 7 + Number(estado.ano)) % 17),
+      idade: Math.min(
+        40,
+        18 + ((base + indice * 7 + 2026) % 17) +
+          Math.max(0, Number(estado.ano) - 2026),
       ),
+      pesoRanking: 1,
     }));
+    elenco.forEach((jogador) => {
+      jogador.pesoRanking =
+        calcularMultiplicadorAuge(jogador.idade) *
+        calcularMultiplicadorFormaTemporada(
+          jogador.id,
+          estado.ano,
+          jogador.posicao,
+        );
+    });
     return elenco.concat(obterJogadoresReaisDoClube(clube.id, estado.ano));
   }
 
   function calcularMultiplicadorAuge(idade) {
     const distanciaAuge = Math.abs((Number(idade) || 27) - 27);
-    return Math.max(0.75, 1.6 - Math.max(0, distanciaAuge - 2) * 0.1);
+    return Math.max(0.55, 1.48 - Math.max(0, distanciaAuge - 2) * 0.08);
+  }
+
+  function calcularMultiplicadorFormaTemporada(id, ano, posicao) {
+    const aleatorio = criarSorteadorRanking(
+      `${id}:${ano}:forma:${posicao || ""}`,
+    );
+    const formaBase = (aleatorio() + aleatorio() + aleatorio()) / 3;
+    const pico = aleatorio() > 0.84 ? 0.12 + aleatorio() * 0.12 : 0;
+    return Math.max(0.72, Math.min(1.24, 0.88 + formaBase * 0.2 + pico));
   }
 
   function calcularPesoRankingReal(jogador, ano) {
@@ -4686,7 +4706,13 @@
       posicao: jogador.posicao,
       clubeId,
       idade: anoNumerico - jogador.anoNascimento,
-      pesoRanking: calcularPesoRankingReal(jogador, anoNumerico),
+      pesoRanking:
+        calcularPesoRankingReal(jogador, anoNumerico) *
+        calcularMultiplicadorFormaTemporada(
+          `real:${jogador.id}`,
+          anoNumerico,
+          jogador.posicao,
+        ),
       }));
   }
 
@@ -4783,6 +4809,10 @@
       GOL: 0.05, ZCE: 0.25, ZCD: 0.25, LE: 0.65, LD: 0.65,
       ME: 2.6, MC: 2.2, MD: 2.6, PE: 1.8, CA: 0.7, PD: 1.8,
     };
+    const pesosEscalacao = Object.fromEntries(
+      POSICOES_ELENCO_LIGA.map((posicao) => [posicao, 1]),
+    );
+    const participantes = [];
     const times = [
       { lado: "casa", clubeId: casaId, gols: golsCasa },
       { lado: "fora", clubeId: foraId, gols: golsFora },
@@ -4814,7 +4844,30 @@
         (jogador) => jogador.id !== jogadorId || podeJogar,
       );
       const elegiveis = jogadores.length ? jogadores : elenco;
-      const goleadoresAleatorios = elegiveis.filter(
+      const escalacao = POSICOES_ELENCO_LIGA.map((posicao) => {
+        const porPosicao = elegiveis.filter(
+          (jogador) => jogador.posicao === posicao,
+        );
+        return porPosicao.length
+          ? escolherJogadorLiga(porPosicao, pesosEscalacao)
+          : null;
+      }).filter(Boolean);
+      if (podeJogar) {
+        const indicePosicao = escalacao.findIndex(
+          (jogador) => jogador.posicao === jogadorDoUsuario.posicao,
+        );
+        if (indicePosicao >= 0) escalacao[indicePosicao] = jogadorDoUsuario;
+        else escalacao.push(jogadorDoUsuario);
+      }
+      escalacao.forEach((jogador) => {
+        participantes.push({
+          id: jogador.id,
+          nome: jogador.nome,
+          posicao: jogador.posicao,
+          clubeId: jogador.clubeId || time.clubeId,
+        });
+      });
+      const goleadoresAleatorios = escalacao.filter(
         (jogador) => jogador.id !== estado.carreiraId,
       );
       const gols = Math.max(0, Math.floor(Number(time.gols) || 0));
@@ -4827,7 +4880,7 @@
         const autor = indice < golsForcadosUsuario
           ? jogadorDoUsuario
           : escolherJogadorLiga(
-              goleadoresAleatorios.length ? goleadoresAleatorios : elegiveis,
+              goleadoresAleatorios.length ? goleadoresAleatorios : escalacao,
               pesosGols,
             );
         golsTime.push({
@@ -4847,7 +4900,7 @@
         ? Math.max(0, Math.floor(Number(opcoes.assistenciasJogador) || 0))
         : 0;
       golsTime.forEach((gol) => {
-        const podeAssistir = elegiveis.filter(
+        const podeAssistir = escalacao.filter(
           (jogador) => jogador.id !== gol.autorId,
         );
         if (!podeAssistir.length) return;
@@ -4878,6 +4931,9 @@
       });
       eventos.push(...golsTime);
     });
+    if (opcoes.partida && typeof opcoes.partida === "object") {
+      opcoes.partida.jogadoresParticipantes = participantes;
+    }
 
     return eventos;
   }
@@ -4911,7 +4967,7 @@
     ).length;
     const cache = estado.rankingGlobalOutrasLigas;
     if (
-      cache?.versao === 8 &&
+      cache?.versao === 9 &&
       cache?.ano === estado.ano &&
       cache?.rodadas === rodadasConcluidas &&
       Array.isArray(cache.jogadores)
@@ -4942,21 +4998,57 @@
       }
       return elenco[elenco.length - 1];
     };
-    const registrarGol = (jogador, metrica) => {
+    const registrarJogador = (jogador) => {
       if (!jogador) return;
       const identidade = chaveIdentidadeRanking(jogador.id, jogador.nome);
       if (!jogadores.has(identidade))
-        jogadores.set(identidade, { id: jogador.id, nome: jogador.nome, clubeId: jogador.clubeId, posicao: jogador.posicao, gols: 0, assistencias: 0 });
+        jogadores.set(identidade, {
+          id: jogador.id,
+          nome: jogador.nome,
+          clubeId: jogador.clubeId,
+          posicao: jogador.posicao,
+          idade: Number(jogador.idade) || 0,
+          pesoRanking: Number(jogador.pesoRanking) || 1,
+          overall: Number(jogador.overall) || 0,
+          gols: 0,
+          assistencias: 0,
+          jogos: 0,
+          vitorias: 0,
+          jogosSemSofrer: 0,
+        });
       const agregado = jogadores.get(identidade);
-      if (jogador.id === estado.carreiraId) agregado.id = jogador.id;
+      agregado.nome = jogador.nome || agregado.nome;
       agregado.clubeId = jogador.clubeId;
       agregado.posicao = jogador.posicao || agregado.posicao;
+      agregado.idade = Number(jogador.idade) || agregado.idade;
+      agregado.pesoRanking = Number(jogador.pesoRanking) || agregado.pesoRanking;
+      agregado.overall = Number(jogador.overall) || agregado.overall;
+      return agregado;
+    };
+    const registrarGol = (jogador, metrica) => {
+      const agregado = registrarJogador(jogador);
+      if (!agregado) return;
       agregado[metrica]++;
     };
+    const pesosEscalacao = Object.fromEntries(
+      POSICOES_ELENCO_LIGA.map((posicao) => [posicao, 1]),
+    );
+    const obterEscalacao = (elenco, identificador) =>
+      POSICOES_ELENCO_LIGA.map((posicao) => {
+        const elegiveis = elenco.filter((jogador) => jogador.posicao === posicao);
+        return elegiveis.length
+          ? escolherJogador(
+              elegiveis,
+              pesosEscalacao,
+              criarSorteadorRanking(`${identificador}:${posicao}`),
+            )
+          : null;
+      }).filter(Boolean);
 
     clubesPorLiga.forEach((clubes, liga) => {
-      if (clubes.length < 2 || rodadasConcluidas === 0) return;
       const elencos = new Map(clubes.map((clube) => [clube.id, criarElencoLiga(clube)]));
+      elencos.forEach((elenco) => elenco.forEach(registrarJogador));
+      if (clubes.length < 2 || rodadasConcluidas === 0) return;
       const agenda = gerarAgendaFaseLiga(clubes.map((clube) => clube.id), rodadasConcluidas);
       agenda.forEach((jogos, indiceRodada) => {
         jogos.forEach(({ casaId, foraId }) => {
@@ -4967,13 +5059,40 @@
           const delta = (forcaClube(casa) - forcaClube(fora)) / 25;
           const golsCasa = sortearPoissonRanking(Math.max(0.25, 1.8 + delta * 0.48), aleatorio);
           const golsFora = sortearPoissonRanking(Math.max(0.25, 1.7 - delta * 0.42), aleatorio);
-          [[casaId, golsCasa], [foraId, golsFora]].forEach(([clubeId, gols]) => {
-            const elenco = elencos.get(clubeId) || [];
+          const escalacaoCasa = obterEscalacao(
+            elencos.get(casaId) || [],
+            `${estado.ano}:${liga}:${indiceRodada}:${casaId}:${foraId}:casa`,
+          );
+          const escalacaoFora = obterEscalacao(
+            elencos.get(foraId) || [],
+            `${estado.ano}:${liga}:${indiceRodada}:${casaId}:${foraId}:fora`,
+          );
+          [
+            {
+              clubeId: casaId,
+              escalacao: escalacaoCasa,
+              gols: golsCasa,
+              golsSofridos: golsFora,
+            },
+            {
+              clubeId: foraId,
+              escalacao: escalacaoFora,
+              gols: golsFora,
+              golsSofridos: golsCasa,
+            },
+          ].forEach((time) => {
+            time.escalacao.forEach((jogador) => {
+              const agregado = registrarJogador(jogador);
+              agregado.jogos++;
+              if (time.gols > time.golsSofridos) agregado.vitorias++;
+              if (time.golsSofridos === 0) agregado.jogosSemSofrer++;
+            });
+            const gols = time.gols;
             for (let indice = 0; indice < gols; indice++) {
-              const autor = escolherJogador(elenco, pesosGols, aleatorio);
+              const autor = escolherJogador(time.escalacao, pesosGols, aleatorio);
               registrarGol(autor, "gols");
               if (aleatorio() < 0.68) {
-                const assistentes = elenco.filter((jogador) => jogador.id !== autor.id);
+                const assistentes = time.escalacao.filter((jogador) => jogador.id !== autor.id);
                 registrarGol(escolherJogador(assistentes, pesosAssistencias, aleatorio), "assistencias");
               }
             }
@@ -4982,7 +5101,7 @@
       });
     });
     estado.rankingGlobalOutrasLigas = {
-      versao: 8,
+      versao: 9,
       ano: estado.ano,
       rodadas: rodadasConcluidas,
       jogadores: [...jogadores.values()],
