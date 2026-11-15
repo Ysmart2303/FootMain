@@ -1,6 +1,7 @@
 const STORAGE_KEY = "footmain_temporadas";
 const STORAGE_KEY_RANKING = "footmain_ranking";
-const ANO_BASE_COPA_DO_MUNDO_SELECOES = 2026;
+const ANO_BASE_COPA_DO_MUNDO_SELECOES = 2002;
+const ANO_BASE_EVENTOS_SELECOES = 2004;
 const CICLO_COPA_DO_MUNDO_SELECOES = 4;
 const STORAGE_KEY_CARREIRA_ATUAL = "footmain_carreira_atual";
 const REGIOES_SELECOES = {
@@ -2139,7 +2140,7 @@ function obterCompeticoesSelecao(
       temporadasAnteriores.some(
         (t) => Number(t.ano) === ano - 1 && t.classificadoCopa === true,
       ));
-  const anoInicioContinental = ANO_BASE_COPA_DO_MUNDO_SELECOES + 2;
+  const anoInicioContinental = ANO_BASE_EVENTOS_SELECOES;
   const anoTorneioRegional =
     ano >= anoInicioContinental &&
     (ano - anoInicioContinental) % CICLO_COPA_DO_MUNDO_SELECOES === 0;
@@ -2176,7 +2177,7 @@ function gerarTrofeusSelecao(nacionalidade, ano, multiplicadorTitulos) {
     ano >= ANO_BASE_COPA_DO_MUNDO_SELECOES &&
     (ano - ANO_BASE_COPA_DO_MUNDO_SELECOES) % CICLO_COPA_DO_MUNDO_SELECOES ===
       0;
-  const anoInicioContinental = ANO_BASE_COPA_DO_MUNDO_SELECOES + 2;
+  const anoInicioContinental = ANO_BASE_EVENTOS_SELECOES;
   const anoTorneioRegional =
     ano >= anoInicioContinental &&
     (ano - anoInicioContinental) % CICLO_COPA_DO_MUNDO_SELECOES === 0;
@@ -5673,10 +5674,8 @@ function simularTemporadaPorJogo(
           (t) => Number(t.ano) === ano - 1 && t.classificadoCopa === true,
         ));
     const anoRegional =
-      ano >= ANO_BASE_COPA_DO_MUNDO_SELECOES + 2 &&
-      (ano - (ANO_BASE_COPA_DO_MUNDO_SELECOES + 2)) %
-        CICLO_COPA_DO_MUNDO_SELECOES ===
-        0;
+      ano >= ANO_BASE_EVENTOS_SELECOES &&
+      (ano - ANO_BASE_EVENTOS_SELECOES) % CICLO_COPA_DO_MUNDO_SELECOES === 0;
     const jogosEliminatorias = qualificacao.jogos;
     const jogosAmistosos = 2;
     const jogosTorneio = anoCopa

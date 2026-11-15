@@ -744,7 +744,8 @@
   }
 
   const KEY = "footmain_jogo_a_jogo_carreira_v2";
-  const ANO_BASE_COPA_DO_MUNDO_SELECOES = 2026;
+  const ANO_BASE_COPA_DO_MUNDO_SELECOES = 2002;
+  const ANO_BASE_EVENTOS_SELECOES = 2004;
   const CICLO_COPA_DO_MUNDO_SELECOES = 4;
   const $ = (id) => document.getElementById(id);
   let estado = null;
@@ -3641,7 +3642,7 @@
           historico.some(
             (t) => Number(t.ano) === ano - 1 && t.classificadoCopa === true,
           ));
-      const anoInicioContinental = ANO_BASE_COPA_DO_MUNDO_SELECOES + 2;
+      const anoInicioContinental = ANO_BASE_EVENTOS_SELECOES;
       const anoTorneioRegional =
         ano >= anoInicioContinental &&
         (ano - anoInicioContinental) % CICLO_COPA_DO_MUNDO_SELECOES === 0;
