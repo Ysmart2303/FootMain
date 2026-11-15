@@ -4372,9 +4372,9 @@
   ];
 
   const JOGADORES_REAIS = [
-    { id: "messi", nome: "Lionel Messi", anoNascimento: 1987, clube: "inter-miami", posicao: "PD", idadeAposentadoria: 41, destinos: ["newells-old-boys"], chanceTransferencia: 0.05, pesoRanking: 3.8, pesoRankingPico: 8, anoInicioProfissional: 2004, anosPico: [2009, 2019], clubesHistoricos: [{ inicio: 2004, fim: 2020, clube: "barcelona" }, { inicio: 2021, fim: 2022, clube: "paris-saint-germain" }, { inicio: 2023, fim: 2025, clube: "inter-miami" }] },
-    { id: "cristiano-ronaldo", nome: "Cristiano Ronaldo", anoNascimento: 1985, clube: "al-nassr", posicao: "CA", idadeAposentadoria: 42, destinos: ["sporting-cp", "al-hilal"], chanceTransferencia: 0.08, pesoRanking: 4.1, pesoRankingPico: 8, anoInicioProfissional: 2002, anosPico: [2008, 2018], clubesHistoricos: [{ inicio: 2002, fim: 2003, clube: "sporting-cp" }, { inicio: 2004, fim: 2008, clube: "manchester-united" }, { inicio: 2009, fim: 2017, clube: "real-madrid" }, { inicio: 2018, fim: 2020, clube: "juventus" }, { inicio: 2021, fim: 2022, clube: "manchester-united" }, { inicio: 2023, fim: 2025, clube: "al-nassr" }] },
-    { id: "neymar", nome: "Neymar Jr.", anoNascimento: 1992, clube: "santos", posicao: "PE", idadeAposentadoria: 39, destinos: ["al-hilal", "inter-miami"], chanceTransferencia: 0.16, pesoRanking: 3.5, pesoRankingPico: 7.5, anoInicioProfissional: 2009, anosPico: [2011, 2017], clubesHistoricos: [{ inicio: 2009, fim: 2013, clube: "santos" }, { inicio: 2014, fim: 2017, clube: "barcelona" }, { inicio: 2018, fim: 2023, clube: "paris-saint-germain" }, { inicio: 2024, fim: 2024, clube: "al-hilal" }, { inicio: 2025, fim: 2025, clube: "santos" }] },
+    { id: "messi", nome: "Lionel Messi", anoNascimento: 1987, clube: "inter-miami", posicao: "PD", idadeAposentadoria: 41, destinos: ["newells-old-boys"], chanceTransferencia: 0.05, pesoRanking: 5.8, pesoRankingPico: 12, anoInicioProfissional: 2004, anosPico: [2009, 2019], clubesHistoricos: [{ inicio: 2004, fim: 2020, clube: "barcelona" }, { inicio: 2021, fim: 2022, clube: "paris-saint-germain" }, { inicio: 2023, fim: 2025, clube: "inter-miami" }] },
+    { id: "cristiano-ronaldo", nome: "Cristiano Ronaldo", anoNascimento: 1985, clube: "al-nassr", posicao: "CA", idadeAposentadoria: 42, destinos: ["sporting-cp", "al-hilal"], chanceTransferencia: 0.08, pesoRanking: 6.2, pesoRankingPico: 12, anoInicioProfissional: 2002, anosPico: [2008, 2018], clubesHistoricos: [{ inicio: 2002, fim: 2003, clube: "sporting-cp" }, { inicio: 2004, fim: 2008, clube: "manchester-united" }, { inicio: 2009, fim: 2017, clube: "real-madrid" }, { inicio: 2018, fim: 2020, clube: "juventus" }, { inicio: 2021, fim: 2022, clube: "manchester-united" }, { inicio: 2023, fim: 2025, clube: "al-nassr" }] },
+    { id: "neymar", nome: "Neymar Jr.", anoNascimento: 1992, clube: "santos", posicao: "PE", idadeAposentadoria: 39, destinos: ["al-hilal", "inter-miami"], chanceTransferencia: 0.16, pesoRanking: 5.5, pesoRankingPico: 10.5, anoInicioProfissional: 2009, anosPico: [2011, 2017], clubesHistoricos: [{ inicio: 2009, fim: 2013, clube: "santos" }, { inicio: 2014, fim: 2017, clube: "barcelona" }, { inicio: 2018, fim: 2023, clube: "paris-saint-germain" }, { inicio: 2024, fim: 2024, clube: "al-hilal" }, { inicio: 2025, fim: 2025, clube: "santos" }] },
     { id: "luis-suarez", nome: "Luis Suárez", anoNascimento: 1987, clube: "inter-miami", posicao: "CA", idadeAposentadoria: 40, destinos: ["santos", "newells-old-boys"], chanceTransferencia: 0.12, pesoRanking: 3.1 },
     { id: "modric", nome: "Luka Modrić", anoNascimento: 1985, clube: "milan", posicao: "MC", idadeAposentadoria: 41, destinos: ["real-madrid", "inter"], chanceTransferencia: 0.1, pesoRanking: 2.8 },
     { id: "lewandowski", nome: "Robert Lewandowski", anoNascimento: 1988, clube: "barcelona", posicao: "CA", idadeAposentadoria: 40, destinos: ["bayern-munich", "milan"], chanceTransferencia: 0.12, pesoRanking: 3.2 },
@@ -4382,7 +4382,7 @@
     { id: "virgil-van-dijk", nome: "Virgil van Dijk", anoNascimento: 1991, clube: "liverpool", posicao: "ZCD", idadeAposentadoria: 39, destinos: ["bayern-munich", "paris-saint-germain"], chanceTransferencia: 0.12, pesoRanking: 2.8 },
     { id: "kevin-de-bruyne", nome: "Kevin De Bruyne", anoNascimento: 1991, clube: "napoli", posicao: "MC", idadeAposentadoria: 39, destinos: ["manchester-city", "inter-miami"], chanceTransferencia: 0.14, pesoRanking: 3.1 },
     { id: "harry-kane", nome: "Harry Kane", anoNascimento: 1993, clube: "bayern-munich", posicao: "CA", idadeAposentadoria: 40, destinos: ["manchester-city", "tottenham"], chanceTransferencia: 0.12, pesoRanking: 3.6 },
-    { id: "kylian-mbappe", nome: "Kylian Mbappé", anoNascimento: 1998, clube: "real-madrid", posicao: "PE", idadeAposentadoria: 39, destinos: ["paris-saint-germain", "liverpool"], chanceTransferencia: 0.1, pesoRanking: 4.2 },
+    { id: "kylian-mbappe", nome: "Kylian Mbappé", anoNascimento: 1998, clube: "real-madrid", posicao: "PE", idadeAposentadoria: 39, destinos: ["paris-saint-germain", "liverpool"], chanceTransferencia: 0.1, pesoRanking: 5.8, pesoRankingPico: 10.5, anoInicioProfissional: 2015, anosPico: [2018, 2026], clubesHistoricos: [{ inicio: 2015, fim: 2017, clube: "monaco" }, { inicio: 2018, fim: 2024, clube: "paris-saint-germain" }, { inicio: 2025, fim: 2025, clube: "real-madrid" }] },
     { id: "vinicius-junior", nome: "Vinícius Júnior", anoNascimento: 2000, clube: "real-madrid", posicao: "PE", idadeAposentadoria: 40, destinos: ["paris-saint-germain", "manchester-city"], chanceTransferencia: 0.12, pesoRanking: 4.2, pesoRankingPico: 8, anoInicioProfissional: 2017, anosPico: [2022, 2030], clubesHistoricos: [{ inicio: 2017, fim: 2018, clube: "flamengo" }, { inicio: 2019, fim: 2025, clube: "real-madrid" }] },
     { id: "jude-bellingham", nome: "Jude Bellingham", anoNascimento: 2003, clube: "real-madrid", posicao: "MC", idadeAposentadoria: 40, destinos: ["liverpool", "manchester-city"], chanceTransferencia: 0.12, pesoRanking: 3.4 },
     { id: "rodrygo", nome: "Rodrygo", anoNascimento: 2001, clube: "real-madrid", posicao: "PD", idadeAposentadoria: 39, destinos: ["liverpool", "manchester-city"], chanceTransferencia: 0.14, pesoRanking: 2.9 },
@@ -4465,7 +4465,7 @@
     { id: "jordan-henderson", nome: "Jordan Henderson", anoNascimento: 1990, clube: "al-nassr", posicao: "MC", idadeAposentadoria: 38, destinos: ["liverpool", "newcastle"], chanceTransferencia: 0.08, pesoRanking: 2.6 },
     { id: "zinedine-zidane", nome: "Zinedine Zidane", anoNascimento: 1972, clube: "real-madrid", posicao: "MC", idadeAposentadoria: 34, pesoRanking: 4.2, pesoRankingPico: 8.5, anoInicioProfissional: 1989, anosPico: [2000, 2006], clubesHistoricos: [{ inicio: 2000, fim: 2001, clube: "juventus" }, { inicio: 2002, fim: 2006, clube: "real-madrid" }] },
     { id: "ronaldo-nazario", nome: "Ronaldo Nazário", anoNascimento: 1976, clube: "real-madrid", posicao: "CA", idadeAposentadoria: 35, pesoRanking: 4.4, pesoRankingPico: 9, anoInicioProfissional: 1993, anosPico: [1997, 2002], clubesHistoricos: [{ inicio: 2000, fim: 2002, clube: "inter" }, { inicio: 2003, fim: 2007, clube: "real-madrid" }, { inicio: 2008, fim: 2008, clube: "milan" }, { inicio: 2009, fim: 2011, clube: "corinthians" }] },
-    { id: "ronaldinho-gaucho", nome: "Ronaldinho Gaúcho", anoNascimento: 1980, clube: "flamengo", posicao: "ME", idadeAposentadoria: 35, pesoRanking: 4, pesoRankingPico: 8.5, anoInicioProfissional: 1998, anosPico: [2004, 2006], clubesHistoricos: [{ inicio: 2001, fim: 2003, clube: "paris-saint-germain" }, { inicio: 2004, fim: 2008, clube: "barcelona" }, { inicio: 2009, fim: 2010, clube: "milan" }, { inicio: 2011, fim: 2012, clube: "flamengo" }, { inicio: 2013, fim: 2014, clube: "santos" }] },
+    { id: "ronaldinho-gaucho", nome: "Ronaldinho Gaúcho", anoNascimento: 1980, clube: "flamengo", posicao: "ME", idadeAposentadoria: 35, pesoRanking: 5.5, pesoRankingPico: 11, anoInicioProfissional: 1998, anosPico: [2004, 2006], clubesHistoricos: [{ inicio: 2001, fim: 2003, clube: "paris-saint-germain" }, { inicio: 2004, fim: 2008, clube: "barcelona" }, { inicio: 2009, fim: 2010, clube: "milan" }, { inicio: 2011, fim: 2012, clube: "flamengo" }, { inicio: 2013, fim: 2014, clube: "santos" }] },
     { id: "luis-figo", nome: "Luís Figo", anoNascimento: 1972, clube: "inter", posicao: "PD", idadeAposentadoria: 36, pesoRanking: 3.6, pesoRankingPico: 7.2, anoInicioProfissional: 1989, anosPico: [2000, 2002], clubesHistoricos: [{ inicio: 2000, fim: 2000, clube: "barcelona" }, { inicio: 2001, fim: 2005, clube: "real-madrid" }, { inicio: 2006, fim: 2009, clube: "inter" }] },
     { id: "thierry-henry", nome: "Thierry Henry", anoNascimento: 1977, clube: "barcelona", posicao: "CA", idadeAposentadoria: 37, pesoRanking: 4, pesoRankingPico: 8, anoInicioProfissional: 1994, anosPico: [2002, 2006], clubesHistoricos: [{ inicio: 2000, fim: 2007, clube: "arsenal" }, { inicio: 2008, fim: 2010, clube: "barcelona" }, { inicio: 2011, fim: 2014, clube: "arsenal" }] },
     { id: "david-beckham", nome: "David Beckham", anoNascimento: 1975, clube: "real-madrid", posicao: "MD", idadeAposentadoria: 38, pesoRanking: 3.4, pesoRankingPico: 6.8, anoInicioProfissional: 1992, anosPico: [2000, 2003], clubesHistoricos: [{ inicio: 2000, fim: 2003, clube: "manchester-united" }, { inicio: 2004, fim: 2007, clube: "real-madrid" }, { inicio: 2008, fim: 2009, clube: "milan" }] },
@@ -4484,7 +4484,7 @@
     { id: "claude-makelele", nome: "Claude Makélélé", anoNascimento: 1973, clube: "chelsea", posicao: "MC", idadeAposentadoria: 37, pesoRanking: 3, pesoRankingPico: 6.4, anoInicioProfissional: 1990, anosPico: [2001, 2006], clubesHistoricos: [{ inicio: 2000, fim: 2000, clube: "real-madrid" }, { inicio: 2001, fim: 2003, clube: "real-madrid" }, { inicio: 2004, fim: 2008, clube: "chelsea" }, { inicio: 2009, fim: 2011, clube: "paris-saint-germain" }] },
     { id: "rio-ferdinand", nome: "Rio Ferdinand", anoNascimento: 1978, clube: "manchester-united", posicao: "ZCD", idadeAposentadoria: 36, pesoRanking: 3.1, pesoRankingPico: 6.4, anoInicioProfissional: 1996, anosPico: [2002, 2009], clubesHistoricos: [{ inicio: 2000, fim: 2001, clube: "west-ham" }, { inicio: 2002, fim: 2014, clube: "manchester-united" }] },
     { id: "carles-puyol", nome: "Carles Puyol", anoNascimento: 1978, clube: "barcelona", posicao: "ZCD", idadeAposentadoria: 36, pesoRanking: 3, pesoRankingPico: 6.4, anoInicioProfissional: 1999, anosPico: [2006, 2010], clubesHistoricos: [{ inicio: 2000, fim: 2014, clube: "barcelona" }] },
-    { id: "kaka", nome: "Kaká", anoNascimento: 1982, clube: "milan", posicao: "ME", idadeAposentadoria: 35, pesoRanking: 3.8, pesoRankingPico: 8.4, anoInicioProfissional: 2001, anosPico: [2006, 2007], clubesHistoricos: [{ inicio: 2001, fim: 2003, clube: "sao-paulo" }, { inicio: 2004, fim: 2009, clube: "milan" }, { inicio: 2010, fim: 2013, clube: "real-madrid" }, { inicio: 2014, fim: 2014, clube: "milan" }] },
+    { id: "kaka", nome: "Kaká", anoNascimento: 1982, clube: "milan", posicao: "ME", idadeAposentadoria: 35, pesoRanking: 5.2, pesoRankingPico: 10.5, anoInicioProfissional: 2001, anosPico: [2006, 2007], clubesHistoricos: [{ inicio: 2001, fim: 2003, clube: "sao-paulo" }, { inicio: 2004, fim: 2009, clube: "milan" }, { inicio: 2010, fim: 2013, clube: "real-madrid" }, { inicio: 2014, fim: 2014, clube: "milan" }] },
     { id: "xavi-hernandez", nome: "Xavi Hernández", anoNascimento: 1980, clube: "barcelona", posicao: "MC", idadeAposentadoria: 39, pesoRanking: 3.6, pesoRankingPico: 7.8, anoInicioProfissional: 1998, anosPico: [2008, 2012], clubesHistoricos: [{ inicio: 2000, fim: 2015, clube: "barcelona" }] },
     { id: "andres-iniesta", nome: "Andrés Iniesta", anoNascimento: 1984, clube: "barcelona", posicao: "MC", idadeAposentadoria: 39, pesoRanking: 3.7, pesoRankingPico: 8, anoInicioProfissional: 2002, anosPico: [2009, 2012], clubesHistoricos: [{ inicio: 2002, fim: 2018, clube: "barcelona" }] },
     { id: "samuel-etoo", nome: "Samuel Eto'o", anoNascimento: 1981, clube: "barcelona", posicao: "CA", idadeAposentadoria: 37, pesoRanking: 3.8, pesoRankingPico: 7.8, anoInicioProfissional: 1997, anosPico: [2005, 2010], clubesHistoricos: [{ inicio: 2000, fim: 2004, clube: "mallorca" }, { inicio: 2005, fim: 2009, clube: "barcelona" }, { inicio: 2010, fim: 2011, clube: "inter" }, { inicio: 2012, fim: 2013, clube: "chelsea" }] },
@@ -4504,7 +4504,7 @@
     { id: "angel-di-maria", nome: "Ángel Di María", anoNascimento: 1988, clube: "benfica", posicao: "PD", idadeAposentadoria: 38, pesoRanking: 3.7, pesoRankingPico: 7.5, anoInicioProfissional: 2005, anosPico: [2014, 2022], clubesHistoricos: [{ inicio: 2007, fim: 2010, clube: "benfica" }, { inicio: 2011, fim: 2014, clube: "real-madrid" }, { inicio: 2015, fim: 2015, clube: "manchester-united" }, { inicio: 2016, fim: 2022, clube: "paris-saint-germain" }, { inicio: 2023, fim: 2023, clube: "juventus" }, { inicio: 2024, fim: 2025, clube: "benfica" }] },
     { id: "eden-hazard", nome: "Eden Hazard", anoNascimento: 1991, clube: "real-madrid", posicao: "PE", idadeAposentadoria: 32, pesoRanking: 3.7, pesoRankingPico: 7.8, anoInicioProfissional: 2007, anosPico: [2015, 2019], clubesHistoricos: [{ inicio: 2007, fim: 2012, clube: "lille" }, { inicio: 2013, fim: 2019, clube: "chelsea" }, { inicio: 2020, fim: 2023, clube: "real-madrid" }] },
     { id: "karim-benzema", nome: "Karim Benzema", anoNascimento: 1987, clube: "al-ittihad", posicao: "CA", idadeAposentadoria: 40, pesoRanking: 3.9, pesoRankingPico: 8.4, anoInicioProfissional: 2004, anosPico: [2021, 2022], clubesHistoricos: [{ inicio: 2005, fim: 2009, clube: "lyon" }, { inicio: 2010, fim: 2023, clube: "real-madrid" }, { inicio: 2024, fim: 2025, clube: "al-ittihad" }] },
-    { id: "philippe-coutinho", nome: "Philippe Coutinho", anoNascimento: 1992, clube: "vasco", posicao: "ME", idadeAposentadoria: 36, pesoRanking: 3.4, pesoRankingPico: 7.5, anoInicioProfissional: 2009, anosPico: [2017, 2018], clubesHistoricos: [{ inicio: 2009, fim: 2010, clube: "vasco" }, { inicio: 2011, fim: 2012, clube: "inter" }, { inicio: 2013, fim: 2013, clube: "liverpool" }, { inicio: 2014, fim: 2017, clube: "liverpool" }, { inicio: 2018, fim: 2019, clube: "barcelona" }, { inicio: 2020, fim: 2020, clube: "bayern-munich" }, { inicio: 2021, fim: 2021, clube: "barcelona" }] },
+    { id: "philippe-coutinho", nome: "Philippe Coutinho", anoNascimento: 1992, clube: "vasco", posicao: "ME", idadeAposentadoria: 36, pesoRanking: 4.8, pesoRankingPico: 9.5, anoInicioProfissional: 2009, anosPico: [2017, 2018], clubesHistoricos: [{ inicio: 2009, fim: 2010, clube: "vasco" }, { inicio: 2011, fim: 2012, clube: "inter" }, { inicio: 2013, fim: 2013, clube: "liverpool" }, { inicio: 2014, fim: 2017, clube: "liverpool" }, { inicio: 2018, fim: 2019, clube: "barcelona" }, { inicio: 2020, fim: 2020, clube: "bayern-munich" }, { inicio: 2021, fim: 2021, clube: "barcelona" }] },
     { id: "sergio-ramos-historico", nome: "Sergio Ramos", anoNascimento: 1986, clube: "real-madrid", posicao: "ZCD", idadeAposentadoria: 39, pesoRanking: 3.5, pesoRankingPico: 7.3, anoInicioProfissional: 2003, anosPico: [2010, 2017], clubesHistoricos: [{ inicio: 2004, fim: 2005, clube: "sevilla" }, { inicio: 2006, fim: 2021, clube: "real-madrid" }, { inicio: 2022, fim: 2023, clube: "paris-saint-germain" }, { inicio: 2024, fim: 2025, clube: "sevilla" }] },
     { id: "thiago-silva", nome: "Thiago Silva", anoNascimento: 1984, clube: "chelsea", posicao: "ZCD", idadeAposentadoria: 41, pesoRanking: 3.2, pesoRankingPico: 6.8, anoInicioProfissional: 2002, anosPico: [2012, 2015], clubesHistoricos: [{ inicio: 2006, fim: 2008, clube: "milan" }, { inicio: 2009, fim: 2012, clube: "milan" }, { inicio: 2013, fim: 2020, clube: "paris-saint-germain" }, { inicio: 2021, fim: 2024, clube: "chelsea" }, { inicio: 2025, fim: 2025, clube: "fluminense" }] },
     { id: "luka-modric-historico", nome: "Luka Modrić", anoNascimento: 1985, clube: "milan", posicao: "MC", idadeAposentadoria: 41, pesoRanking: 3.4, pesoRankingPico: 7.5, anoInicioProfissional: 2003, anosPico: [2016, 2018], clubesHistoricos: [{ inicio: 2008, fim: 2012, clube: "tottenham" }, { inicio: 2013, fim: 2025, clube: "real-madrid" }] },
@@ -4911,7 +4911,7 @@
     ).length;
     const cache = estado.rankingGlobalOutrasLigas;
     if (
-      cache?.versao === 7 &&
+      cache?.versao === 8 &&
       cache?.ano === estado.ano &&
       cache?.rodadas === rodadasConcluidas &&
       Array.isArray(cache.jogadores)
@@ -4982,7 +4982,7 @@
       });
     });
     estado.rankingGlobalOutrasLigas = {
-      versao: 7,
+      versao: 8,
       ano: estado.ano,
       rodadas: rodadasConcluidas,
       jogadores: [...jogadores.values()],
@@ -5109,16 +5109,58 @@
     ["Conference League", 6],
     ["Mundial Sub-20", 4],
     ["Mundial Sub-17", 3],
+    ["Premier League", 11],
+    ["La Liga", 10],
+    ["Serie A", 10],
+    ["Bundesliga", 10],
+    ["Brasileirão", 10],
+    ["Série A Br", 10],
+    ["Ligue 1", 9],
+    ["Primeira Liga", 8],
+    ["Eredivisie", 8],
+    ["Serie A Argentina", 9],
+    ["Liga Profesional", 9],
+    ["Liga BetPlay", 7],
+    ["Primera División", 7],
+    ["LigaPro", 7],
+    ["Liga MX", 8],
+    ["MLS Cup", 7],
+    ["Saudi Pro League", 7],
+    ["Carabao Cup", 5],
+    ["Copa del Rey", 7],
+    ["Coppa Italia", 7],
+    ["DFB-Pokal", 7],
+    ["Coupe de France", 6],
+    ["Taça de Portugal", 6],
+    ["KNVB Beker", 6],
+    ["Copa do Brasil", 8],
+    ["Copa Argentina", 7],
+    ["Copa Colombia", 6],
+    ["Copa Chile", 6],
+    ["Copa Uruguay", 6],
+    ["Copa Ecuador", 6],
+    ["Copa Paraguay", 6],
+    ["US Open Cup", 5],
+    ["Copa MX", 5],
+    ["King's Cup", 5],
+    ["Emperor's Cup", 5],
+    ["Carioca", 3],
+    ["Paulistão", 3],
+    ["Gauchão", 2],
+    ["Mineiro", 3],
+    ["Baianão", 2],
+    ["Pernambucano", 2],
+    ["Cearense", 2],
   ]);
 
   function calcularPesoTituloBolaDeOuro(titulo, tiposTitulos) {
     if (PESOS_TITULOS_BOLA_DE_OURO.has(titulo)) {
       return PESOS_TITULOS_BOLA_DE_OURO.get(titulo);
     }
-    if (tiposTitulos.ligas.has(titulo)) return 8;
-    if (tiposTitulos.copas.has(titulo)) return 5;
+    if (tiposTitulos.ligas.has(titulo)) return 7;
+    if (tiposTitulos.copas.has(titulo)) return 4;
     if (/supercopa|super cup/i.test(titulo)) return 3;
-    if (/estadual/i.test(titulo)) return 2;
+    if (/estadual|carioca|paulist[aã]o|gauch[aã]o|mineiro|baian[aã]o|pernambucano|cearense/i.test(titulo)) return 2;
     return 1;
   }
 
@@ -5288,7 +5330,7 @@
           gols,
           assistencias,
           pontosTitulos,
-          pontuacao: pontosTitulos * 10 + gols * 0.5 + assistencias * 0.35,
+          pontuacao: pontosTitulos * 6 + gols * 2.2 + assistencias * 1.6,
         };
       })
       .sort((a, b) => {
