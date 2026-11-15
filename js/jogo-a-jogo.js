@@ -2279,6 +2279,143 @@
     );
   }
 
+  function embaralharSelecoes(selecoes) {
+    for (let indice = selecoes.length - 1; indice > 0; indice--) {
+      const outroIndice = Math.floor(Math.random() * (indice + 1));
+      [selecoes[indice], selecoes[outroIndice]] = [
+        selecoes[outroIndice],
+        selecoes[indice],
+      ];
+    }
+    return selecoes;
+  }
+
+  function obterClassificadosCopaDoMundo() {
+    const regioes = [
+      "americaSul",
+      "europa",
+      "africa",
+      "asia",
+      "americaNorte",
+      "oceania",
+    ];
+    return regioes
+      .flatMap((regiao) => {
+        const vagas = obterFormatoEliminatorias(regiao).vagas;
+        return SELECOES.filter(
+          (selecao) => selecao.regiao === regiao && selecao.fifa !== false,
+        )
+          .sort(
+            (a, b) =>
+              forcaSelecao(b.id) - forcaSelecao(a.id) ||
+              a.nome.localeCompare(b.nome, "pt-BR"),
+          )
+          .slice(0, vagas);
+      })
+      .sort(
+        (a, b) =>
+          forcaSelecao(b.id) - forcaSelecao(a.id) ||
+          a.nome.localeCompare(b.nome, "pt-BR"),
+      );
+  }
+
+  function sortearGruposCopaDoMundo(classificados, selecaoId) {
+    if (classificados.length !== 48) return [];
+    const potes = Array.from({ length: 4 }, (_, indice) =>
+      classificados.slice(indice * 12, (indice + 1) * 12),
+    );
+    const ordemSorteio = potes.flatMap((pote) => {
+      const contagemRegioes = new Map();
+      pote.forEach((selecao) =>
+        contagemRegioes.set(
+          selecao.regiao,
+          (contagemRegioes.get(selecao.regiao) || 0) + 1,
+        ),
+      );
+      const sorteado = [...pote];
+      for (let indice = sorteado.length - 1; indice > 0; indice--) {
+        const outroIndice = Math.floor(Math.random() * (indice + 1));
+        [sorteado[indice], sorteado[outroIndice]] = [
+          sorteado[outroIndice],
+          sorteado[indice],
+        ];
+      }
+      return sorteado.sort((a, b) => {
+        if (a.id === selecaoId) return -1;
+        if (b.id === selecaoId) return 1;
+        return (
+          contagemRegioes.get(b.regiao) - contagemRegioes.get(a.regiao) ||
+          forcaSelecao(b.id) - forcaSelecao(a.id)
+        );
+      });
+    });
+    const grupos = Array.from({ length: 12 }, () => []);
+
+    function distribuirSelecoes(indice) {
+      if (indice === ordemSorteio.length) return true;
+      const selecao = ordemSorteio[indice];
+      const indicePote = Math.floor(indice / 12);
+      const gruposPossiveis =
+        selecao.id === selecaoId
+          ? [0]
+          : Array.from({ length: grupos.length }, (_, grupo) => grupo);
+      for (let posicao = gruposPossiveis.length - 1; posicao > 0; posicao--) {
+        const outroIndice = Math.floor(Math.random() * (posicao + 1));
+        [gruposPossiveis[posicao], gruposPossiveis[outroIndice]] = [
+          gruposPossiveis[outroIndice],
+          gruposPossiveis[posicao],
+        ];
+      }
+
+      for (const indiceGrupo of gruposPossiveis) {
+        const grupo = grupos[indiceGrupo];
+        const limiteConfederacao = selecao.regiao === "europa" ? 2 : 1;
+        if (
+          grupo.length !== indicePote ||
+          grupo.filter((item) => item.regiao === selecao.regiao).length >=
+            limiteConfederacao
+        ) {
+          continue;
+        }
+        grupo.push(selecao);
+        if (distribuirSelecoes(indice + 1)) return true;
+        grupo.pop();
+      }
+      return false;
+    }
+
+    return distribuirSelecoes(0) ? grupos : [];
+  }
+
+  function obterClassificadosMataMataCopa(grupos, selecaoId) {
+    const terceiros = [];
+    const classificados = [];
+    grupos.forEach((grupo) => {
+      const ordenado = [...grupo].sort(
+        (a, b) =>
+          forcaSelecao(b.id) - forcaSelecao(a.id) ||
+          a.nome.localeCompare(b.nome, "pt-BR"),
+      );
+      classificados.push(...ordenado.slice(0, 2));
+      if (ordenado[2]) terceiros.push(ordenado[2]);
+    });
+    classificados.push(
+      ...terceiros
+        .sort(
+          (a, b) =>
+            forcaSelecao(b.id) - forcaSelecao(a.id) ||
+            a.nome.localeCompare(b.nome, "pt-BR"),
+        )
+        .slice(0, 8),
+    );
+    if (!classificados.some((selecao) => selecao.id === selecaoId)) {
+      classificados[classificados.length - 1] = SELECOES.find(
+        (selecao) => selecao.id === selecaoId,
+      );
+    }
+    return classificados.filter(Boolean);
+  }
+
   function sortearResultadoSelecao(timeCasaId, timeForaId) {
     const delta = (forcaSelecao(timeCasaId) - forcaSelecao(timeForaId)) / 25;
     return {
@@ -2294,17 +2431,29 @@
     );
     if (!conf || !selecao) return;
 
-    const elegiveis = SELECOES.filter(
-      (item) => conf.regioes.includes(item.regiao) && item.id !== selecaoId,
-    );
-    for (let i = elegiveis.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [elegiveis[i], elegiveis[j]] = [elegiveis[j], elegiveis[i]];
-    }
-    const grupo = [
-      selecaoId,
-      ...elegiveis.slice(0, conf.timesPorGrupo - 1).map((item) => item.id),
-    ];
+    const copaDoMundo = competicao === "Copa do Mundo";
+    const classificadosCopa = copaDoMundo
+      ? obterClassificadosCopaDoMundo()
+      : [];
+    const gruposCopa = copaDoMundo
+      ? sortearGruposCopaDoMundo(classificadosCopa, selecaoId)
+      : [];
+    const grupo = copaDoMundo
+      ? gruposCopa.find((itens) =>
+          itens.some((item) => item.id === selecaoId),
+        )?.map((item) => item.id) || []
+      : [
+          selecaoId,
+          ...embaralharSelecoes(
+            SELECOES.filter(
+              (item) =>
+                conf.regioes.includes(item.regiao) && item.id !== selecaoId,
+            ),
+          )
+            .slice(0, conf.timesPorGrupo - 1)
+            .map((item) => item.id),
+        ];
+    if (grupo.length !== conf.timesPorGrupo) return;
     const torneioId = `selecao:${selecaoId}:${competicao}:${ano}`;
     const jogosGrupo = grupo.length - 1;
     const datas = calcularDatasFases(
@@ -2352,9 +2501,12 @@
       }
     });
 
+    const classificadosMataMata = copaDoMundo
+      ? obterClassificadosMataMataCopa(gruposCopa, selecaoId)
+      : [];
     adicionarEliminatoria(
       partidas,
-      [],
+      classificadosMataMata,
       selecaoId,
       competicao,
       ano,
@@ -3400,10 +3552,29 @@
     const datas =
       datasPersonalizadas ||
       calcularDatasFases(competicao, ano, quantidadeRodadas, mesInicial);
+    const adversariosUsados = new Set();
 
     for (let fase = 0; fase < quantidadeRodadas; fase++) {
-      const adversario =
-        oponentes[Math.floor(Math.random() * oponentes.length)];
+      let adversario;
+      if (selecao === "Copa do Mundo") {
+        const disponiveis = oponentes
+          .filter((time) => !adversariosUsados.has(time.id))
+          .sort(
+            (a, b) =>
+              forcaSelecao(a.id) - forcaSelecao(b.id) ||
+              a.nome.localeCompare(b.nome, "pt-BR"),
+          );
+        const indiceAdversario = Math.min(
+          disponiveis.length - 1,
+          Math.floor(
+            ((fase + 1) * disponiveis.length) / (quantidadeRodadas + 1),
+          ),
+        );
+        adversario = disponiveis[indiceAdversario];
+        if (adversario) adversariosUsados.add(adversario.id);
+      } else {
+        adversario = oponentes[Math.floor(Math.random() * oponentes.length)];
+      }
       partidas.push({
         data: datas[fase],
         adversarioId: adversario?.id || "",
@@ -7894,6 +8065,7 @@
         Number(candidato.assistencias) || 0,
         Number(jogador.assistencias) || 0,
       );
+      if (jogador.ehUsuario) candidato.ehUsuario = true;
       candidato.nome = jogador.nome || candidato.nome;
       candidato.clubeId = jogador.clubeId || candidato.clubeId;
       candidato.posicao = jogador.posicao || candidato.posicao;
@@ -7990,7 +8162,14 @@
           { ...jogador, gols, assistencias },
           dados,
         );
-        const titulos = [...(titulosPorClube.get(jogador.clubeId) || [])];
+        const titulos = [
+          ...new Set([
+            ...(titulosPorClube.get(jogador.clubeId) || []),
+            ...(jogador.ehUsuario && Array.isArray(temporada.trofeusSelecao)
+              ? temporada.trofeusSelecao
+              : []),
+          ]),
+        ];
         const pontosTitulos = titulos.reduce(
           (total, titulo) =>
             total + calcularPesoTituloBolaDeOuro(titulo, tiposTitulos, liga),
