@@ -6958,6 +6958,8 @@
       .trim();
   }
 
+  const anoElencosPreparadosPorEstado = new WeakMap();
+
   function prepararElencosLiga() {
     if (
       !estado ||
@@ -6965,32 +6967,38 @@
     )
       return;
     estado.elencosLiga ||= {};
-    const clubesLiga = estado.tabela
-      .filter((time) => !String(time.id).startsWith("__rodada__"))
-      .map((time) => obterClube(time.id) || time)
-      .filter((clube) => clube.id);
+    if (
+      !anoElencosPreparadosPorEstado.has(estado) ||
+      anoElencosPreparadosPorEstado.get(estado) !== estado.ano
+    ) {
+      const clubesLiga = estado.tabela
+        .filter((time) => !String(time.id).startsWith("__rodada__"))
+        .map((time) => obterClube(time.id) || time)
+        .filter((clube) => clube.id);
 
-    clubesLiga.forEach((clube) => {
-      if (
-        !Array.isArray(estado.elencosLiga[clube.id]) ||
-        !estado.elencosLiga[clube.id].length
-      )
-        estado.elencosLiga[clube.id] = criarElencoLiga(clube);
-      estado.elencosLiga[clube.id] = estado.elencosLiga[clube.id]
-        .filter((jogador) => !String(jogador.id).startsWith("real:"))
-        .concat(obterJogadoresReaisDoClube(clube.id, estado.ano));
-      estado.elencosLiga[clube.id].forEach((jogador, indice) => {
-        const id = String(jogador.id || "");
-        if (id.startsWith("liga:")) {
-          const indiceOriginal = Number(id.split(":").at(-1));
-          jogador.nome = obterNomeFicticio(
-            clube.id,
-            Number.isInteger(indiceOriginal) ? indiceOriginal : indice,
-            estado.ano,
-          );
-        }
+      clubesLiga.forEach((clube) => {
+        if (
+          !Array.isArray(estado.elencosLiga[clube.id]) ||
+          !estado.elencosLiga[clube.id].length
+        )
+          estado.elencosLiga[clube.id] = criarElencoLiga(clube);
+        estado.elencosLiga[clube.id] = estado.elencosLiga[clube.id]
+          .filter((jogador) => !String(jogador.id).startsWith("real:"))
+          .concat(obterJogadoresReaisDoClube(clube.id, estado.ano));
+        estado.elencosLiga[clube.id].forEach((jogador, indice) => {
+          const id = String(jogador.id || "");
+          if (id.startsWith("liga:")) {
+            const indiceOriginal = Number(id.split(":").at(-1));
+            jogador.nome = obterNomeFicticio(
+              clube.id,
+              Number.isInteger(indiceOriginal) ? indiceOriginal : indice,
+              estado.ano,
+            );
+          }
+        });
       });
-    });
+      anoElencosPreparadosPorEstado.set(estado, estado.ano);
+    }
 
     const elencoMeuClube = estado.elencosLiga[estado.clubeId];
     if (!elencoMeuClube || !estado.carreiraId) return;
@@ -9141,7 +9149,7 @@
     });
     estado.feed = estado.feed.slice(0, 12);
     if (partida.tipo === "liga") simularOutrosJogosDaRodada(partida.rodadaLiga);
-    obterRankingOutrasLigas();
+    if (!opcoesPenaltis?.simulacaoEmLote) obterRankingOutrasLigas();
 
     // ─── NOVO: enfileirar eventos para modal (só quando o jogador está acompanhando) ───
     if (mostrarResultado) {
@@ -10410,7 +10418,13 @@
         partidasSimuladas++;
         if (partidasSimuladas % 20 === 0) {
           salvar();
-          await new Promise((resolver) => requestAnimationFrame(resolver));
+          await new Promise((resolver) => {
+            if (document.visibilityState === "hidden") {
+              setTimeout(resolver, 0);
+              return;
+            }
+            requestAnimationFrame(resolver);
+          });
         }
       }
 
