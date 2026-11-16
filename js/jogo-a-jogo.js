@@ -2442,9 +2442,9 @@
       ? sortearGruposCopaDoMundo(classificadosCopa, selecaoId)
       : [];
     const grupo = copaDoMundo
-      ? gruposCopa.find((itens) =>
-          itens.some((item) => item.id === selecaoId),
-        )?.map((item) => item.id) || []
+      ? gruposCopa
+          .find((itens) => itens.some((item) => item.id === selecaoId))
+          ?.map((item) => item.id) || []
       : [
           selecaoId,
           ...embaralharSelecoes(
@@ -3829,8 +3829,7 @@
 
     const anoCopaDoMundo =
       ano >= ANO_BASE_COPA_DO_MUNDO_SELECOES &&
-      (ano - ANO_BASE_COPA_DO_MUNDO_SELECOES) %
-        CICLO_COPA_DO_MUNDO_SELECOES ===
+      (ano - ANO_BASE_COPA_DO_MUNDO_SELECOES) % CICLO_COPA_DO_MUNDO_SELECOES ===
         0 &&
       obterClassificacaoCopaPorForca(perfil.nacionalidade).classificado;
     const convocada = obterConvocacao({ ...perfil, ano }, carreira, historico);
@@ -4798,7 +4797,7 @@
       idadeAposentadoria: 41,
       destinos: ["newells-old-boys"],
       chanceTransferencia: 0.05,
-      pesoRanking: 5.8,
+      pesoRanking: 6.0,
       pesoRankingPico: 12,
       anoInicioProfissional: 2004,
       anosPico: [2009, 2022],
@@ -4817,7 +4816,7 @@
       idadeAposentadoria: 42,
       destinos: ["sporting-cp", "al-hilal"],
       chanceTransferencia: 0.08,
-      pesoRanking: 6.2,
+      pesoRanking: 6.0,
       pesoRankingPico: 12,
       anoInicioProfissional: 2002,
       anosPico: [2008, 2018],
@@ -4839,7 +4838,7 @@
       idadeAposentadoria: 39,
       destinos: ["al-hilal", "inter-miami"],
       chanceTransferencia: 0.16,
-      pesoRanking: 5.5,
+      pesoRanking: 6.0,
       pesoRankingPico: 10.5,
       anoInicioProfissional: 2009,
       anosPico: [2014, 2020],
@@ -6784,7 +6783,8 @@
       normalizarNomeElenco(estado?.nome),
       ...[...nomes.values()].map(normalizarNomeElenco),
     ]);
-    let tentativa = hashIdentificador(`${anoTemporada}:${chave}`) % combinacoes.length;
+    let tentativa =
+      hashIdentificador(`${anoTemporada}:${chave}`) % combinacoes.length;
     for (let indice = 0; indice < combinacoes.length; indice++) {
       const nome = combinacoes[tentativa];
       if (!usados.has(normalizarNomeElenco(nome))) {
@@ -7255,6 +7255,216 @@
     "neymar",
   ]);
 
+  function limitarNumeroRanking(valor, minimo, maximo) {
+    return Math.max(minimo, Math.min(maximo, Number(valor) || 0));
+  }
+
+  function escolherComPesoRanking(jogadores, obterPeso, aleatorio) {
+    if (!jogadores.length) return null;
+    const pesos = jogadores.map((jogador) =>
+      Math.max(0.001, obterPeso(jogador)),
+    );
+    const total = pesos.reduce((soma, peso) => soma + peso, 0);
+    let sorteio = aleatorio() * total;
+    for (let indice = 0; indice < jogadores.length; indice++) {
+      sorteio -= pesos[indice];
+      if (sorteio <= 0) return jogadores[indice];
+    }
+    return jogadores[jogadores.length - 1];
+  }
+
+  function obterPesoQualidadeNpc(jogador) {
+    const peso = Math.max(0.5, Number(jogador.pesoRanking) || 1);
+    return limitarNumeroRanking(0.9 + Math.log2(peso) * 0.12, 0.78, 1.42);
+  }
+
+  function obterMultiplicadorHistoricoNpc(jogador, ano) {
+    const id = String(jogador.id || "").replace(/^real:/, "");
+    // Bônus restritos a temporadas históricas específicas; não são aplicados
+    // a jogadores fictícios nem a todos os anos de auge dos jogadores reais.
+    if (id === "messi" && Number(ano) === 2012) return 3.35;
+    if (id === "cristiano-ronaldo" && Number(ano) === 2008) return 2.25;
+    return 1;
+  }
+
+  function obterEscalacaoNpc(elenco, clubeId, rodada, ano) {
+    const escalacao = [];
+    POSICOES_ELENCO_LIGA.forEach((posicao) => {
+      const candidatos = elenco.filter(
+        (jogador) => String(jogador.posicao || "").toUpperCase() === posicao,
+      );
+      if (!candidatos.length) return;
+      const sorteador = criarSorteadorRanking(
+        `${ano}:${clubeId}:${rodada}:titular:${posicao}`,
+      );
+      const escolhido = escolherComPesoRanking(
+        candidatos,
+        (jogador) =>
+          limitarNumeroRanking(Number(jogador.pesoRanking) || 1, 0.5, 15),
+        sorteador,
+      );
+      if (escolhido) escalacao.push(escolhido);
+    });
+    return escalacao;
+  }
+
+  function obterPesosGolsNpc(jogador, ano) {
+    const posicao = String(jogador.posicao || "").toUpperCase();
+    const pesos = {
+      GOL: 0.015,
+      ZCE: 0.16,
+      ZCD: 0.16,
+      LE: 0.28,
+      LD: 0.28,
+      ME: 0.78,
+      MC: 0.68,
+      MD: 0.78,
+      PE: 2.0,
+      CA: 2.8,
+      PD: 2.0,
+    };
+    return (
+      (pesos[posicao] || 0.5) *
+      obterPesoQualidadeNpc(jogador) *
+      obterMultiplicadorHistoricoNpc(jogador, ano)
+    );
+  }
+
+  function obterPesosAssistenciasNpc(jogador) {
+    const posicao = String(jogador.posicao || "").toUpperCase();
+    const pesos = {
+      GOL: 0.02,
+      ZCE: 0.18,
+      ZCD: 0.18,
+      LE: 0.62,
+      LD: 0.62,
+      ME: 2.15,
+      MC: 2.3,
+      MD: 2.15,
+      PE: 1.65,
+      CA: 0.72,
+      PD: 1.65,
+    };
+    return (pesos[posicao] || 0.5) * obterPesoQualidadeNpc(jogador);
+  }
+
+  function obterForcaRelativaNpc(clube, mediaForca) {
+    const forca = clube ? forcaClube(clube) : 65;
+    return limitarNumeroRanking(1 + (forca - mediaForca) * 0.008, 0.78, 1.22);
+  }
+
+  function simularPartidaNpc(
+    mandante,
+    visitante,
+    rodada,
+    ano,
+    jogadoresPorClube,
+    mediaForca,
+  ) {
+    const sorteador = criarSorteadorRanking(
+      `${ano}:${mandante.liga || ""}:${rodada}:${mandante.id}:${visitante.id}:placar`,
+    );
+    const elencoCasa = jogadoresPorClube.get(mandante.id) || [];
+    const elencoFora = jogadoresPorClube.get(visitante.id) || [];
+    const escalaCasa = obterEscalacaoNpc(elencoCasa, mandante.id, rodada, ano);
+    const escalaFora = obterEscalacaoNpc(elencoFora, visitante.id, rodada, ano);
+    if (!escalaCasa.length || !escalaFora.length) return;
+
+    const fatorCasa = obterForcaRelativaNpc(mandante, mediaForca);
+    const fatorFora = obterForcaRelativaNpc(visitante, mediaForca);
+    const equilibrio = limitarNumeroRanking(fatorCasa / fatorFora, 0.78, 1.28);
+    // Os gols são sorteados uma única vez por equipe e partida. Depois são
+    // distribuídos entre os titulares: a soma individual nunca supera o placar.
+    const golsCasa = Math.min(
+      7,
+      sortearPoissonRanking(1.42 * 1.07 * equilibrio, sorteador),
+    );
+    const golsFora = Math.min(
+      7,
+      sortearPoissonRanking(1.16 / equilibrio, sorteador),
+    );
+    const times = [
+      {
+        clube: mandante,
+        escalacao: escalaCasa,
+        gols: golsCasa,
+        golsSofridos: golsFora,
+        lado: "casa",
+      },
+      {
+        clube: visitante,
+        escalacao: escalaFora,
+        gols: golsFora,
+        golsSofridos: golsCasa,
+        lado: "fora",
+      },
+    ];
+
+    times.forEach((time) => {
+      time.escalacao.forEach((jogador) => {
+        jogador.jogos++;
+        if (time.gols > time.golsSofridos) jogador.vitorias++;
+        const posicao = String(jogador.posicao || "").toUpperCase();
+        if (
+          time.golsSofridos === 0 &&
+          ["GOL", "ZCE", "ZCD", "LE", "LD"].includes(posicao)
+        ) {
+          jogador.jogosSemSofrer++;
+        }
+        const sorteadorAcao = criarSorteadorRanking(
+          `${ano}:${rodada}:${time.clube.id}:${jogador.id}:acoes`,
+        );
+        if (["ZCE", "ZCD", "LE", "LD"].includes(posicao)) {
+          jogador.desarmes += sortearPoissonRanking(1.45, sorteadorAcao);
+        } else if (["ME", "MC", "MD"].includes(posicao)) {
+          jogador.desarmes += sortearPoissonRanking(0.85, sorteadorAcao);
+        } else if (["PE", "CA", "PD"].includes(posicao)) {
+          jogador.desarmes += sortearPoissonRanking(0.28, sorteadorAcao);
+        }
+        if (posicao === "GOL") {
+          jogador.defesas += Math.max(
+            0,
+            sortearPoissonRanking(
+              2.15 + time.golsSofridos * 0.45,
+              sorteadorAcao,
+            ) - time.golsSofridos,
+          );
+        }
+      });
+
+      const golsDaEquipe = [];
+      for (let indice = 0; indice < time.gols; indice++) {
+        const sorteadorGol = criarSorteadorRanking(
+          `${ano}:${rodada}:${time.clube.id}:gol:${indice}`,
+        );
+        const autor = escolherComPesoRanking(
+          time.escalacao,
+          (jogador) => obterPesosGolsNpc(jogador, ano),
+          sorteadorGol,
+        );
+        if (!autor) continue;
+        autor.gols++;
+        golsDaEquipe.push(autor);
+      }
+
+      golsDaEquipe.forEach((autor, indice) => {
+        const sorteadorAssistencia = criarSorteadorRanking(
+          `${ano}:${rodada}:${time.clube.id}:assistencia:${indice}`,
+        );
+        if (sorteadorAssistencia() >= 0.66) return;
+        const candidatos = time.escalacao.filter(
+          (jogador) => jogador.id !== autor.id,
+        );
+        const assistente = escolherComPesoRanking(
+          candidatos,
+          obterPesosAssistenciasNpc,
+          sorteadorAssistencia,
+        );
+        if (assistente) assistente.assistencias++;
+      });
+    });
+  }
+
   function obterRankingOutrasLigas() {
     const base =
       typeof ehClubeBase === "function" && ehClubeBase(estado?.clubeId);
@@ -7265,7 +7475,7 @@
     ).length;
     const cache = estado.rankingGlobalOutrasLigas;
     const cacheValido =
-      cache?.versao === 14 &&
+      cache?.versao === 15 &&
       cache?.ano === estado.ano &&
       Array.isArray(cache.jogadores);
     if (cacheValido && cache.jogosUsuario === jogosUsuario)
@@ -7281,11 +7491,15 @@
             clube.liga !== estado.liga &&
             LIGAS_PRINCIPAIS_NPCS.has(clube.liga),
         );
-    const elencoPorId = new Map(
-      clubesAlvo
-        .flatMap((clube) => criarElencoLiga(clube))
-        .map((jogador) => [jogador.id, jogador]),
-    );
+
+    const clubesPorId = new Map(clubesAlvo.map((clube) => [clube.id, clube]));
+    const jogadoresPorClube = new Map();
+    const jogadores = [];
+    clubesAlvo.forEach((clube) => {
+      const elenco = criarElencoLiga(clube);
+      jogadoresPorClube.set(clube.id, elenco);
+      jogadores.push(...elenco);
+    });
 
     if (!base) {
       JOGADORES_REAIS.filter((jogador) =>
@@ -7293,10 +7507,11 @@
       ).forEach((jogador) => {
         const clubeId = clubeJogadorRealNaTemporada(jogador, estado.ano);
         const clube = obterClube(clubeId);
-        if (!clube || clube.liga === estado.liga) return;
+        if (!clube || clube.liga === estado.liga || !clubesPorId.has(clubeId))
+          return;
         const id = `real:${jogador.id}`;
-        if (elencoPorId.has(id)) return;
-        elencoPorId.set(id, {
+        if (jogadores.some((item) => item.id === id)) return;
+        const real = {
           id,
           nome: jogador.nome,
           posicao: jogador.posicao,
@@ -7304,115 +7519,95 @@
           idade: Number(estado.ano) - jogador.anoNascimento,
           pesoRanking:
             calcularPesoRankingReal(jogador, estado.ano) *
-            calcularMultiplicadorFormaTemporada(id, estado.ano, jogador.posicao),
-        });
+            calcularMultiplicadorFormaTemporada(
+              id,
+              estado.ano,
+              jogador.posicao,
+            ),
+          gols: 0,
+          assistencias: 0,
+          jogos: 0,
+          vitorias: 0,
+          jogosSemSofrer: 0,
+          desarmes: 0,
+          defesas: 0,
+          titulosIndividuais: [],
+        };
+        jogadores.push(real);
+        jogadoresPorClube.get(clubeId)?.push(real);
       });
     }
 
+    // Zera estatísticas calculadas: o resultado é reconstruído deterministicamente
+    // para o número atual de partidas, sem acumular uma simulação antiga.
     const jogadoresAntigos = new Map(
       (cacheValido ? cache.jogadores : []).map((jogador) => [
         jogador.id,
         jogador,
       ]),
     );
-    const jogadores = [...elencoPorId.values()].map((jogador) => {
-      const antigo = jogadoresAntigos.get(jogador.id);
-      return {
-        ...jogador,
-        gols: Number(antigo?.gols) || 0,
-        assistencias: Number(antigo?.assistencias) || 0,
-        jogos: Number(antigo?.jogos) || 0,
-        vitorias: Number(antigo?.vitorias) || 0,
-        jogosSemSofrer: Number(antigo?.jogosSemSofrer) || 0,
-        desarmes: Number(antigo?.desarmes) || 0,
-        defesas: Number(antigo?.defesas) || 0,
-        titulosIndividuais: Array.isArray(antigo?.titulosIndividuais)
-          ? antigo.titulosIndividuais
-          : [],
-      };
-    });
-    const jogosAnteriores = cacheValido && !base
-      ? Math.min(jogosUsuario, Math.max(0, Number(cache.jogosUsuario) || 0))
-      : 0;
-    const taxasGols = {
-      GOL: 0.003,
-      ZCE: 0.025,
-      ZCD: 0.025,
-      LE: 0.045,
-      LD: 0.045,
-      ME: 0.09,
-      MC: 0.08,
-      MD: 0.09,
-      PE: 0.17,
-      CA: 0.2,
-      PD: 0.17,
-    };
-    const taxasAssistencias = {
-      GOL: 0.001,
-      ZCE: 0.012,
-      ZCD: 0.012,
-      LE: 0.045,
-      LD: 0.045,
-      ME: 0.13,
-      MC: 0.14,
-      MD: 0.13,
-      PE: 0.12,
-      CA: 0.08,
-      PD: 0.12,
-    };
     jogadores.forEach((jogador) => {
-      const nomeReal = String(jogador.id).replace(/^real:/, "");
-      const jogadorFamoso = JOGADORES_FAMOSOS_NPCS.has(nomeReal);
-      const clube = obterClube(jogador.clubeId);
-      const forca = clube ? forcaClube(clube) : 70;
-      const fatorQualidade = Math.max(
-        0.78,
-        Math.min(
-          1.65,
-          0.9 + Math.log2(Math.max(0.5, Number(jogador.pesoRanking) || 1)) * 0.16,
-        ),
-      );
-      const fatorClube = Math.max(0.88, Math.min(1.14, 0.88 + forca / 300));
-      const formaAleatoria = criarSorteadorRanking(
-        `${estado.ano}:${jogador.id}:temporada-extraordinaria`,
-      );
-      const sorteTemporada = formaAleatoria();
-      const fatorTemporada =
-        sorteTemporada < 0.08
-          ? 2
-          : sorteTemporada < 0.3
-            ? 1.45
-            : 0.78 + formaAleatoria() * 0.5;
-      const fatorFama = jogadorFamoso ? 1.12 : 1;
-      const multiplicador =
-        fatorQualidade * fatorClube * fatorTemporada * fatorFama;
-      const posicao = String(jogador.posicao || "").toUpperCase();
+      const antigo = jogadoresAntigos.get(jogador.id);
+      jogador.gols = 0;
+      jogador.assistencias = 0;
+      jogador.jogos = 0;
+      jogador.vitorias = 0;
+      jogador.jogosSemSofrer = 0;
+      jogador.desarmes = 0;
+      jogador.defesas = 0;
+      jogador.titulosIndividuais = Array.isArray(antigo?.titulosIndividuais)
+        ? antigo.titulosIndividuais
+        : [];
+    });
 
-      for (let partida = jogosAnteriores + 1; partida <= jogosUsuario; partida++) {
-        const aleatorio = criarSorteadorRanking(
-          `${estado.ano}:${jogador.id}:npc:${partida}`,
-        );
-        const gols = Math.min(
-          5,
-          sortearPoissonRanking(
-            (taxasGols[posicao] || 0.02) * multiplicador,
-            aleatorio,
-          ),
-        );
-        const assistencias = Math.min(
-          5 - gols,
-          sortearPoissonRanking(
-            (taxasAssistencias[posicao] || 0.02) * multiplicador,
-            aleatorio,
-          ),
-        );
-        jogador.jogos++;
-        jogador.gols += gols;
-        jogador.assistencias += assistencias;
+    // NPCs não recebem automaticamente a mesma quantidade ilimitada de jogos
+    // de uma carreira: usamos um calendário de até 55 partidas por temporada.
+    const quantidadeRodadas = Math.min(55, Math.max(0, jogosUsuario));
+    const ligas = new Map();
+    clubesAlvo.forEach((clube) => {
+      const chaveLiga = clube.liga || (base ? "base" : "outras");
+      if (!ligas.has(chaveLiga)) ligas.set(chaveLiga, []);
+      ligas.get(chaveLiga).push(clube);
+    });
+    const mediaForca = clubesAlvo.length
+      ? clubesAlvo.reduce((soma, clube) => soma + forcaClube(clube), 0) /
+        clubesAlvo.length
+      : 65;
+
+    ligas.forEach((clubesLiga) => {
+      const participantes = [...clubesLiga].sort((a, b) =>
+        String(a.id).localeCompare(String(b.id)),
+      );
+      if (participantes.length < 2) return;
+      if (participantes.length % 2 !== 0) participantes.push(null);
+      const tamanho = participantes.length;
+      let rotacao = [...participantes];
+      for (let rodada = 0; rodada < quantidadeRodadas; rodada++) {
+        for (let indice = 0; indice < tamanho / 2; indice++) {
+          let mandante = rotacao[indice];
+          let visitante = rotacao[tamanho - 1 - indice];
+          if (!mandante || !visitante) continue;
+          if (rodada % 2 === 1) [mandante, visitante] = [visitante, mandante];
+          simularPartidaNpc(
+            mandante,
+            visitante,
+            rodada,
+            estado.ano,
+            jogadoresPorClube,
+            mediaForca,
+          );
+        }
+        // Método do círculo: cada equipe disputa exatamente uma partida por rodada.
+        rotacao = [
+          rotacao[0],
+          rotacao[tamanho - 1],
+          ...rotacao.slice(1, tamanho - 1),
+        ];
       }
     });
+
     estado.rankingGlobalOutrasLigas = {
-      versao: 14,
+      versao: 15,
       ano: estado.ano,
       jogosUsuario,
       jogadores,
