@@ -4851,6 +4851,46 @@
       ],
     },
     {
+      id: "haydex",
+      nome: "Haydex",
+      anoNascimento: 2009,
+      clube: "ceara",
+      posicao: "CA",
+      idadeAposentadoria: 41,
+      destinos: ["ceara", "sao-paulo"],
+      chanceTransferencia: 0.10,
+      pesoRanking: 7.5,
+      pesoRankingPico: 9,
+      anoInicioProfissional: 2026,
+      anosPico: [2035, 2040],
+      clubesHistoricos: [
+        { inicio: 2026, fim: 2028, clube: "ceara" },
+        { inicio: 2029, fim: 2032, clube: "sao-paulo" },
+        { inicio: 2033, fim: 2037, clube: "milan" },
+        { inicio: 2038, fim: 2050, clube: "barcelona" },
+      ],
+    },
+    {
+      id: "ysmart",
+      nome: "Ysmart",
+      anoNascimento: 2009,
+      clube: "santos",
+      posicao: "CA",
+      idadeAposentadoria: 41,
+      destinos: ["santos", "chelsea"],
+      chanceTransferencia: 0.10,
+      pesoRanking: 7.5,
+      pesoRankingPico: 9,
+      anoInicioProfissional: 2026,
+      anosPico: [2035, 2040],
+      clubesHistoricos: [
+        { inicio: 2026, fim: 2030, clube: "santos" },
+        { inicio: 2031, fim: 2034, clube: "bayern-munich" },
+        { inicio: 2035, fim: 2040, clube: "inter" },
+        { inicio: 2041, fim: 2050, clube: "barcelona" },
+      ],
+    },
+    {
       id: "luis-suarez",
       nome: "Luis Suárez",
       anoNascimento: 1987,
@@ -6869,11 +6909,12 @@
     const anoInicioProfissional =
       Number(jogador.anoInicioProfissional) || jogador.anoNascimento + 17;
     if (ano < anoInicioProfissional || ano > anoAposentadoria) return "";
-    if (ano < 2026) {
+    const clubeHistorico = jogador.clubesHistoricos?.find(
+      (periodo) => ano >= periodo.inicio && ano <= periodo.fim,
+    )?.clube;
+    if (ano < 2026 || clubeHistorico) {
       return (
-        jogador.clubesHistoricos?.find(
-          (periodo) => ano >= periodo.inicio && ano <= periodo.fim,
-        )?.clube || ""
+        clubeHistorico || ""
       );
     }
 
