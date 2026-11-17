@@ -969,8 +969,9 @@
             maximumFractionDigits: 1,
           });
         adicionarDetalhe("Desempenho", [
-          `${Math.round(Number(jogador.golsPonderados) || 0)} gols`,
-          `${Math.round(Number(jogador.assistenciasPonderadas) || 0)} assistências`,
+          `${Number(jogador.jogos) || 0} jogos disputados`,
+          `${Number(jogador.gols) || 0} gols`,
+          `${Number(jogador.assistencias) || 0} assistências`,
         ]);
         adicionarDetalhe("Pontuação por pilar", [
           `Individual (75%): ${formatarNota(jogador.notaIndividual)}`,
