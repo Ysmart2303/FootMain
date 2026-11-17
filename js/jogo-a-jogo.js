@@ -870,7 +870,6 @@
         modal.hidden = true;
         continuar.removeEventListener("click", fechar);
         document.removeEventListener("keydown", aoTeclar);
-        modal.removeEventListener("click", aoClicarFora);
         resolve();
       };
       const aoTeclar = (e) => {
@@ -879,12 +878,8 @@
           fechar();
         }
       };
-      const aoClicarFora = (e) => {
-        if (e.target === modal) fechar();
-      };
       continuar.addEventListener("click", fechar);
       document.addEventListener("keydown", aoTeclar);
-      modal.addEventListener("click", aoClicarFora);
     });
   }
 
@@ -991,7 +986,6 @@
         modal.hidden = true;
         continuar.removeEventListener("click", fechar);
         document.removeEventListener("keydown", aoTeclar);
-        modal.removeEventListener("click", aoClicarFora);
         resolve();
       };
       const aoTeclar = (evento) => {
@@ -1000,12 +994,8 @@
           fechar();
         }
       };
-      const aoClicarFora = (evento) => {
-        if (evento.target === modal) fechar();
-      };
       continuar.addEventListener("click", fechar);
       document.addEventListener("keydown", aoTeclar);
-      modal.addEventListener("click", aoClicarFora);
     });
   }
 
@@ -1450,7 +1440,7 @@
     const numero = Number(ano);
     const anoValido =
       Number.isFinite(numero) && numero !== 0 ? numero : fallback;
-    return Math.min(2026, Math.max(2000, Math.floor(anoValido)));
+    return Math.min(2050, Math.max(2000, Math.floor(anoValido)));
   }
 
   function atualizarCampoAnoInicial(carreira, historico) {
@@ -4839,7 +4829,7 @@
       destinos: ["al-hilal", "inter-miami"],
       chanceTransferencia: 0.16,
       pesoRanking: 8.0,
-      pesoRankingPico: 10.5,
+      pesoRankingPico: 12,
       anoInicioProfissional: 2009,
       anosPico: [2011, 2022],
       clubesHistoricos: [
@@ -4859,15 +4849,15 @@
       idadeAposentadoria: 41,
       destinos: ["ceara", "sao-paulo"],
       chanceTransferencia: 0.10,
-      pesoRanking: 8,
-      pesoRankingPico: 11,
+      pesoRanking: 10,
+      pesoRankingPico: 12,
       anoInicioProfissional: 2026,
       anosPico: [2033, 2046],
       clubesHistoricos: [
-        { inicio: 2026, fim: 2030, clube: "ceara" },
-        { inicio: 2031, fim: 2037, clube: "sao-paulo" },
-        { inicio: 2038, fim: 2044, clube: "milan" },
-        { inicio: 2045, fim: 2050, clube: "barcelona" },
+        { inicio: 2026, fim: 2027, clube: "ceara" },
+        { inicio: 2028, fim: 2029, clube: "sao-paulo" },
+        { inicio: 2030, fim: 2038, clube: "milan" },
+        { inicio: 2039, fim: 2050, clube: "barcelona" },
       ],
     },
     {
@@ -4879,8 +4869,8 @@
       idadeAposentadoria: 41,
       destinos: ["santos", "chelsea"],
       chanceTransferencia: 0.10,
-      pesoRanking: 8,
-      pesoRankingPico: 11,
+      pesoRanking: 10,
+      pesoRankingPico: 12,
       anoInicioProfissional: 2026,
       anosPico: [2033, 2046],
       clubesHistoricos: [
@@ -4976,8 +4966,8 @@
       idadeAposentadoria: 39,
       destinos: ["paris-saint-germain", "liverpool"],
       chanceTransferencia: 0.1,
-      pesoRanking: 5.8,
-      pesoRankingPico: 10.5,
+      pesoRanking: 6.0,
+      pesoRankingPico: 12,
       anoInicioProfissional: 2015,
       anosPico: [2018, 2026],
       clubesHistoricos: [
@@ -4996,7 +4986,7 @@
       destinos: ["paris-saint-germain", "manchester-city"],
       chanceTransferencia: 0.12,
       pesoRanking: 4.2,
-      pesoRankingPico: 8,
+      pesoRankingPico: 10,
       anoInicioProfissional: 2017,
       anosPico: [2022, 2030],
       clubesHistoricos: [
@@ -5035,8 +5025,8 @@
       idadeAposentadoria: 40,
       destinos: ["paris-saint-germain", "manchester-city"],
       chanceTransferencia: 0.1,
-      pesoRanking: 4.8,
-      pesoRankingPico: 8.5,
+      pesoRanking: 7,
+      pesoRankingPico: 10,
       anoInicioProfissional: 2023,
       anosPico: [2026, 2035],
       clubesHistoricos: [{ inicio: 2023, fim: 2025, clube: "barcelona" }],
@@ -5061,8 +5051,8 @@
       idadeAposentadoria: 40,
       destinos: ["real-madrid", "bayern-munich"],
       chanceTransferencia: 0.12,
-      pesoRanking: 4.6,
-      pesoRankingPico: 9,
+      pesoRanking: 7,
+      pesoRankingPico: 10,
       anoInicioProfissional: 2020,
       anosPico: [2022, 2031],
       clubesHistoricos: [
@@ -5464,7 +5454,7 @@
       idadeAposentadoria: 39,
       destinos: ["paris-saint-germain", "arsenal"],
       chanceTransferencia: 0.1,
-      pesoRanking: 2.8,
+      pesoRanking: 7,
     },
     {
       id: "gavi",
@@ -5783,7 +5773,7 @@
       idadeAposentadoria: 40,
       destinos: ["paris-saint-germain", "real-madrid"],
       chanceTransferencia: 0.12,
-      pesoRanking: 3.3,
+      pesoRanking: 6,
     },
     {
       id: "sadio-mane",
@@ -5923,7 +5913,7 @@
       nome: "Ronaldinho Gaúcho",
       anoNascimento: 1980,
       clube: "flamengo",
-      posicao: "ME",
+      posicao: "PE",
       idadeAposentadoria: 35,
       pesoRanking: 5.5,
       pesoRankingPico: 11,
@@ -5934,7 +5924,7 @@
         { inicio: 2004, fim: 2008, clube: "barcelona" },
         { inicio: 2009, fim: 2010, clube: "milan" },
         { inicio: 2011, fim: 2012, clube: "flamengo" },
-        { inicio: 2013, fim: 2014, clube: "santos" },
+        { inicio: 2013, fim: 2014, clube: "fluminense" },
       ],
     },
     {
@@ -6229,8 +6219,8 @@
       clube: "milan",
       posicao: "ME",
       idadeAposentadoria: 35,
-      pesoRanking: 5.2,
-      pesoRankingPico: 10.5,
+      pesoRanking: 7,
+      pesoRankingPico: 11,
       anoInicioProfissional: 2001,
       anosPico: [2006, 2007],
       clubesHistoricos: [
@@ -6273,8 +6263,8 @@
       clube: "barcelona",
       posicao: "CA",
       idadeAposentadoria: 37,
-      pesoRanking: 3.8,
-      pesoRankingPico: 7.8,
+      pesoRanking: 4,
+      pesoRankingPico: 8,
       anoInicioProfissional: 1997,
       anosPico: [2005, 2010],
       clubesHistoricos: [
@@ -6400,7 +6390,7 @@
       posicao: "PE",
       idadeAposentadoria: 39,
       pesoRanking: 3.5,
-      pesoRankingPico: 7.2,
+      pesoRankingPico: 8,
       anoInicioProfissional: 2000,
       anosPico: [2008, 2013],
       clubesHistoricos: [
@@ -6454,8 +6444,8 @@
       clube: "sao-paulo",
       posicao: "CA",
       idadeAposentadoria: 35,
-      pesoRanking: 3.2,
-      pesoRankingPico: 7,
+      pesoRanking: 6,
+      pesoRankingPico: 9,
       anoInicioProfissional: 2006,
       anosPico: [2009, 2011],
       clubesHistoricos: [
@@ -6565,8 +6555,8 @@
       clube: "al-ittihad",
       posicao: "CA",
       idadeAposentadoria: 40,
-      pesoRanking: 3.9,
-      pesoRankingPico: 8.4,
+      pesoRanking: 4,
+      pesoRankingPico: 9,
       anoInicioProfissional: 2004,
       anosPico: [2021, 2022],
       clubesHistoricos: [
@@ -6581,11 +6571,11 @@
       anoNascimento: 1992,
       clube: "vasco",
       posicao: "ME",
-      idadeAposentadoria: 36,
-      pesoRanking: 4.8,
-      pesoRankingPico: 9.5,
+      idadeAposentadoria: 40,
+      pesoRanking: 6,
+      pesoRankingPico: 11,
       anoInicioProfissional: 2009,
-      anosPico: [2017, 2018],
+      anosPico: [2017, 2020],
       clubesHistoricos: [
         { inicio: 2009, fim: 2010, clube: "vasco" },
         { inicio: 2011, fim: 2012, clube: "inter" },
@@ -6593,7 +6583,9 @@
         { inicio: 2014, fim: 2017, clube: "liverpool" },
         { inicio: 2018, fim: 2019, clube: "barcelona" },
         { inicio: 2020, fim: 2020, clube: "bayern-munich" },
-        { inicio: 2021, fim: 2021, clube: "barcelona" },
+        { inicio: 2021, fim: 2024, clube: "barcelona" },
+        { inicio: 2025, fim: 2025, clube: "vasco" },
+        { inicio: 2026, fim: 2032, clube: "santos" },
       ],
     },
     {
@@ -6622,7 +6614,7 @@
       posicao: "ZCD",
       idadeAposentadoria: 41,
       pesoRanking: 3.2,
-      pesoRankingPico: 6.8,
+      pesoRankingPico: 7,
       anoInicioProfissional: 2002,
       anosPico: [2012, 2015],
       clubesHistoricos: [
@@ -6709,8 +6701,8 @@
       clube: "bayern-munich",
       posicao: "CA",
       idadeAposentadoria: 40,
-      pesoRanking: 3.6,
-      pesoRankingPico: 7.8,
+      pesoRanking: 6,
+      pesoRankingPico: 11,
       anoInicioProfissional: 2010,
       anosPico: [2017, 2024],
       clubesHistoricos: [
@@ -12197,7 +12189,7 @@
           ? Number(getConfig()?.geral?.anoInicial)
           : Number(typeof ANO_INICIAL !== "undefined" ? ANO_INICIAL : 2026);
       campoAnoInicial.min = "2000";
-      campoAnoInicial.max = "2026";
+      campoAnoInicial.max = "2050";
       campoAnoInicial.value = String(limitarAnoInicial(anoConfigurado));
       campoAnoInicial.addEventListener("change", () => {
         campoAnoInicial.value = String(
