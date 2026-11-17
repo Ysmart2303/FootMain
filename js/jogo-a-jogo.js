@@ -969,9 +969,8 @@
             maximumFractionDigits: 1,
           });
         adicionarDetalhe("Desempenho", [
-          `${jogador.gols} gols`,
-          `${jogador.assistencias} assistências`,
-          `${jogador.jogos} jogos`,
+          `${Math.round(Number(jogador.golsPonderados) || 0)} gols`,
+          `${Math.round(Number(jogador.assistenciasPonderadas) || 0)} assistências`,
         ]);
         adicionarDetalhe("Pontuação por pilar", [
           `Individual (75%): ${formatarNota(jogador.notaIndividual)}`,
@@ -7867,11 +7866,11 @@
   ]);
 
   const FATORES_DIFICULDADE_LIGAS = new Map([
-    ["Serie A", 1.18],
-    ["La Liga", 1.17],
-    ["Premier League", 1.16],
-    ["Brasileirão", 1.15],
-    ["Bundesliga", 1.1],
+    ["Premier League", 1.35],
+    ["Serie A", 1.24],
+    ["La Liga", 1.22],
+    ["Bundesliga", 1.18],
+    ["Brasileirão", 1],
     ["Argentine Primera División", 1.07],
     ["Primeira Liga", 1.05],
     ["Ligue 1", 1.03],
@@ -7927,8 +7926,8 @@
   ]);
 
   const FATORES_DIFICULDADE_CONTINENTAIS = new Map([
-    ["Champions League", 1.2],
-    ["Libertadores", 1.18],
+    ["Champions League", 1.4],
+    ["Libertadores", 1.1],
     ["Eurocopa", 1.18],
     ["Copa América", 1.14],
     ["CONCACAF Champions Cup", 0.98],
@@ -8130,12 +8129,31 @@
     return "";
   }
 
-  function calcularDesempenhoBolaDeOuro(jogador, dados) {
+  function calcularDesempenhoBolaDeOuro(jogador, dados, liga = "") {
     const jogos = Math.max(0, Number(dados.jogos) || 0);
     const gols = Math.max(0, Number(dados.gols ?? jogador.gols) || 0);
     const assistencias = Math.max(
       0,
       Number(dados.assistencias ?? jogador.assistencias) || 0,
+    );
+    const fatorDificuldadeLiga = obterFatorDificuldadeCompeticao(liga, liga);
+    const obterEstatisticaPonderada = (valor, registrado, ponderado) => {
+      const totalRegistrado = Math.max(0, Number(registrado) || 0);
+      const totalPonderado = Math.max(0, Number(ponderado) || 0);
+      if (totalRegistrado > 0 && totalPonderado > 0) {
+        return totalPonderado * (valor / totalRegistrado);
+      }
+      return valor * fatorDificuldadeLiga;
+    };
+    const golsPonderados = obterEstatisticaPonderada(
+      gols,
+      dados.gols,
+      dados.golsPonderados,
+    );
+    const assistenciasPonderadas = obterEstatisticaPonderada(
+      assistencias,
+      dados.assistencias,
+      dados.assistenciasPonderadas,
     );
     const desarmes = Math.max(0, Number(dados.desarmes) || 0);
     const defesas = Math.max(0, Number(dados.defesas) || 0);
@@ -8146,6 +8164,8 @@
       Math.max(0, Math.min(100, (valor / referencia) * 100));
     const golsPorJogo = taxa(gols);
     const assistenciasPorJogo = taxa(assistencias);
+    const golsPonderadosPorJogo = taxa(golsPonderados);
+    const assistenciasPonderadasPorJogo = taxa(assistenciasPonderadas);
     const desarmesPorJogo = taxa(desarmes);
     const defesasPorJogo = taxa(defesas);
     const jogosSemSofrerPorJogo = taxa(jogosSemSofrer);
@@ -8162,6 +8182,10 @@
         jogosSemSofrer,
         golsPorJogo,
         assistenciasPorJogo,
+        golsPonderados,
+        assistenciasPonderadas,
+        golsPonderadosPorJogo,
+        assistenciasPonderadasPorJogo,
         desarmesPorJogo,
         defesasPorJogo,
         jogosSemSofrerPorJogo,
@@ -8171,19 +8195,19 @@
 
     if (categoria === "atacante") {
       desempenho =
-        pontuarTaxa(golsPorJogo, 0.75) * 0.6 +
-        pontuarTaxa(assistenciasPorJogo, 0.45) * 0.4;
+        pontuarTaxa(golsPonderadosPorJogo, 0.75) * 0.6 +
+        pontuarTaxa(assistenciasPonderadasPorJogo, 0.45) * 0.4;
     } else if (categoria === "meio-campista") {
       desempenho =
-        pontuarTaxa(golsPorJogo, 0.3) * 0.25 +
-        pontuarTaxa(assistenciasPorJogo, 0.5) * 0.35 +
+        pontuarTaxa(golsPonderadosPorJogo, 0.3) * 0.25 +
+        pontuarTaxa(assistenciasPonderadasPorJogo, 0.5) * 0.35 +
         pontuarTaxa(desarmesPorJogo, 1.8) * 0.4;
     } else if (categoria === "defensor") {
       desempenho =
         pontuarTaxa(desarmesPorJogo, 1.8) * 0.35 +
         pontuarTaxa(jogosSemSofrerPorJogo, 0.35) * 0.35 +
-        pontuarTaxa(golsPorJogo, 0.12) * 0.15 +
-        pontuarTaxa(assistenciasPorJogo, 0.18) * 0.15;
+        pontuarTaxa(golsPonderadosPorJogo, 0.12) * 0.15 +
+        pontuarTaxa(assistenciasPonderadasPorJogo, 0.18) * 0.15;
     } else {
       desempenho =
         pontuarTaxa(defesasPorJogo, 3) * 0.55 +
@@ -8216,6 +8240,10 @@
       jogosSemSofrer,
       golsPorJogo,
       assistenciasPorJogo,
+      golsPonderados,
+      assistenciasPonderadas,
+      golsPonderadosPorJogo,
+      assistenciasPonderadasPorJogo,
       desarmesPorJogo,
       defesasPorJogo,
       jogosSemSofrerPorJogo,
@@ -8321,7 +8349,7 @@
       .join("|");
     const cache = estado.resultadosColetivosTemporada;
     if (
-      cache?.versao === 2 &&
+      cache?.versao === 3 &&
       cache.ano === estado.ano &&
       cache.jogosUsuario === jogosUsuario &&
       cache.titulosUsuario === titulosUsuario &&
@@ -8405,18 +8433,17 @@
       );
     });
 
-    const clubesPorCompeticao = new Map();
-    clubes.forEach((clube) => {
-      const continental = determinarCompeticaoContinental(clube.id);
-      [continental.principal, continental.secundaria]
-        .filter(Boolean)
-        .forEach((titulo) => {
-          if (!clubesPorCompeticao.has(titulo)) {
-            clubesPorCompeticao.set(titulo, []);
-          }
-          clubesPorCompeticao.get(titulo).push(clube);
-        });
-    });
+    const clubesPorId = new Map(clubes.map((clube) => [clube.id, clube]));
+    const clubesPorCompeticao = new Map(
+      Object.keys(CONTINENTAL_CONFS)
+        .map((competicao) => [
+          competicao,
+          (obterParticipantesContinental(competicao) || [])
+            .map((id) => clubesPorId.get(id))
+            .filter(Boolean),
+        ])
+        .filter(([, participantes]) => participantes.length > 0),
+    );
     const campeoesContinentais = [];
     clubesPorCompeticao.forEach((participantes, titulo) => {
       registrarCampanha(
@@ -8454,7 +8481,7 @@
 
     const resultados = [...campanhasPorClube.entries()];
     estado.resultadosColetivosTemporada = {
-      versao: 2,
+      versao: 3,
       ano: estado.ano,
       jogosUsuario,
       titulosUsuario,
@@ -8528,6 +8555,18 @@
     const campanhasPorClube = obterResultadosColetivosTemporada();
     const estatisticasPonderadas = obterEstatisticasPonderadasBolaDeOuro();
     const jogosReferenciaPorClube = new Map();
+    const pesoMaximoColetivoGlobal = [...campanhasPorClube.entries()].reduce(
+      (maximo, [clubeId, campanhas]) => {
+        const ligaClube = obterClube(clubeId)?.liga || "";
+        const pesoMaximoClube = campanhas.reduce(
+          (total, campanha) =>
+            total + calcularPesoTituloBolaDeOuro(campanha.titulo, ligaClube),
+          0,
+        );
+        return Math.max(maximo, pesoMaximoClube);
+      },
+      0,
+    );
 
     const avaliados = [...candidatos.values()]
       .filter(
@@ -8587,6 +8626,7 @@
         const desempenho = calcularDesempenhoBolaDeOuro(
           { ...jogador, gols, assistencias },
           dados,
+          liga,
         );
         const participacao =
           dados.jogosReferencia > 0
@@ -8603,11 +8643,6 @@
                   ? 0.4
                   : 0.15;
         const campanhas = campanhasPorClube.get(jogador.clubeId) || [];
-        const pesoMaximoColetivo = campanhas.reduce(
-          (total, campanha) =>
-            total + calcularPesoTituloBolaDeOuro(campanha.titulo, liga),
-          0,
-        );
         const pontosColetivos = campanhas.reduce(
           (total, campanha) =>
             total +
@@ -8617,8 +8652,11 @@
           0,
         );
         const notaColetiva =
-          pesoMaximoColetivo > 0
-            ? Math.min(100, (pontosColetivos / pesoMaximoColetivo) * 100)
+          pesoMaximoColetivoGlobal > 0
+            ? Math.min(
+                100,
+                (pontosColetivos / pesoMaximoColetivoGlobal) * 100,
+              )
             : 0;
         const notaParticipacao = participacao * 100;
         const notaIndividual = desempenho.notaIndividual;
@@ -8652,8 +8690,13 @@
           desarmes: desempenho.desarmes,
           defesas: desempenho.defesas,
           jogosSemSofrer: desempenho.jogosSemSofrer,
+          golsPonderados: desempenho.golsPonderados,
+          assistenciasPonderadas: desempenho.assistenciasPonderadas,
           golsPorJogo: desempenho.golsPorJogo,
           assistenciasPorJogo: desempenho.assistenciasPorJogo,
+          golsPonderadosPorJogo: desempenho.golsPonderadosPorJogo,
+          assistenciasPonderadasPorJogo:
+            desempenho.assistenciasPonderadasPorJogo,
           desarmesPorJogo: desempenho.desarmesPorJogo,
           defesasPorJogo: desempenho.defesasPorJogo,
           jogosSemSofrerPorJogo: desempenho.jogosSemSofrerPorJogo,
@@ -8689,8 +8732,12 @@
           return b.notaIndividual - a.notaIndividual;
         const criterios =
           a.categoria === "meio-campista"
-            ? ["assistenciasPorJogo", "desarmesPorJogo", "golsPorJogo"]
-            : ["golsPorJogo", "assistenciasPorJogo"];
+            ? [
+                "assistenciasPonderadasPorJogo",
+                "desarmesPorJogo",
+                "golsPonderadosPorJogo",
+              ]
+            : ["golsPonderadosPorJogo", "assistenciasPonderadasPorJogo"];
         for (const criterio of criterios) {
           if (a[criterio] !== b[criterio])
             return b[criterio] - a[criterio];
@@ -8727,6 +8774,8 @@
         pontuacao: jogador.pontuacao,
         pontuacaoDesempenho: jogador.pontuacaoDesempenho,
         notaIndividual: jogador.notaIndividual,
+        golsPonderados: jogador.golsPonderados,
+        assistenciasPonderadas: jogador.assistenciasPonderadas,
         notaColetiva: jogador.notaColetiva,
         notaParticipacao: jogador.notaParticipacao,
         ehUsuario: String(jogador.id) === idUsuario,
