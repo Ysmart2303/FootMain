@@ -5,6 +5,7 @@
     const menuClose = document.getElementById("menu-close");
     const backdrop = document.getElementById("menu-backdrop");
     const themeButtons = document.querySelectorAll("[data-theme-choice]");
+    const clearStorageButton = document.getElementById("clear-storage");
 
     function readSavedTheme() {
         try {
@@ -54,6 +55,16 @@
 
     themeButtons.forEach((button) => {
         button.addEventListener("click", () => applyTheme(button.dataset.themeChoice));
+    });
+
+    clearStorageButton.addEventListener("click", () => {
+        const confirmado = window.confirm(
+            "Isso apagará todos os dados salvos neste navegador, incluindo carreiras e preferências. Deseja continuar?"
+        );
+        if (!confirmado) return;
+
+        localStorage.clear();
+        location.reload();
     });
 
     document.addEventListener("keydown", (event) => {

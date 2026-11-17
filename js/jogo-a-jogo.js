@@ -969,28 +969,28 @@
             maximumFractionDigits: 1,
           });
         adicionarDetalhe("Desempenho", [
-          `${Number(jogador.jogos) || 0} jogos disputados`,
           `${Number(jogador.gols) || 0} gols`,
           `${Number(jogador.assistencias) || 0} assistências`,
-        ]);
-        adicionarDetalhe("Pontuação por pilar", [
-          `Individual (75%): ${formatarNota(jogador.notaIndividual)}`,
-          `Coletivo (15%): ${formatarNota(jogador.notaColetiva)}`,
-          `Participação (10%): ${formatarNota(jogador.notaParticipacao)}`,
-        ]);
-        adicionarDetalhe("Ações da posição", [
-          `${jogador.desarmes || 0} desarmes`,
-          `${jogador.defesas || 0} defesas`,
-          `${jogador.jogosSemSofrer || 0} jogos sem sofrer gols`,
+          `${Number(jogador.jogos) || 0} jogos disputados`,
         ]);
         adicionarDetalhe(
-          "Campanhas coletivas",
+          "Campanha Coletiva",
           jogador.campanhasColetivas || [],
         );
         adicionarDetalhe(
           "Títulos individuais",
           jogador.titulosIndividuais || [],
         );
+        adicionarDetalhe("Ações da posição", [
+          `${jogador.desarmes || 0} desarmes`,
+          `${jogador.defesas || 0} defesas`,
+          `${jogador.jogosSemSofrer || 0} jogos sem sofrer gols`,
+        ]);
+        adicionarDetalhe("Pontuação por Pilar", [
+          `Individual (75%): ${formatarNota(jogador.notaIndividual)}`,
+          `Coletivo (15%): ${formatarNota(jogador.notaColetiva)}`,
+          `Participação (10%): ${formatarNota(jogador.notaParticipacao)}`,
+        ]);
         detalhesBotao.addEventListener("click", () => {
           const expandido =
             detalhesBotao.getAttribute("aria-expanded") === "true";
@@ -7975,11 +7975,12 @@
 
   function obterEstatisticasPonderadasBolaDeOuro() {
     const estatisticas = new Map();
-    const obterJogador = (id) => {
+    const obterJogador = (id, clubeId = "") => {
       if (!id) return null;
       const chave = String(id);
       if (!estatisticas.has(chave)) {
         estatisticas.set(chave, {
+          clubeId,
           gols: 0,
           assistencias: 0,
           golsPonderados: 0,
@@ -7993,7 +7994,9 @@
           defesas: 0,
         });
       }
-      return estatisticas.get(chave);
+      const jogador = estatisticas.get(chave);
+      if (clubeId) jogador.clubeId = clubeId;
+      return jogador;
     };
 
     const partidasLiga = (estado?.rodadas || []).flatMap((rodada) => rodada);
@@ -8017,7 +8020,7 @@
         : [];
 
       participantes.forEach((jogador) => {
-        const agregado = obterJogador(jogador.id);
+        const agregado = obterJogador(jogador.id, jogador.clubeId);
         if (!agregado) return;
         agregado.jogos++;
         if (competicao === estado?.liga) agregado.jogosLiga++;
@@ -8048,7 +8051,7 @@
         [evento.autorId, evento.assistenteId].filter(Boolean).forEach((id) => {
           const chave = String(id);
           if (!envolvidosNoJogo.has(chave)) {
-            const envolvido = obterJogador(id);
+            const envolvido = obterJogador(id, evento.clubeId);
             if (envolvido) envolvidosNoJogo.add(chave);
           }
         });
@@ -8056,12 +8059,12 @@
           competicao,
           obterClube(evento.clubeId)?.liga,
         );
-        const autor = obterJogador(evento.autorId);
+        const autor = obterJogador(evento.autorId, evento.clubeId);
         if (autor) {
           autor.gols++;
           autor.golsPonderados += fator;
         }
-        const assistente = obterJogador(evento.assistenteId);
+        const assistente = obterJogador(evento.assistenteId, evento.clubeId);
         if (assistente) {
           assistente.assistencias++;
           assistente.assistenciasPonderadas += fator;
@@ -8079,7 +8082,7 @@
     });
 
     obterRankingOutrasLigas().forEach((jogador) => {
-      const agregado = obterJogador(jogador.id);
+      const agregado = obterJogador(jogador.id, jogador.clubeId);
       if (!agregado) return;
       const fator = obterFatorDificuldadeCompeticao(
         obterClube(jogador.clubeId)?.liga || "",
@@ -8555,6 +8558,27 @@
 
     const campanhasPorClube = obterResultadosColetivosTemporada();
     const estatisticasPonderadas = obterEstatisticasPonderadasBolaDeOuro();
+    temporada.trofeusIndividuais = (
+      temporada.trofeusIndividuais || []
+    ).filter((titulo) => titulo !== "Chuteira de Ouro");
+    const golsPonderadosMaximos = [...estatisticasPonderadas.values()]
+      .filter(
+        (dados) =>
+          dados.gols > 0 && obterClube(dados.clubeId)?.tipo !== "base",
+      )
+      .reduce(
+        (maximo, dados) => Math.max(maximo, dados.golsPonderados),
+        0,
+      );
+    const dadosUsuarioPonderados = estatisticasPonderadas.get(idUsuario);
+    if (
+      usuarioElegivel &&
+      dadosUsuarioPonderados?.gols > 0 &&
+      Math.abs(dadosUsuarioPonderados.golsPonderados - golsPonderadosMaximos) <=
+        1e-9
+    ) {
+      temporada.trofeusIndividuais.push("Chuteira de Ouro");
+    }
     const jogosReferenciaPorClube = new Map();
     const pesoMaximoColetivoGlobal = [...campanhasPorClube.entries()].reduce(
       (maximo, [clubeId, campanhas]) => {

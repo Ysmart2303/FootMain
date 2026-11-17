@@ -3,7 +3,7 @@
  */
 
 const STORAGE_KEY_CONFIG = "footmain_config_v1";
-const VERSAO_APP = "2.9.17cansar.";
+const VERSAO_APP = "2.9.18";
 
 /* ---------- Definições base (as "de fábrica") ---------- */
 const POSICOES_PADRAO = {
@@ -963,7 +963,6 @@ const CONFIG_PADRAO = {
         chanceBolaDeOuroZagueiro: 0.20,
         chanceBolaDeOuroGoleiro: 0.20,
         chanceGoldenBoy: 0.18,
-        chanceChuteiraDeOuro: 0.50,
         chanceLuvaDeOuro: 0.30,
         anoInicioMundialClubes: 2029,
         cicloCopaDoMundo: 4,

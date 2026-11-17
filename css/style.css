@@ -240,6 +240,30 @@ header p {
     background: rgba(16, 185, 129, 0.25);
 }
 
+.storage-reset {
+    display: grid;
+    gap: 12px;
+    margin-top: 28px;
+    border-top: 1px solid rgba(148, 163, 184, 0.25);
+    padding-top: 18px;
+}
+
+.storage-reset p {
+    color: #94a3b8;
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+.storage-reset__button {
+    border: 1px solid #f87171;
+    background: #991b1b;
+    color: #fff;
+}
+
+.storage-reset__button:hover {
+    background: #b91c1c;
+}
+
 main {
     width: 100%;
     max-width: 1600px;
@@ -2440,6 +2464,16 @@ html[data-theme="light"] .theme-options button {
     border-color: #86efac;
     background: #dcfce7;
     color: #14532d;
+}
+
+html[data-theme="light"] .storage-reset p {
+    color: #14532d;
+}
+
+html[data-theme="light"] .storage-reset__button {
+    border-color: #b91c1c;
+    background: #b91c1c;
+    color: #fff;
 }
 
 html[data-theme="light"] .theme-options button[aria-pressed="true"] {

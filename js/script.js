@@ -2540,13 +2540,6 @@ function gerarTrofeusTemporada(
     trofeusIndividuais.push("Golden Boy");
   }
   if (
-    jogadorEmClubeProfissional &&
-    gols > jogos &&
-    sortearPremio(t.chanceChuteiraDeOuro * multIndividuais)
-  ) {
-    trofeusIndividuais.push("Chuteira de Ouro");
-  }
-  if (
     categoriaPosicao(posicao) === "go" &&
     jogos >= 30 &&
     sortearPremio(t.chanceLuvaDeOuro * multIndividuais)

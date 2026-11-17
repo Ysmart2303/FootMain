@@ -42,7 +42,6 @@ const SCHEMA_CONFIG = [
             { caminho: "titulos.chanceBolaDeOuroZagueiro", label: "Defender of the Year", tipo: "range", min: 0, max: 1, passo: 0.01 },
             { caminho: "titulos.chanceBolaDeOuroGoleiro", label: "GoalKeeper of the year", tipo: "range", min: 0, max: 1, passo: 0.01 },
             { caminho: "titulos.chanceGoldenBoy",        label: "Golden Boy",             tipo: "range", min: 0, max: 1, passo: 0.01 },
-            { caminho: "titulos.chanceChuteiraDeOuro",   label: "Chuteira de Ouro",       tipo: "range", min: 0, max: 1, passo: 0.01 },
             { caminho: "titulos.chanceLuvaDeOuro",       label: "Luva de Ouro",           tipo: "range", min: 0, max: 1, passo: 0.01 },
             { caminho: "titulos.anoInicioMundialClubes", label: "Ano do 1º Mundial de Clubes", tipo: "number", min: 2020, max: 2100, passo: 1 },
             { caminho: "titulos.cicloCopaDoMundo",       label: "Ciclo da Copa (anos)",   tipo: "number", min: 1, max: 8, passo: 1 }
