@@ -896,11 +896,22 @@
         return;
       }
 
-      mensagem.textContent = ranking.venceuNestaTemporada
-        ? "Você venceu a Bola de Ouro nesta temporada."
-        : ranking.vencedor?.nome
-          ? `${ranking.vencedor.nome} venceu a Bola de Ouro nesta temporada.`
-          : "A temporada terminou sem indicações elegíveis à Bola de Ouro.";
+      const nomeVencedor =
+        ranking.vencedor?.nome || ranking.jogadores[0]?.nome;
+      if (ranking.venceuNestaTemporada) {
+        mensagem.textContent = "Você venceu a Bola de Ouro nesta temporada.";
+      } else if (ranking.posicaoUsuario > 0 && nomeVencedor) {
+        const foraDoTop10 =
+          ranking.posicaoUsuario > ranking.jogadores.length
+            ? " e ficou fora do TOP 10"
+            : "";
+        mensagem.textContent = `Você terminou em ${ranking.posicaoUsuario}º lugar${foraDoTop10}. ${nomeVencedor} venceu a Bola de Ouro nesta temporada.`;
+      } else if (ranking.posicaoUsuario === 0 && nomeVencedor) {
+        mensagem.textContent = `Você não foi elegível à Bola de Ouro nesta temporada. ${nomeVencedor} venceu a premiação.`;
+      } else {
+        mensagem.textContent =
+          "A temporada terminou sem indicações elegíveis à Bola de Ouro.";
+      }
       vitorias.hidden = ranking.totalVitorias < 1;
       if (ranking.totalVitorias > 0) {
         const vezes = ranking.totalVitorias === 1 ? "vez" : "vezes";
@@ -926,9 +937,10 @@
         pontos.className = "jja-bola-de-ouro-pontos";
         detalhes.className = "jja-bola-de-ouro-detalhes";
         detalhes.hidden = true;
-        colocacao.textContent = String(indice + 1).padStart(2, "0");
+        colocacao.textContent = `${indice + 1}º`;
+        colocacao.setAttribute("aria-label", `${indice + 1}º lugar`);
         nome.textContent = jogador.nome;
-        clube.textContent = jogador.clube;
+        clube.textContent = `${jogador.clube} · ${jogador.posicao}`;
         detalhesBotao.type = "button";
         detalhesBotao.textContent = "+";
         detalhesBotao.setAttribute("aria-expanded", "false");
@@ -952,12 +964,29 @@
           grupo.append(titulo, conteudo);
           detalhes.append(grupo);
         };
+        const formatarNota = (nota) =>
+          Number(nota || 0).toLocaleString("pt-BR", {
+            maximumFractionDigits: 1,
+          });
         adicionarDetalhe("Desempenho", [
           `${jogador.gols} gols`,
           `${jogador.assistencias} assistências`,
           `${jogador.jogos} jogos`,
         ]);
-        adicionarDetalhe("Títulos coletivos", jogador.titulosColetivos || []);
+        adicionarDetalhe("Pontuação por pilar", [
+          `Individual (75%): ${formatarNota(jogador.notaIndividual)}`,
+          `Coletivo (15%): ${formatarNota(jogador.notaColetiva)}`,
+          `Participação (10%): ${formatarNota(jogador.notaParticipacao)}`,
+        ]);
+        adicionarDetalhe("Ações da posição", [
+          `${jogador.desarmes || 0} desarmes`,
+          `${jogador.defesas || 0} defesas`,
+          `${jogador.jogosSemSofrer || 0} jogos sem sofrer gols`,
+        ]);
+        adicionarDetalhe(
+          "Campanhas coletivas",
+          jogador.campanhasColetivas || [],
+        );
         adicionarDetalhe(
           "Títulos individuais",
           jogador.titulosIndividuais || [],
@@ -7436,6 +7465,7 @@
     times.forEach((time) => {
       time.escalacao.forEach((jogador) => {
         jogador.jogos++;
+        jogador.jogosLiga++;
         if (time.gols > time.golsSofridos) jogador.vitorias++;
         const posicao = String(jogador.posicao || "").toUpperCase();
         if (
@@ -7498,17 +7528,34 @@
     });
   }
 
+  function contarJogosConcluidosTemporada() {
+    const jogosLiga = (estado?.rodadas || [])
+      .flat()
+      .filter(
+        (partida) =>
+          (partida.status === "concluida" ||
+            partida.status === "concluido") &&
+          ((partida.casaId || partida.clubeCasaId) === estado.clubeId ||
+            (partida.foraId || partida.clubeForaId) === estado.clubeId) &&
+          !ehPartidaDeIA(partida),
+      ).length;
+    const jogosOutrasCompeticoes = (estado?.partidas || []).filter(
+      (partida) =>
+        (partida.status === "concluida" ||
+          partida.status === "concluido") &&
+        partida.competicao !== estado?.liga &&
+        !ehPartidaDeIA(partida),
+    ).length;
+    return jogosLiga + jogosOutrasCompeticoes;
+  }
+
   function obterRankingOutrasLigas() {
     const base =
       typeof ehClubeBase === "function" && ehClubeBase(estado?.clubeId);
-    const jogosUsuario = (estado?.partidas || []).filter(
-      (partida) =>
-        (partida.status === "concluida" || partida.status === "concluido") &&
-        !ehPartidaDeIA(partida),
-    ).length;
+    const jogosUsuario = contarJogosConcluidosTemporada();
     const cache = estado.rankingGlobalOutrasLigas;
     const cacheValido =
-      cache?.versao === 15 &&
+      cache?.versao === 16 &&
       cache?.ano === estado.ano &&
       Array.isArray(cache.jogadores);
     if (cacheValido && cache.jogosUsuario === jogosUsuario)
@@ -7574,16 +7621,17 @@
     // Zera estatísticas calculadas: o resultado é reconstruído deterministicamente
     // para o número atual de partidas, sem acumular uma simulação antiga.
     const jogadoresAntigos = new Map(
-      (cacheValido ? cache.jogadores : []).map((jogador) => [
-        jogador.id,
-        jogador,
-      ]),
+      (cache?.ano === estado.ano && Array.isArray(cache.jogadores)
+        ? cache.jogadores
+        : []
+      ).map((jogador) => [jogador.id, jogador]),
     );
     jogadores.forEach((jogador) => {
       const antigo = jogadoresAntigos.get(jogador.id);
       jogador.gols = 0;
       jogador.assistencias = 0;
       jogador.jogos = 0;
+      jogador.jogosLiga = 0;
       jogador.vitorias = 0;
       jogador.jogosSemSofrer = 0;
       jogador.desarmes = 0;
@@ -7596,6 +7644,9 @@
     // NPCs não recebem automaticamente a mesma quantidade ilimitada de jogos
     // de uma carreira: usamos um calendário de até 55 partidas por temporada.
     const quantidadeRodadas = Math.min(55, Math.max(0, jogosUsuario));
+    jogadores.forEach((jogador) => {
+      jogador.jogosReferencia = quantidadeRodadas;
+    });
     const ligas = new Map();
     clubesAlvo.forEach((clube) => {
       const chaveLiga = clube.liga || (base ? "base" : "outras");
@@ -7640,7 +7691,7 @@
     });
 
     estado.rankingGlobalOutrasLigas = {
-      versao: 15,
+      versao: 16,
       ano: estado.ano,
       jogosUsuario,
       jogadores,
@@ -7934,6 +7985,8 @@
           golsPonderados: 0,
           assistenciasPonderadas: 0,
           jogos: 0,
+          jogosLiga: 0,
+          jogosReferencia: 0,
           vitorias: 0,
           jogosSemSofrer: 0,
           desarmes: 0,
@@ -7967,6 +8020,7 @@
         const agregado = obterJogador(jogador.id);
         if (!agregado) return;
         agregado.jogos++;
+        if (competicao === estado?.liga) agregado.jogosLiga++;
         const clubeId = jogador.clubeId;
         const venceu =
           clubeId === casaId
@@ -8016,7 +8070,10 @@
       if (!participantes.length) {
         envolvidosNoJogo.forEach((id) => {
           const envolvido = obterJogador(id);
-          if (envolvido) envolvido.jogos++;
+          if (envolvido) {
+            envolvido.jogos++;
+            if (competicao === estado?.liga) envolvido.jogosLiga++;
+          }
         });
       }
     });
@@ -8035,6 +8092,14 @@
       agregado.golsPonderados += gols * fator;
       agregado.assistenciasPonderadas += assistencias * fator;
       agregado.jogos = Math.max(agregado.jogos, Number(jogador.jogos) || 0);
+      agregado.jogosLiga = Math.max(
+        agregado.jogosLiga,
+        Number(jogador.jogosLiga ?? jogador.jogos) || 0,
+      );
+      agregado.jogosReferencia = Math.max(
+        agregado.jogosReferencia,
+        Number(jogador.jogosReferencia) || 0,
+      );
       agregado.vitorias = Math.max(
         agregado.vitorias,
         Number(jogador.vitorias) || 0,
@@ -8061,159 +8126,342 @@
     if (pos === "GOL") return "goleiro";
     if (["ZCE", "ZCD", "LE", "LD"].includes(pos)) return "defensor";
     if (["ME", "MC", "MD"].includes(pos)) return "meio-campista";
-    return "atacante";
+    if (["PE", "CA", "PD"].includes(pos)) return "atacante";
+    return "";
   }
 
   function calcularDesempenhoBolaDeOuro(jogador, dados) {
     const jogos = Math.max(0, Number(dados.jogos) || 0);
-    const gols = Math.max(0, Number(jogador.gols) || Number(dados.gols) || 0);
+    const gols = Math.max(0, Number(dados.gols ?? jogador.gols) || 0);
     const assistencias = Math.max(
       0,
-      Number(jogador.assistencias) || Number(dados.assistencias) || 0,
+      Number(dados.assistencias ?? jogador.assistencias) || 0,
     );
+    const desarmes = Math.max(0, Number(dados.desarmes) || 0);
+    const defesas = Math.max(0, Number(dados.defesas) || 0);
+    const jogosSemSofrer = Math.max(0, Number(dados.jogosSemSofrer) || 0);
     const categoria = obterCategoriaBolaDeOuro(jogador.posicao);
-    const notaIndividual = gols * 3 + assistencias * 2;
+    const taxa = (valor) => (jogos > 0 ? valor / jogos : 0);
+    const pontuarTaxa = (valor, referencia) =>
+      Math.max(0, Math.min(100, (valor / referencia) * 100));
+    const golsPorJogo = taxa(gols);
+    const assistenciasPorJogo = taxa(assistencias);
+    const desarmesPorJogo = taxa(desarmes);
+    const defesasPorJogo = taxa(defesas);
+    const jogosSemSofrerPorJogo = taxa(jogosSemSofrer);
+    if (!categoria) {
+      return {
+        categoria,
+        notaIndividual: 0,
+        temContribuicaoIndividual: false,
+        gols,
+        assistencias,
+        jogos,
+        desarmes,
+        defesas,
+        jogosSemSofrer,
+        golsPorJogo,
+        assistenciasPorJogo,
+        desarmesPorJogo,
+        defesasPorJogo,
+        jogosSemSofrerPorJogo,
+      };
+    }
+    let desempenho;
+
+    if (categoria === "atacante") {
+      desempenho =
+        pontuarTaxa(golsPorJogo, 0.75) * 0.6 +
+        pontuarTaxa(assistenciasPorJogo, 0.45) * 0.4;
+    } else if (categoria === "meio-campista") {
+      desempenho =
+        pontuarTaxa(golsPorJogo, 0.3) * 0.25 +
+        pontuarTaxa(assistenciasPorJogo, 0.5) * 0.35 +
+        pontuarTaxa(desarmesPorJogo, 1.8) * 0.4;
+    } else if (categoria === "defensor") {
+      desempenho =
+        pontuarTaxa(desarmesPorJogo, 1.8) * 0.35 +
+        pontuarTaxa(jogosSemSofrerPorJogo, 0.35) * 0.35 +
+        pontuarTaxa(golsPorJogo, 0.12) * 0.15 +
+        pontuarTaxa(assistenciasPorJogo, 0.18) * 0.15;
+    } else {
+      desempenho =
+        pontuarTaxa(defesasPorJogo, 3) * 0.55 +
+        pontuarTaxa(jogosSemSofrerPorJogo, 0.35) * 0.45;
+    }
+
+    const overall = Math.max(0, Math.min(100, Number(jogador.overall) || 0));
+    const notaIndividual = desempenho * 0.95 + overall * 0.05;
+    const temDesempenhoDefensivo =
+      categoria === "defensor"
+        ? desarmes > 0 || jogosSemSofrer > 0
+        : categoria === "goleiro"
+          ? defesas > 0 || jogosSemSofrer > 0
+          : false;
 
     return {
       categoria,
       notaIndividual,
-      temContribuicaoIndividual: gols > 0,
+      temContribuicaoIndividual:
+        categoria === "atacante"
+          ? gols > 0 || assistencias > 0
+          : categoria === "meio-campista"
+            ? gols > 0 || assistencias > 0 || desarmes > 0
+            : temDesempenhoDefensivo || gols > 0 || assistencias > 0,
       gols,
       assistencias,
       jogos,
+      desarmes,
+      defesas,
+      jogosSemSofrer,
+      golsPorJogo,
+      assistenciasPorJogo,
+      desarmesPorJogo,
+      defesasPorJogo,
+      jogosSemSofrerPorJogo,
     };
   }
 
-  function calcularPesoTituloBolaDeOuro(titulo, tiposTitulos, liga) {
+  function calcularPesoTituloBolaDeOuro(titulo, liga) {
     let pesoBase = 1;
     if (PESOS_TITULOS_BOLA_DE_OURO.has(titulo)) {
       pesoBase = PESOS_TITULOS_BOLA_DE_OURO.get(titulo);
+    } else if (/supercopa|super cup/i.test(titulo)) {
+      pesoBase = 3;
     } else if (
       /estadual|carioca|paulist[aã]o|gauch[aã]o|mineiro|baian[aã]o|pernambucano|cearense/i.test(
         titulo,
       )
     ) {
       pesoBase = 2;
-    } else if (tiposTitulos.ligas.has(titulo)) {
+    } else if (/liga|league|division|división|brasileir[aã]o/i.test(titulo)) {
       pesoBase = 7;
-    } else if (tiposTitulos.copas.has(titulo)) {
+    } else if (/copa|cup|pokal|taça/i.test(titulo)) {
       pesoBase = 4;
-    } else if (/supercopa|super cup/i.test(titulo)) {
-      pesoBase = 3;
     }
     if (TITULOS_GLOBAIS_BOLA_DE_OURO.has(titulo)) return pesoBase;
     const fatorCompeticao = FATORES_DIFICULDADE_CONTINENTAIS.get(titulo);
     return pesoBase * (fatorCompeticao || obterFatorDificuldadeLiga(liga));
   }
 
-  function escolherCampeaoPonderado(clubes, identificador) {
-    const ordenados = [...clubes].sort((a, b) => a.id.localeCompare(b.id));
-    if (!ordenados.length) return null;
-    const total = ordenados.reduce(
-      (soma, clube) => soma + Math.pow(forcaClube(clube), 2),
-      0,
-    );
-    const aleatorio = criarSorteadorRanking(identificador);
-    let sorteio = aleatorio() * total;
-    return (
-      ordenados.find((clube) => {
-        sorteio -= Math.pow(forcaClube(clube), 2);
-        return sorteio < 0;
-      }) || ordenados[ordenados.length - 1]
-    );
+  function obterJogosReferenciaClube(clubeId, estatisticas = {}) {
+    const partidasLiga = (estado?.rodadas || []).flatMap((rodada) => rodada);
+    const jogosLiga = partidasLiga.filter(
+      (partida) =>
+        partida.casaId === clubeId || partida.foraId === clubeId,
+    ).length;
+    if (jogosLiga > 0) return jogosLiga;
+    return Math.max(0, Number(estatisticas.jogosReferencia) || 0);
   }
 
-  function obterTitulosDaTemporadaPorClube() {
+  function ordenarClubesCampanha(clubes, identificador, usarTabelaReal = false) {
+    if (usarTabelaReal) {
+      const posicoes = new Map(
+        (estado.tabela || [])
+          .filter((time) => !String(time.id).startsWith("__rodada__"))
+          .map((time) => [time.id, time]),
+      );
+      if (clubes.every((clube) => posicoes.has(clube.id))) {
+        return [...clubes].sort((a, b) => {
+          const timeA = posicoes.get(a.id);
+          const timeB = posicoes.get(b.id);
+          return (
+            Number(timeB.pts || 0) - Number(timeA.pts || 0) ||
+            (Number(timeB.gp || 0) - Number(timeB.gc || 0)) -
+              (Number(timeA.gp || 0) - Number(timeA.gc || 0)) ||
+            Number(timeB.gp || 0) - Number(timeA.gp || 0) ||
+            String(a.nome || "").localeCompare(
+              String(b.nome || ""),
+              "pt-BR",
+            )
+          );
+        });
+      }
+    }
+
+    const sorteador = criarSorteadorRanking(`${estado.ano}:${identificador}`);
+    return clubes
+      .map((clube) => ({
+        clube,
+        nivel: forcaClube(clube) * (0.9 + sorteador() * 0.2),
+      }))
+      .sort(
+        (a, b) =>
+          b.nivel - a.nivel ||
+          String(a.clube.nome || "").localeCompare(
+            String(b.clube.nome || ""),
+            "pt-BR",
+          ),
+      )
+      .map((item) => item.clube);
+  }
+
+  function obterNivelCampanha(indice, tipo, vagasContinentais) {
+    if (indice === 0) return 1;
+    if (indice === 1) return 0.75;
+    if (tipo === "liga" && indice < 4) return 0.5;
+    if (indice < 8) return 0.3;
+    if (tipo === "liga" && indice < vagasContinentais) return 0.15;
+    return 0;
+  }
+
+  function obterResultadosColetivosTemporada() {
     const clubes = clubesDisponiveis().filter((clube) => clube.tipo !== "base");
-    const titulosPorClube = new Map(
-      clubes.map((clube) => [clube.id, new Set()]),
+    const jogosUsuario = contarJogosConcluidosTemporada();
+    const titulosUsuario = [...new Set(estado.trofeusClube || [])]
+      .sort()
+      .join("|");
+    const classificacaoUsuario = (estado.tabela || [])
+      .filter((time) => !String(time.id).startsWith("__rodada__"))
+      .map(
+        (time) =>
+          `${time.id}:${Number(time.pts) || 0}:${Number(time.gp) || 0}:${Number(time.gc) || 0}`,
+      )
+      .sort()
+      .join("|");
+    const cache = estado.resultadosColetivosTemporada;
+    if (
+      cache?.versao === 2 &&
+      cache.ano === estado.ano &&
+      cache.jogosUsuario === jogosUsuario &&
+      cache.titulosUsuario === titulosUsuario &&
+      cache.classificacaoUsuario === classificacaoUsuario
+    ) {
+      return new Map(
+        (cache.clubes || []).map(([id, campanhas]) => [id, campanhas]),
+      );
+    }
+
+    const campanhasPorClube = new Map(
+      clubes.map((clube) => [clube.id, []]),
     );
     const nomesPorLiga = new Map();
-    const tiposTitulos = { ligas: new Set(), copas: new Set() };
+    const ligas = new Map();
+    const titulosReais = new Set(estado.trofeusClube || []);
     clubes.forEach((clube) => {
       const nomes = obterNomesTrofeusClube(clube.id);
       nomesPorLiga.set(clube.liga, nomes);
-      if (nomes.liga) tiposTitulos.ligas.add(nomes.liga);
-      if (nomes.copa) tiposTitulos.copas.add(nomes.copa);
+      if (!ligas.has(clube.liga)) ligas.set(clube.liga, []);
+      ligas.get(clube.liga).push(clube);
     });
 
-    const titulosDeClubeDoUsuario = new Set(estado.trofeusClube || []);
-    if (!titulosPorClube.has(estado.clubeId)) {
-      titulosPorClube.set(estado.clubeId, new Set());
-    }
-    titulosDeClubeDoUsuario.forEach((titulo) =>
-      titulosPorClube.get(estado.clubeId).add(titulo),
-    );
-
-    const clubesPorLiga = new Map();
-    clubes.forEach((clube) => {
-      if (!clubesPorLiga.has(clube.liga)) clubesPorLiga.set(clube.liga, []);
-      clubesPorLiga.get(clube.liga).push(clube);
-    });
-
-    const campeoesPorCompeticao = new Map();
-    const registrarCampeao = (titulo, clube) => {
-      if (!titulo || !clube) return;
-      titulosPorClube.get(clube.id)?.add(titulo);
-    };
-    const escolherCampeao = (titulo, participantes, chave) => {
-      if (!participantes.length) return null;
-      if (titulosDeClubeDoUsuario.has(titulo)) {
+    const registrarCampanha = (titulo, participantes, tipo, identificador) => {
+      if (!titulo || participantes.length === 0) return;
+      const participantesDaCampanha = [...participantes];
+      if (
+        titulosReais.has(titulo) &&
+        !participantesDaCampanha.some((clube) => clube.id === estado.clubeId)
+      ) {
         const clubeUsuario = clubes.find(
           (clube) => clube.id === estado.clubeId,
         );
-        if (clubeUsuario) return clubeUsuario;
+        if (clubeUsuario) participantesDaCampanha.push(clubeUsuario);
       }
-      return escolherCampeaoPonderado(
-        participantes,
-        `${estado.ano}:${chave}:${titulo}`,
+      const ordem = ordenarClubesCampanha(
+        participantesDaCampanha,
+        identificador,
+        tipo === "liga" && participantesDaCampanha[0]?.liga === estado.liga,
       );
+      const ligaComResultadoReal =
+        tipo === "liga" && participantesDaCampanha[0]?.liga === estado.liga;
+      if (titulosReais.has(titulo) && !ligaComResultadoReal) {
+        const indiceUsuario = ordem.findIndex(
+          (clube) => clube.id === estado.clubeId,
+        );
+        if (indiceUsuario > 0) {
+          ordem.unshift(...ordem.splice(indiceUsuario, 1));
+        }
+      }
+      const vagasContinentais =
+        tipo === "liga"
+          ? participantesDaCampanha.filter((clube) => {
+              const continental = determinarCompeticaoContinental(clube.id);
+              return continental.principal || continental.secundaria;
+            }).length
+          : 0;
+      ordem.forEach((clube, indice) => {
+        const nivel = obterNivelCampanha(
+          indice,
+          tipo,
+          vagasContinentais,
+        );
+        campanhasPorClube.get(clube.id)?.push({
+          titulo,
+          nivel,
+          tipo,
+          posicao: indice + 1,
+        });
+      });
     };
 
-    clubesPorLiga.forEach((participantes, liga) => {
+    ligas.forEach((participantes, liga) => {
       const nomes = nomesPorLiga.get(liga) || {};
-      const tabela =
-        liga === estado.liga
-          ? (estado.tabela || [])
-              .filter((time) => !String(time.id).startsWith("__rodada__"))
-              .sort(
-                (a, b) =>
-                  b.pts - a.pts || b.gp - b.gc - (a.gp - a.gc) || b.gp - a.gp,
-              )
-          : [];
-      const campeaoReal = tabela.length
-        ? participantes.find((clube) => clube.id === tabela[0].id)
-        : null;
-      const campeaoLiga =
-        campeaoReal ||
-        escolherCampeao(nomes.liga, participantes, `${liga}:liga`);
-      registrarCampeao(nomes.liga, campeaoLiga);
-
-      const campeaoCopa = escolherCampeao(
+      registrarCampanha(nomes.liga, participantes, "liga", `${liga}:liga`);
+      registrarCampanha(
         nomes.copa,
         participantes,
+        "mata-mata",
         `${liga}:copa`,
       );
-      registrarCampeao(nomes.copa, campeaoCopa);
     });
 
+    const clubesPorCompeticao = new Map();
     clubes.forEach((clube) => {
       const continental = determinarCompeticaoContinental(clube.id);
       [continental.principal, continental.secundaria]
         .filter(Boolean)
         .forEach((titulo) => {
-          if (!campeoesPorCompeticao.has(titulo)) {
-            campeoesPorCompeticao.set(titulo, []);
+          if (!clubesPorCompeticao.has(titulo)) {
+            clubesPorCompeticao.set(titulo, []);
           }
-          campeoesPorCompeticao.get(titulo).push(clube);
+          clubesPorCompeticao.get(titulo).push(clube);
         });
     });
-    campeoesPorCompeticao.forEach((participantes, titulo) => {
-      const campeao = escolherCampeao(titulo, participantes, "continental");
-      registrarCampeao(titulo, campeao);
+    const campeoesContinentais = [];
+    clubesPorCompeticao.forEach((participantes, titulo) => {
+      registrarCampanha(
+        titulo,
+        participantes,
+        "mata-mata",
+        `continental:${titulo}`,
+      );
+      const campeao = participantes.find((clube) =>
+        campanhasPorClube
+          .get(clube.id)
+          ?.some(
+            (campanha) => campanha.titulo === titulo && campanha.nivel === 1,
+          ),
+      );
+      if (campeao) campeoesContinentais.push(campeao);
     });
+    const participantesMundiais = [
+      ...new Map(
+        campeoesContinentais.map((clube) => [clube.id, clube]),
+      ).values(),
+    ];
+    registrarCampanha(
+      "Copa do Mundo de Clubes",
+      participantesMundiais,
+      "mata-mata",
+      "club-world-cup",
+    );
+    registrarCampanha(
+      "Intercontinental",
+      participantesMundiais,
+      "mata-mata",
+      "intercontinental",
+    );
 
-    return { titulosPorClube, tiposTitulos };
+    const resultados = [...campanhasPorClube.entries()];
+    estado.resultadosColetivosTemporada = {
+      versao: 2,
+      ano: estado.ano,
+      jogosUsuario,
+      titulosUsuario,
+      classificacaoUsuario,
+      clubes: resultados,
+    };
+    return new Map(resultados);
   }
 
   function premiarBolaDeOuro(temporada, estatisticas, historicoCarreira = []) {
@@ -8277,14 +8525,9 @@
       candidatos.delete(idUsuario);
     }
 
-    const { titulosPorClube, tiposTitulos } = obterTitulosDaTemporadaPorClube();
+    const campanhasPorClube = obterResultadosColetivosTemporada();
     const estatisticasPonderadas = obterEstatisticasPonderadasBolaDeOuro();
-    const totalJogosReferencia = Math.max(
-      1,
-      Math.floor(Number(estado.estatisticas?.jogos) || 0),
-    );
-    // Exige participação em pelo menos 40% dos jogos disputados pelo usuário.
-    const minimoJogos = Math.max(1, Math.ceil(totalJogosReferencia * 0.4));
+    const jogosReferenciaPorClube = new Map();
 
     const avaliados = [...candidatos.values()]
       .filter(
@@ -8294,6 +8537,14 @@
         const clube = obterClube(jogador.clubeId);
         const liga = clube?.liga || "";
         const dados = {
+          gols: 0,
+          assistencias: 0,
+          jogos: 0,
+          jogosLiga: 0,
+          jogosReferencia: 0,
+          jogosSemSofrer: 0,
+          desarmes: 0,
+          defesas: 0,
           ...(estatisticasPonderadas.get(String(jogador.id)) || {}),
         };
         if (jogador.ehUsuario) {
@@ -8323,54 +8574,98 @@
                 estado.estatisticas?.assistencias,
             ) || 0;
         }
-        const gols = Math.max(
-          0,
-          Number(jogador.gols) || Number(dados.gols) || 0,
-        );
-        const assistencias = Math.max(
-          0,
-          Number(jogador.assistencias) || Number(dados.assistencias) || 0,
-        );
+        if (!jogosReferenciaPorClube.has(jogador.clubeId)) {
+          jogosReferenciaPorClube.set(
+            jogador.clubeId,
+            obterJogosReferenciaClube(jogador.clubeId, dados),
+          );
+        }
+        dados.jogosReferencia = jogosReferenciaPorClube.get(jogador.clubeId);
+        const jogosParticipacao = Math.max(0, Number(dados.jogosLiga) || 0);
+        const gols = Math.max(0, Number(dados.gols) || 0);
+        const assistencias = Math.max(0, Number(dados.assistencias) || 0);
         const desempenho = calcularDesempenhoBolaDeOuro(
           { ...jogador, gols, assistencias },
           dados,
         );
-        const titulos = [
-          ...new Set([
-            ...(titulosPorClube.get(jogador.clubeId) || []),
-            ...(jogador.ehUsuario && Array.isArray(temporada.trofeusSelecao)
-              ? temporada.trofeusSelecao
-              : []),
-          ]),
-        ];
-        const pontosTitulos = titulos.reduce(
-          (total, titulo) =>
-            total + calcularPesoTituloBolaDeOuro(titulo, tiposTitulos, liga),
+        const participacao =
+          dados.jogosReferencia > 0
+            ? Math.min(1, jogosParticipacao / dados.jogosReferencia)
+            : 0;
+        const fatorParticipacaoCampanha =
+          participacao >= 0.8
+            ? 1
+            : participacao >= 0.6
+              ? 0.85
+              : participacao >= 0.4
+                ? 0.65
+                : participacao >= 0.2
+                  ? 0.4
+                  : 0.15;
+        const campanhas = campanhasPorClube.get(jogador.clubeId) || [];
+        const pesoMaximoColetivo = campanhas.reduce(
+          (total, campanha) =>
+            total + calcularPesoTituloBolaDeOuro(campanha.titulo, liga),
           0,
         );
-        // Gols e assistências definem a disputa; títulos e participação só complementam.
-        const notaTitulos =
-          3 * (1 - Math.exp(-Math.max(0, pontosTitulos) / 24));
-        const notaParticipacao = Math.min(
-          1.5,
-          (desempenho.jogos / totalJogosReferencia) * 1.5,
+        const pontosColetivos = campanhas.reduce(
+          (total, campanha) =>
+            total +
+            calcularPesoTituloBolaDeOuro(campanha.titulo, liga) *
+              campanha.nivel *
+              fatorParticipacaoCampanha,
+          0,
         );
+        const notaColetiva =
+          pesoMaximoColetivo > 0
+            ? Math.min(100, (pontosColetivos / pesoMaximoColetivo) * 100)
+            : 0;
+        const notaParticipacao = participacao * 100;
+        const notaIndividual = desempenho.notaIndividual;
         const pontuacao =
-          desempenho.notaIndividual + notaTitulos + notaParticipacao;
+          notaIndividual * 0.75 +
+          notaColetiva * 0.15 +
+          notaParticipacao * 0.1;
+        const campanhasComResultado = campanhas
+          .filter((campanha) => campanha.nivel > 0)
+          .map((campanha) => {
+            if (campanha.tipo === "liga") {
+              return `${campanha.posicao}º lugar — ${campanha.titulo}`;
+            }
+            if (campanha.nivel === 1) return campanha.titulo;
+            if (campanha.nivel === 0.75)
+              return `Vice-campeão da ${campanha.titulo}`;
+            if (campanha.nivel === 0.5)
+              return `Semifinalista da ${campanha.titulo}`;
+            if (campanha.nivel === 0.3)
+              return `Quartas de final da ${campanha.titulo}`;
+            return `Classificado para competição continental`;
+          });
         return {
           ...jogador,
           clube,
           gols,
           assistencias,
           jogos: desempenho.jogos,
+          jogosLiga: jogosParticipacao,
+          jogosReferencia: dados.jogosReferencia,
+          desarmes: desempenho.desarmes,
+          defesas: desempenho.defesas,
+          jogosSemSofrer: desempenho.jogosSemSofrer,
+          golsPorJogo: desempenho.golsPorJogo,
+          assistenciasPorJogo: desempenho.assistenciasPorJogo,
+          desarmesPorJogo: desempenho.desarmesPorJogo,
+          defesasPorJogo: desempenho.defesasPorJogo,
+          jogosSemSofrerPorJogo: desempenho.jogosSemSofrerPorJogo,
           categoria: desempenho.categoria,
-          pontuacaoDesempenho: desempenho.notaIndividual,
-          notaTitulos,
+          pontuacaoDesempenho: notaIndividual,
+          notaIndividual,
+          notaColetiva,
           notaParticipacao,
           temContribuicaoIndividual: desempenho.temContribuicaoIndividual,
-          pontosTitulos,
+          campanhasColetivas: campanhasComResultado,
           pontuacao,
-          titulosColetivos: titulos,
+          titulosColetivos: campanhasComResultado,
           titulosIndividuais: jogador.ehUsuario
             ? (temporada.trofeusIndividuais || []).filter(
                 (titulo) => titulo !== "Bola de Ouro",
@@ -8382,23 +8677,28 @@
       })
       .filter(
         (jogador) =>
-          jogador.jogos >= minimoJogos &&
-          jogador.gols > 0 &&
+          ["atacante", "meio-campista"].includes(jogador.categoria) &&
+          jogador.jogosReferencia > 0 &&
+          jogador.jogosLiga >= Math.ceil(jogador.jogosReferencia * 0.4) &&
           jogador.temContribuicaoIndividual,
       )
       .sort((a, b) => {
         const diferenca = b.pontuacao - a.pontuacao;
         if (Math.abs(diferenca) > 0.0001) return diferenca;
-        // Desempates esportivos: desempenho individual, produção e participação.
+        if (a.notaIndividual !== b.notaIndividual)
+          return b.notaIndividual - a.notaIndividual;
+        const criterios =
+          a.categoria === "meio-campista"
+            ? ["assistenciasPorJogo", "desarmesPorJogo", "golsPorJogo"]
+            : ["golsPorJogo", "assistenciasPorJogo"];
+        for (const criterio of criterios) {
+          if (a[criterio] !== b[criterio])
+            return b[criterio] - a[criterio];
+        }
         if (a.gols !== b.gols) return b.gols - a.gols;
         if (a.assistencias !== b.assistencias)
           return b.assistencias - a.assistencias;
-        if (a.pontuacaoDesempenho !== b.pontuacaoDesempenho) {
-          return b.pontuacaoDesempenho - a.pontuacaoDesempenho;
-        }
         if (a.jogos !== b.jogos) return b.jogos - a.jogos;
-        const overall = (Number(b.overall) || 0) - (Number(a.overall) || 0);
-        if (overall) return overall;
         return String(a.nome || "").localeCompare(
           String(b.nome || ""),
           "pt-BR",
@@ -8418,21 +8718,34 @@
     ).length;
 
     return {
+      vencedor: avaliados[0]
+        ? { nome: avaliados[0].nome || "Jogador" }
+        : null,
       jogadores: avaliados.slice(0, 10).map((jogador) => ({
         nome: jogador.nome || "Jogador",
         clube: jogador.clube?.nome || jogador.clubeId || "Clube não informado",
         pontuacao: jogador.pontuacao,
         pontuacaoDesempenho: jogador.pontuacaoDesempenho,
+        notaIndividual: jogador.notaIndividual,
+        notaColetiva: jogador.notaColetiva,
+        notaParticipacao: jogador.notaParticipacao,
         ehUsuario: String(jogador.id) === idUsuario,
         gols: jogador.gols,
         assistencias: jogador.assistencias,
         jogos: jogador.jogos,
+        jogosLiga: jogador.jogosLiga,
+        jogosReferencia: jogador.jogosReferencia,
+        desarmes: jogador.desarmes,
+        defesas: jogador.defesas,
+        jogosSemSofrer: jogador.jogosSemSofrer,
         posicao: jogador.posicao,
         categoria: jogador.categoria,
+        campanhasColetivas: jogador.campanhasColetivas,
         titulosColetivos: jogador.titulosColetivos,
         titulosIndividuais: jogador.titulosIndividuais,
       })),
       posicaoUsuario: posicaoUsuario + 1,
+      totalCandidatos: avaliados.length,
       venceuNestaTemporada,
       totalVitorias: vitoriasAnteriores + (venceuNestaTemporada ? 1 : 0),
     };
@@ -10878,15 +11191,10 @@
       temporada.trofeusIndividuais
         .filter((titulo) => titulo !== "Bola de Ouro")
         .forEach(enfileirarPremioIndividual);
-      if (
-        rankingBolaDeOuro.posicaoUsuario >= 1 &&
-        rankingBolaDeOuro.posicaoUsuario <= 10
-      ) {
-        filaModaisPartida.push({
-          tipo: "bola-de-ouro",
-          ranking: rankingBolaDeOuro,
-        });
-      }
+      filaModaisPartida.push({
+        tipo: "bola-de-ouro",
+        ranking: rankingBolaDeOuro,
+      });
       estado.trofeusColetivos = temporada.trofeusColetivos;
       estado.trofeusIndividuais = temporada.trofeusIndividuais;
       const reputacao =

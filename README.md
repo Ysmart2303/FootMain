@@ -50,6 +50,7 @@ Todos os dados ficam salvos no localStorage do navegador, então suas carreiras,
 · Eliminatórias da Copa do Mundo: calendário de três temporadas, classificação por confederação e vagas que determinam a participação no Mundial.
 · Formatos continentais: CONMEBOL em turno e returno (18 jogos e 7 vagas); UEFA em grupos e fase classificatória adicional; CAF em grupos; AFC e CONCACAF com grupos finais e vagas adicionais; OFC com grupos e decisão da vaga.
 · Títulos individuais: Bola de Ouro, Golden Boy, Chuteira de Ouro, Luva de Ouro.
+· Bola de Ouro: premia atacantes e meio-campistas com 75% de desempenho individual, 15% de campanhas coletivas e 10% de participação; exige 40% dos jogos da liga. Goleiros e defensores concorrem às suas premiações próprias. A modal final sempre mostra o top 10 e a posição do jogador, mesmo fora da lista, e exibe a colocação em vez de fases eliminatórias para campanhas de liga.
 · 40 conquistas desbloqueáveis divididas em 8 categorias, incluindo hat-tricks e Over.
 · Recordes históricos de gols, assistências, títulos, hat-tricks e Over.
 
