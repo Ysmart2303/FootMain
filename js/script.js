@@ -1499,9 +1499,9 @@ function validarTemporada(temporada) {
       typeof temporada.golsSelecaoPorCompeticao === "object"
         ? temporada.golsSelecaoPorCompeticao
         : {},
-    partidasEliminatorias: Array.isArray(temporada.partidasEliminatorias)
-      ? temporada.partidasEliminatorias
-      : [],
+    partidasEliminatorias: normalizarPartidasEliminatorias(
+      temporada.partidasEliminatorias,
+    ),
     atributos,
     overall,
     trofeusColetivos,
@@ -1599,6 +1599,32 @@ function normalizarEventosTemporada(eventos) {
       clube: typeof evento.clube === "string" ? evento.clube : "",
       motivo:
         typeof evento.motivo === "string" ? evento.motivo.slice(0, 120) : "",
+    }));
+}
+
+function normalizarPartidasEliminatorias(partidas) {
+  if (!Array.isArray(partidas)) {
+    return [];
+  }
+
+  return partidas
+    .filter((partida) => partida && typeof partida === "object")
+    .map((partida) => ({
+      torneioId:
+        typeof partida.torneioId === "string" ||
+        typeof partida.torneioId === "number"
+          ? partida.torneioId
+          : "",
+      status: typeof partida.status === "string" ? partida.status : "",
+      tipo: typeof partida.tipo === "string" ? partida.tipo : "",
+      faseGrupo: !!partida.faseGrupo,
+      casa: !!partida.casa,
+      adversarioId:
+        typeof partida.adversarioId === "string" ? partida.adversarioId : "",
+      casaId: typeof partida.casaId === "string" ? partida.casaId : "",
+      foraId: typeof partida.foraId === "string" ? partida.foraId : "",
+      golsCasa: Math.max(0, Math.floor(Number(partida.golsCasa) || 0)),
+      golsFora: Math.max(0, Math.floor(Number(partida.golsFora) || 0)),
     }));
 }
 

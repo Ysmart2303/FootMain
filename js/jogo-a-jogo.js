@@ -888,6 +888,15 @@
   async function exibirModalBolaDeOuro(ranking) {
     await aguardarCarregamentoLiberado();
     return new Promise((resolve) => {
+      const possuiDados =
+        (Array.isArray(ranking?.jogadores) &&
+          ranking.jogadores.length > 0) ||
+        (Array.isArray(ranking?.chuteira) && ranking.chuteira.length > 0);
+      if (!ranking || !possuiDados) {
+        resolve();
+        return;
+      }
+
       const modal = $("jja-modal-bola-de-ouro");
       const mensagem = $("jja-bola-de-ouro-mensagem");
       const vitorias = $("jja-bola-de-ouro-vitorias");
@@ -11435,18 +11444,22 @@
       temporada.trofeusIndividuais = (
         trofeusCalculados.trofeusIndividuais || []
       ).filter((titulo) => titulo !== "Bola de Ouro");
-      const rankingBolaDeOuro = premiarBolaDeOuro(
-        temporada,
-        e,
-        historicoCarreira,
-      );
+      const rankingBolaDeOuro = temporada.base
+        ? null
+        : premiarBolaDeOuro(temporada, e, historicoCarreira);
       temporada.trofeusIndividuais
         .filter((titulo) => titulo !== "Bola de Ouro")
         .forEach(enfileirarPremioIndividual);
-      filaModaisPartida.push({
-        tipo: "bola-de-ouro",
-        ranking: rankingBolaDeOuro,
-      });
+      const possuiDadosBolaDeOuro =
+        !temporada.base &&
+        ((rankingBolaDeOuro?.jogadores || []).length > 0 ||
+          (rankingBolaDeOuro?.chuteira || []).length > 0);
+      if (possuiDadosBolaDeOuro) {
+        filaModaisPartida.push({
+          tipo: "bola-de-ouro",
+          ranking: rankingBolaDeOuro,
+        });
+      }
       estado.trofeusColetivos = temporada.trofeusColetivos;
       estado.trofeusIndividuais = temporada.trofeusIndividuais;
       const reputacao =
