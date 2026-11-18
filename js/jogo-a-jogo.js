@@ -890,135 +890,199 @@
       const mensagem = $("jja-bola-de-ouro-mensagem");
       const vitorias = $("jja-bola-de-ouro-vitorias");
       const lista = $("jja-bola-de-ouro-lista");
+      const alternar = $("jja-bola-de-ouro-alternar");
+      const colunaPontos = $("jja-bola-de-ouro-coluna-pontos");
+      const titulo = $("jja-bola-de-ouro-titulo");
       const continuar = $("jja-bola-de-ouro-continuar");
-      if (!modal || !lista || !continuar) {
+      if (!modal || !lista || !alternar || !colunaPontos || !continuar) {
         resolve();
         return;
       }
 
-      const nomeVencedor =
-        ranking.vencedor?.nome || ranking.jogadores[0]?.nome;
-      if (ranking.venceuNestaTemporada) {
-        mensagem.textContent = "Você venceu a Bola de Ouro nesta temporada.";
-      } else if (ranking.posicaoUsuario > 0 && nomeVencedor) {
-        const foraDoTop10 =
-          ranking.posicaoUsuario > ranking.jogadores.length
-            ? " e ficou fora do TOP 10"
-            : "";
-        mensagem.textContent = `Você terminou em ${ranking.posicaoUsuario}º lugar${foraDoTop10}. ${nomeVencedor} venceu a Bola de Ouro nesta temporada.`;
-      } else if (ranking.posicaoUsuario === 0 && nomeVencedor) {
-        mensagem.textContent = `Você não foi elegível à Bola de Ouro nesta temporada. ${nomeVencedor} venceu a premiação.`;
-      } else {
-        mensagem.textContent =
-          "A temporada terminou sem indicações elegíveis à Bola de Ouro.";
-      }
-      vitorias.hidden = ranking.totalVitorias < 1;
-      if (ranking.totalVitorias > 0) {
-        const vezes = ranking.totalVitorias === 1 ? "vez" : "vezes";
-        vitorias.textContent = `Bola de Ouro na carreira: ${ranking.totalVitorias} ${vezes}`;
-      }
+      let exibindoChuteira = false;
+      const renderizarRanking = () => {
+        const jogadores = exibindoChuteira
+          ? ranking.chuteira || []
+          : ranking.jogadores || [];
+        const nomeVencedor = exibindoChuteira
+          ? ranking.chuteiraVencedor?.nome || jogadores[0]?.nome
+          : ranking.vencedor?.nome || jogadores[0]?.nome;
 
-      lista.replaceChildren();
-      ranking.jogadores.forEach((jogador, indice) => {
-        const item = document.createElement("li");
-        const colocacao = document.createElement("span");
-        const identidade = document.createElement("span");
-        const nome = document.createElement("strong");
-        const clube = document.createElement("small");
-        const detalhesBotao = document.createElement("button");
-        const pontos = document.createElement("strong");
-        const detalhes = document.createElement("div");
-
-        item.className = "jja-bola-de-ouro-linha";
-        if (jogador.ehUsuario) item.classList.add("jja-bola-de-ouro-usuario");
-        colocacao.className = "jja-bola-de-ouro-colocacao";
-        identidade.className = "jja-bola-de-ouro-identidade";
-        detalhesBotao.className = "jja-bola-de-ouro-detalhes-botao";
-        pontos.className = "jja-bola-de-ouro-pontos";
-        detalhes.className = "jja-bola-de-ouro-detalhes";
-        detalhes.hidden = true;
-        colocacao.textContent = `${indice + 1}º`;
-        colocacao.setAttribute("aria-label", `${indice + 1}º lugar`);
-        nome.textContent = jogador.nome;
-        clube.textContent = `${jogador.clube} · ${jogador.posicao}`;
-        detalhesBotao.type = "button";
-        detalhesBotao.textContent = "+";
-        detalhesBotao.setAttribute("aria-expanded", "false");
-        detalhesBotao.setAttribute(
+        titulo.textContent = exibindoChuteira
+          ? "Chuteira de Ouro"
+          : "Bola de Ouro";
+        alternar.textContent = exibindoChuteira ? "🏆" : "⚽";
+        alternar.setAttribute(
           "aria-label",
-          `Exibir detalhes de ${jogador.nome}`,
+          `Exibir ${exibindoChuteira ? "Bola" : "Chuteira"} de Ouro`,
         );
-        pontos.textContent = Number(jogador.pontuacao).toLocaleString("pt-BR", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        });
-        const adicionarDetalhe = (rotulo, valores) => {
-          const grupo = document.createElement("div");
-          const titulo = document.createElement("strong");
-          const conteudo = document.createElement("span");
-          grupo.className = "jja-bola-de-ouro-detalhes-grupo";
-          titulo.textContent = rotulo;
-          conteudo.textContent = valores.length
-            ? valores.join(" · ")
-            : "Nenhum registrado";
-          grupo.append(titulo, conteudo);
-          detalhes.append(grupo);
-        };
-        const formatarNota = (nota) =>
-          Number(nota || 0).toLocaleString("pt-BR", {
-            maximumFractionDigits: 1,
-          });
-        adicionarDetalhe("Desempenho", [
-          `${Number(jogador.gols) || 0} gols`,
-          `${Number(jogador.assistencias) || 0} assistências`,
-          `${Number(jogador.jogos) || 0} jogos disputados`,
-        ]);
-        adicionarDetalhe(
-          "Campanha Coletiva",
-          jogador.campanhasColetivas || [],
-        );
-        adicionarDetalhe(
-          "Títulos individuais",
-          jogador.titulosIndividuais || [],
-        );
-        adicionarDetalhe("Ações da posição", [
-          `${jogador.desarmes || 0} desarmes`,
-          `${jogador.defesas || 0} defesas`,
-          `${jogador.jogosSemSofrer || 0} jogos sem sofrer gols`,
-        ]);
-        adicionarDetalhe("Pontuação por Pilar", [
-          `Individual (75%): ${formatarNota(jogador.notaIndividual)}`,
-          `Coletivo (15%): ${formatarNota(jogador.notaColetiva)}`,
-          `Participação (10%): ${formatarNota(jogador.notaParticipacao)}`,
-        ]);
-        detalhesBotao.addEventListener("click", () => {
-          const expandido =
-            detalhesBotao.getAttribute("aria-expanded") === "true";
-          detalhesBotao.setAttribute("aria-expanded", String(!expandido));
+        alternar.title = `Exibir ${exibindoChuteira ? "Bola" : "Chuteira"} de Ouro`;
+        colunaPontos.textContent = exibindoChuteira ? "Gols pond." : "Pontos";
+
+        if (exibindoChuteira) {
+          if (!nomeVencedor) {
+            mensagem.textContent =
+              "A temporada terminou sem jogadores elegíveis à Chuteira de Ouro.";
+          } else if (ranking.chuteiraPosicaoUsuario === 1) {
+            mensagem.textContent =
+              "Você venceu a Chuteira de Ouro nesta temporada.";
+          } else if (ranking.chuteiraPosicaoUsuario > 0) {
+            mensagem.textContent = `Você terminou em ${ranking.chuteiraPosicaoUsuario}º lugar. ${nomeVencedor} venceu a Chuteira de Ouro nesta temporada.`;
+          } else {
+            mensagem.textContent = `Você não marcou gols elegíveis à Chuteira de Ouro nesta temporada. ${nomeVencedor} venceu a premiação.`;
+          }
+          vitorias.hidden = true;
+        } else {
+          if (ranking.venceuNestaTemporada) {
+            mensagem.textContent = "Você venceu a Bola de Ouro nesta temporada.";
+          } else if (ranking.posicaoUsuario > 0 && nomeVencedor) {
+            const foraDoTop10 =
+              ranking.posicaoUsuario > jogadores.length
+                ? " e ficou fora do TOP 10"
+                : "";
+            mensagem.textContent = `Você terminou em ${ranking.posicaoUsuario}º lugar${foraDoTop10}. ${nomeVencedor} venceu a Bola de Ouro nesta temporada.`;
+          } else if (ranking.posicaoUsuario === 0 && nomeVencedor) {
+            mensagem.textContent = `Você não foi elegível à Bola de Ouro nesta temporada. ${nomeVencedor} venceu a premiação.`;
+          } else {
+            mensagem.textContent =
+              "A temporada terminou sem indicações elegíveis à Bola de Ouro.";
+          }
+          vitorias.hidden = ranking.totalVitorias < 1;
+          if (ranking.totalVitorias > 0) {
+            const vezes = ranking.totalVitorias === 1 ? "vez" : "vezes";
+            vitorias.textContent = `Bola de Ouro na carreira: ${ranking.totalVitorias} ${vezes}`;
+          }
+        }
+
+        lista.replaceChildren();
+        jogadores.forEach((jogador, indice) => {
+          const item = document.createElement("li");
+          const colocacao = document.createElement("span");
+          const identidade = document.createElement("span");
+          const nome = document.createElement("strong");
+          const clube = document.createElement("small");
+          const detalhesBotao = document.createElement("button");
+          const pontos = document.createElement("strong");
+          const detalhes = document.createElement("div");
+
+          item.className = "jja-bola-de-ouro-linha";
+          if (jogador.ehUsuario) item.classList.add("jja-bola-de-ouro-usuario");
+          colocacao.className = "jja-bola-de-ouro-colocacao";
+          identidade.className = "jja-bola-de-ouro-identidade";
+          detalhesBotao.className = "jja-bola-de-ouro-detalhes-botao";
+          pontos.className = "jja-bola-de-ouro-pontos";
+          detalhes.className = "jja-bola-de-ouro-detalhes";
+          detalhes.hidden = true;
+          colocacao.textContent = `${indice + 1}º`;
+          colocacao.setAttribute("aria-label", `${indice + 1}º lugar`);
+          nome.textContent = jogador.nome;
+          clube.textContent = `${jogador.clube} · ${jogador.posicao}`;
+          detalhesBotao.type = "button";
+          detalhesBotao.textContent = "+";
+          detalhesBotao.setAttribute("aria-expanded", "false");
           detalhesBotao.setAttribute(
             "aria-label",
-            `${expandido ? "Exibir" : "Ocultar"} detalhes de ${jogador.nome}`,
+            `Exibir detalhes de ${jogador.nome}`,
           );
-          detalhesBotao.textContent = expandido ? "+" : "−";
-          detalhes.hidden = expandido;
-        });
+          pontos.textContent = exibindoChuteira
+            ? Math.round(Number(jogador.golsPonderados) || 0).toLocaleString(
+                "pt-BR",
+              )
+            : Number(jogador.pontuacao).toLocaleString("pt-BR", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              });
+          const adicionarDetalhe = (rotulo, valores) => {
+            const grupo = document.createElement("div");
+            const titulo = document.createElement("strong");
+            const conteudo = document.createElement("span");
+            grupo.className = "jja-bola-de-ouro-detalhes-grupo";
+            titulo.textContent = rotulo;
+            conteudo.textContent = valores.length
+              ? valores.join(" · ")
+              : "Nenhum registrado";
+            grupo.append(titulo, conteudo);
+            detalhes.append(grupo);
+          };
+          const formatarNota = (nota) =>
+            Number(nota || 0).toLocaleString("pt-BR", {
+              maximumFractionDigits: 1,
+            });
+          if (exibindoChuteira) {
+            adicionarDetalhe("Gols ponderados (arredondados)", [
+              `${Math.round(Number(jogador.golsPonderados) || 0)} gols`,
+            ]);
+            adicionarDetalhe("Gols reais", [
+              `${Number(jogador.gols) || 0} gols`,
+            ]);
+            adicionarDetalhe("Partidas/Jogos", [
+              `${Number(jogador.jogos) || 0} partidas`,
+            ]);
+          } else {
+            adicionarDetalhe("Desempenho", [
+              `${Number(jogador.gols) || 0} gols`,
+              `${Number(jogador.assistencias) || 0} assistências`,
+              `${Number(jogador.jogos) || 0} jogos disputados`,
+            ]);
+            adicionarDetalhe(
+              "Campanha Coletiva",
+              jogador.campanhasColetivas || [],
+            );
+            adicionarDetalhe(
+              "Títulos individuais",
+              jogador.titulosIndividuais || [],
+            );
+            adicionarDetalhe("Ações da posição", [
+              `${jogador.desarmes || 0} desarmes`,
+              `${jogador.defesas || 0} defesas`,
+              `${jogador.jogosSemSofrer || 0} jogos sem sofrer gols`,
+            ]);
+            adicionarDetalhe("Pontuação por Pilar", [
+              `Individual (75%): ${formatarNota(jogador.notaIndividual)}`,
+              `Coletivo (15%): ${formatarNota(jogador.notaColetiva)}`,
+              `Participação (10%): ${formatarNota(jogador.notaParticipacao)}`,
+            ]);
+          }
+          detalhesBotao.addEventListener("click", () => {
+            const expandido =
+              detalhesBotao.getAttribute("aria-expanded") === "true";
+            detalhesBotao.setAttribute("aria-expanded", String(!expandido));
+            detalhesBotao.setAttribute(
+              "aria-label",
+              `${expandido ? "Exibir" : "Ocultar"} detalhes de ${jogador.nome}`,
+            );
+            detalhesBotao.textContent = expandido ? "+" : "−";
+            detalhes.hidden = expandido;
+          });
 
-        identidade.append(nome, clube);
-        item.append(colocacao, identidade, detalhesBotao, pontos, detalhes);
-        lista.append(item);
-      });
+          identidade.append(nome, clube);
+          item.append(colocacao, identidade, detalhesBotao, pontos, detalhes);
+          lista.append(item);
+        });
+      };
+      renderizarRanking();
+
+      const alternarRanking = () => {
+        exibindoChuteira = !exibindoChuteira;
+        renderizarRanking();
+      };
+      alternar.addEventListener("click", alternarRanking);
 
       modal.hidden = false;
       continuar.focus();
 
       const fechar = () => {
         modal.hidden = true;
+        alternar.removeEventListener("click", alternarRanking);
         continuar.removeEventListener("click", fechar);
         document.removeEventListener("keydown", aoTeclar);
         resolve();
       };
       const aoTeclar = (evento) => {
-        if (evento.key === "Escape" || evento.key === "Enter") {
+        if (
+          evento.key === "Escape" ||
+          (evento.key === "Enter" && evento.target === continuar)
+        ) {
           evento.preventDefault();
           fechar();
         }
@@ -8579,6 +8643,36 @@
     ) {
       temporada.trofeusIndividuais.push("Chuteira de Ouro");
     }
+    const rankingChuteira = [...estatisticasPonderadas.entries()]
+      .filter(
+        ([, dados]) =>
+          dados.gols > 0 && obterClube(dados.clubeId)?.tipo !== "base",
+      )
+      .map(([id, dados]) => {
+        const jogador = candidatos.get(id);
+        if (!jogador) return null;
+        return {
+          nome: jogador.nome || "Jogador",
+          clube:
+            obterClube(jogador.clubeId)?.nome ||
+            jogador.clubeId ||
+            "Clube não informado",
+          posicao: jogador.posicao || "Não informada",
+          golsPonderados: dados.golsPonderados,
+          gols: dados.gols,
+          jogos: dados.jogos,
+          ehUsuario: id === idUsuario,
+        };
+      })
+      .filter(Boolean)
+      .sort(
+        (a, b) =>
+          b.golsPonderados - a.golsPonderados ||
+          b.gols - a.gols ||
+          a.nome.localeCompare(b.nome, "pt-BR"),
+      );
+    const posicaoUsuarioChuteira =
+      rankingChuteira.findIndex((jogador) => jogador.ehUsuario) + 1;
     const jogosReferenciaPorClube = new Map();
     const pesoMaximoColetivoGlobal = [...campanhasPorClube.entries()].reduce(
       (maximo, [clubeId, campanhas]) => {
@@ -8793,6 +8887,11 @@
       vencedor: avaliados[0]
         ? { nome: avaliados[0].nome || "Jogador" }
         : null,
+      chuteira: rankingChuteira.slice(0, 10),
+      chuteiraVencedor: rankingChuteira[0]
+        ? { nome: rankingChuteira[0].nome }
+        : null,
+      chuteiraPosicaoUsuario: posicaoUsuarioChuteira,
       jogadores: avaliados.slice(0, 10).map((jogador) => ({
         nome: jogador.nome || "Jogador",
         clube: jogador.clube?.nome || jogador.clubeId || "Clube não informado",
