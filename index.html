@@ -639,8 +639,10 @@
     <div id="jja-modal-bola-de-ouro" class="modal-overlay jja-modal-bola-de-ouro" hidden>
         <section class="jja-bola-de-ouro-caixa" role="dialog" aria-modal="true" aria-labelledby="jja-bola-de-ouro-titulo" aria-describedby="jja-bola-de-ouro-mensagem" tabindex="-1">
             <span class="jja-bola-de-ouro-selo" aria-hidden="true">TOP 10</span>
-            <button type="button" class="jja-bola-de-ouro-alternar" id="jja-bola-de-ouro-alternar" aria-label="Exibir Chuteira de Ouro" title="Exibir Chuteira de Ouro">⚽</button>
-            <h3 id="jja-bola-de-ouro-titulo">Bola de Ouro</h3>
+            <div class="jja-bola-de-ouro-abas" aria-label="Premiações">
+                <h3 id="jja-bola-de-ouro-titulo"><button type="button" id="jja-bola-de-ouro-aba-bola" aria-pressed="true">Bola de Ouro</button></h3>
+                <h3 id="jja-chuteira-de-ouro-titulo"><button type="button" id="jja-bola-de-ouro-aba-chuteira" aria-pressed="false">Chuteira de Ouro</button></h3>
+            </div>
             <p id="jja-bola-de-ouro-mensagem"></p>
             <p id="jja-bola-de-ouro-vitorias" class="jja-bola-de-ouro-vitorias" hidden></p>
             <div class="jja-bola-de-ouro-cabecalho" aria-hidden="true">

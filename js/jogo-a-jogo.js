@@ -749,6 +749,8 @@
   const CICLO_COPA_DO_MUNDO_SELECOES = 4;
   const $ = (id) => document.getElementById(id);
   let estado = null;
+  let salvamentoCompacto = false;
+  let avisoArmazenamentoExibido = false;
   let simulandoCarreira = false;
   let bloqueioAcoesPartida = false;
   let decisaoEmAndamento = false;
@@ -890,11 +892,18 @@
       const mensagem = $("jja-bola-de-ouro-mensagem");
       const vitorias = $("jja-bola-de-ouro-vitorias");
       const lista = $("jja-bola-de-ouro-lista");
-      const alternar = $("jja-bola-de-ouro-alternar");
+      const abaBola = $("jja-bola-de-ouro-aba-bola");
+      const abaChuteira = $("jja-bola-de-ouro-aba-chuteira");
       const colunaPontos = $("jja-bola-de-ouro-coluna-pontos");
-      const titulo = $("jja-bola-de-ouro-titulo");
       const continuar = $("jja-bola-de-ouro-continuar");
-      if (!modal || !lista || !alternar || !colunaPontos || !continuar) {
+      if (
+        !modal ||
+        !lista ||
+        !abaBola ||
+        !abaChuteira ||
+        !colunaPontos ||
+        !continuar
+      ) {
         resolve();
         return;
       }
@@ -908,15 +917,14 @@
           ? ranking.chuteiraVencedor?.nome || jogadores[0]?.nome
           : ranking.vencedor?.nome || jogadores[0]?.nome;
 
-        titulo.textContent = exibindoChuteira
-          ? "Chuteira de Ouro"
-          : "Bola de Ouro";
-        alternar.textContent = exibindoChuteira ? "🏆" : "⚽";
-        alternar.setAttribute(
-          "aria-label",
-          `Exibir ${exibindoChuteira ? "Bola" : "Chuteira"} de Ouro`,
+        abaBola.setAttribute("aria-pressed", String(!exibindoChuteira));
+        abaChuteira.setAttribute("aria-pressed", String(exibindoChuteira));
+        modal.setAttribute(
+          "aria-labelledby",
+          exibindoChuteira
+            ? "jja-chuteira-de-ouro-titulo"
+            : "jja-bola-de-ouro-titulo",
         );
-        alternar.title = `Exibir ${exibindoChuteira ? "Bola" : "Chuteira"} de Ouro`;
         colunaPontos.textContent = exibindoChuteira ? "Gols pond." : "Pontos";
 
         if (exibindoChuteira) {
@@ -931,7 +939,12 @@
           } else {
             mensagem.textContent = `Você não marcou gols elegíveis à Chuteira de Ouro nesta temporada. ${nomeVencedor} venceu a premiação.`;
           }
-          vitorias.hidden = true;
+          vitorias.hidden = ranking.totalVitoriasChuteira < 1;
+          if (ranking.totalVitoriasChuteira > 0) {
+            const vezes =
+              ranking.totalVitoriasChuteira === 1 ? "vez" : "vezes";
+            vitorias.textContent = `Chuteira de Ouro na carreira: ${ranking.totalVitoriasChuteira} ${vezes}`;
+          }
         } else {
           if (ranking.venceuNestaTemporada) {
             mensagem.textContent = "Você venceu a Bola de Ouro nesta temporada.";
@@ -1062,18 +1075,24 @@
       };
       renderizarRanking();
 
-      const alternarRanking = () => {
-        exibindoChuteira = !exibindoChuteira;
+      const exibirBolaDeOuro = () => {
+        exibindoChuteira = false;
         renderizarRanking();
       };
-      alternar.addEventListener("click", alternarRanking);
+      const exibirChuteiraDeOuro = () => {
+        exibindoChuteira = true;
+        renderizarRanking();
+      };
+      abaBola.addEventListener("click", exibirBolaDeOuro);
+      abaChuteira.addEventListener("click", exibirChuteiraDeOuro);
 
       modal.hidden = false;
       continuar.focus();
 
       const fechar = () => {
         modal.hidden = true;
-        alternar.removeEventListener("click", alternarRanking);
+        abaBola.removeEventListener("click", exibirBolaDeOuro);
+        abaChuteira.removeEventListener("click", exibirChuteiraDeOuro);
         continuar.removeEventListener("click", fechar);
         document.removeEventListener("keydown", aoTeclar);
         resolve();
@@ -1956,11 +1975,63 @@
     };
   }
 
+  function serializarEstadoCompacto() {
+    return JSON.stringify(estado, (chave, valor) => {
+      if (
+        chave !== "rankingGlobalOutrasLigas" ||
+        !valor ||
+        !Array.isArray(valor.jogadores)
+      ) {
+        return valor;
+      }
+      return {
+        ano: valor.ano,
+        jogadores: valor.jogadores.map((jogador) => ({
+          id: jogador.id,
+          titulosIndividuais: jogador.titulosIndividuais,
+        })),
+      };
+    });
+  }
+
+  function ehErroDeQuota(erro) {
+    return (
+      erro?.name === "QuotaExceededError" ||
+      erro?.code === 22 ||
+      erro?.code === 1014
+    );
+  }
+
   function salvar() {
     try {
-      localStorage.setItem(KEY, JSON.stringify(estado));
+      const conteudo = salvamentoCompacto
+        ? serializarEstadoCompacto()
+        : JSON.stringify(estado);
+      localStorage.setItem(KEY, conteudo);
+      avisoArmazenamentoExibido = false;
     } catch (e) {
-      console.error("Não foi possível salvar a carreira beta", e);
+      if (!ehErroDeQuota(e)) {
+        console.error("Não foi possível salvar a carreira beta", e);
+        return;
+      }
+      try {
+        localStorage.setItem(KEY, serializarEstadoCompacto());
+        salvamentoCompacto = true;
+        avisoArmazenamentoExibido = false;
+      } catch (erroCompacto) {
+        console.error(
+          "Não foi possível salvar a carreira beta mesmo após reduzir o cache de ranking",
+          erroCompacto,
+          e,
+        );
+        if (!avisoArmazenamentoExibido) {
+          informar(
+            "O armazenamento do navegador está cheio. A carreira não pôde ser salva; libere espaço nos dados deste site e tente novamente.",
+            true,
+          );
+          avisoArmazenamentoExibido = true;
+        }
+      }
     }
   }
   function carregar() {
@@ -8882,6 +8953,9 @@
     const vitoriasAnteriores = historicoCarreira.filter((item) =>
       (item.trofeusIndividuais || []).includes("Bola de Ouro"),
     ).length;
+    const vitoriasAnterioresChuteira = historicoCarreira.filter((item) =>
+      (item.trofeusIndividuais || []).includes("Chuteira de Ouro"),
+    ).length;
 
     return {
       vencedor: avaliados[0]
@@ -8892,6 +8966,11 @@
         ? { nome: rankingChuteira[0].nome }
         : null,
       chuteiraPosicaoUsuario: posicaoUsuarioChuteira,
+      totalVitoriasChuteira:
+        vitoriasAnterioresChuteira +
+        ((temporada.trofeusIndividuais || []).includes("Chuteira de Ouro")
+          ? 1
+          : 0),
       jogadores: avaliados.slice(0, 10).map((jogador) => ({
         nome: jogador.nome || "Jogador",
         clube: jogador.clube?.nome || jogador.clubeId || "Clube não informado",

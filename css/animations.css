@@ -441,36 +441,44 @@ html[data-theme="light"] .jja-penaltis-resumo {
     font-weight: 900;
 }
 
-.jja-bola-de-ouro-caixa h3 {
-    margin: 10px 0 6px;
-    padding-right: 44px;
+.jja-bola-de-ouro-abas {
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+    margin: 10px 0 12px;
+    /* border-bottom: 1px solid rgba(250, 204, 21, 0.28); */
+}
+
+.jja-bola-de-ouro-abas h3 {
+    margin: 0;
     color: #fde047;
     font-size: 1.45rem;
 }
 
-.jja-bola-de-ouro-alternar {
-    position: absolute;
-    top: 18px;
-    right: 18px;
-    display: grid;
-    width: 38px;
-    height: 38px;
-    place-items: center;
-    padding: 0;
-    border: 1px solid rgba(250, 204, 21, 0.55);
-    border-radius: 50%;
-    background: rgba(234, 179, 8, 0.14);
-    color: #fde047;
-    font-size: 1.15rem;
+.jja-bola-de-ouro-abas button {
+    padding: 0 0 8px;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -1px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
     cursor: pointer;
 }
 
-.jja-bola-de-ouro-alternar:hover,
-.jja-bola-de-ouro-alternar:focus-visible {
-    background: rgba(234, 179, 8, 0.28);
+.jja-bola-de-ouro-abas button[aria-pressed="false"] {
+    opacity: 0.65;
 }
 
-.jja-bola-de-ouro-alternar:focus-visible {
+.jja-bola-de-ouro-abas button[aria-pressed="true"] {
+    border-bottom-color: #fde047;
+}
+
+.jja-bola-de-ouro-abas button:hover {
+    opacity: 1;
+}
+
+.jja-bola-de-ouro-abas button:focus-visible {
     outline: 2px solid #fde047;
     outline-offset: 2px;
 }
@@ -869,6 +877,8 @@ html[data-theme="light"] .jja-proximo.proxima-e-final .jja-proximo-topo > span:f
     .jja-evento-caixa { padding: 20px 16px 16px; }
     .jja-evento-icone { font-size: 2.2rem; }
     .jja-bola-de-ouro-caixa { padding: 18px 12px 14px; }
+    .jja-bola-de-ouro-abas { gap: 8px; }
+    .jja-bola-de-ouro-abas h3 { font-size: 1rem; }
     .jja-bola-de-ouro-cabecalho,
     .jja-bola-de-ouro-linha { grid-template-columns: 34px minmax(0, 1fr) 32px 68px; gap: 8px; }
     .jja-bola-de-ouro-cabecalho,
