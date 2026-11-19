@@ -18,6 +18,95 @@ let footmainLoadingOverlay = null;
 let cacheMetricasCarreira = new WeakMap();
 const desempenhoFootMain = new Map();
 let medicaoDesempenhoHabilitada = false;
+let workerAnaliseCarreiras = null;
+let proximoIdCalculoCarreira = 0;
+let versaoRenderizacaoRecordes = 0;
+let chaveCacheRecordes = null;
+let cacheRecordesCalculados = null;
+const calculosCarreiraPendentes = new Map();
+let cacheHistoricoRaw;
+let cacheHistoricoNormalizado = null;
+
+function invalidarCacheRecordes() {
+  versaoRenderizacaoRecordes += 1;
+  chaveCacheRecordes = null;
+  cacheRecordesCalculados = null;
+}
+
+window.addEventListener("storage", (evento) => {
+  if (
+    evento.key === STORAGE_KEY ||
+    evento.key === STORAGE_KEY_RANKING ||
+    evento.key === null
+  ) {
+    invalidarCacheRecordes();
+  }
+});
+
+function encerrarWorkerAnaliseCarreiras(erro) {
+  workerAnaliseCarreiras?.terminate();
+  workerAnaliseCarreiras = null;
+  for (const [id, pendente] of calculosCarreiraPendentes) {
+    calculosCarreiraPendentes.delete(id);
+    pendente.reject(erro);
+  }
+}
+
+function calcularRecordesNoWorker(carreiras) {
+  return new Promise((resolver, rejeitar) => {
+    if (typeof Worker === "undefined") {
+      rejeitar(new Error("Este navegador não oferece suporte a Web Workers."));
+      return;
+    }
+
+    let id;
+    try {
+      if (!workerAnaliseCarreiras) {
+        workerAnaliseCarreiras = new Worker("js/career-analysis-worker.js");
+        workerAnaliseCarreiras.addEventListener("message", (evento) => {
+          const mensagem = evento.data;
+          const pendente = calculosCarreiraPendentes.get(mensagem?.id);
+          if (!pendente) return;
+          calculosCarreiraPendentes.delete(mensagem.id);
+          if (mensagem.erro) {
+            pendente.reject(new Error(mensagem.erro));
+          } else if (Array.isArray(mensagem.recordes)) {
+            pendente.resolve(mensagem.recordes);
+          } else {
+            pendente.reject(
+              new Error("O Worker retornou um resultado de recordes inválido."),
+            );
+          }
+        });
+        workerAnaliseCarreiras.addEventListener("error", (evento) => {
+          const erro =
+            evento.error ||
+            new Error(evento.message || "Falha no Worker de análise.");
+          console.error("[FootMain] Falha no Worker de análise.", erro);
+          encerrarWorkerAnaliseCarreiras(erro);
+        });
+        workerAnaliseCarreiras.addEventListener("messageerror", () => {
+          const erro = new Error(
+            "Não foi possível ler a resposta do Worker de análise.",
+          );
+          console.error("[FootMain] Resposta inválida do Worker.", erro);
+          encerrarWorkerAnaliseCarreiras(erro);
+        });
+      }
+
+      id = ++proximoIdCalculoCarreira;
+      calculosCarreiraPendentes.set(id, { resolve: resolver, reject: rejeitar });
+      workerAnaliseCarreiras.postMessage({
+        id,
+        tipo: "calcular-recordes",
+        carreiras,
+      });
+    } catch (erro) {
+      if (id !== undefined) calculosCarreiraPendentes.delete(id);
+      rejeitar(erro);
+    }
+  });
+}
 
 function medirEtapaFootMain(etapa, operacao) {
   if (!medicaoDesempenhoHabilitada) return operacao();
@@ -95,6 +184,23 @@ async function mostrarCarregamentoFootMain(texto = "Processando...") {
     texto;
   footmainLoadingOverlay.hidden = false;
   await new Promise((resolver) => requestAnimationFrame(() => resolver()));
+}
+
+function atualizarCarregamentoFootMain(texto) {
+  const textoEl = footmainLoadingOverlay?.querySelector(
+    ".footmain-loading-texto",
+  );
+  if (textoEl) textoEl.textContent = texto;
+}
+
+function cederControleFootMain() {
+  return new Promise((resolver) => {
+    if (document.visibilityState === "hidden") {
+      setTimeout(resolver, 0);
+      return;
+    }
+    requestAnimationFrame(resolver);
+  });
 }
 
 function ocultarCarregamentoFootMain() {
@@ -1348,7 +1454,11 @@ function safeStorageGet(chave) {
 function safeStorageSet(chave, valor) {
   return medirEtapaFootMain("salvamento_dados", () => {
     try {
+      if (localStorage.getItem(chave) === valor) return true;
       localStorage.setItem(chave, valor);
+      if (chave === STORAGE_KEY || chave === STORAGE_KEY_RANKING) {
+        invalidarCacheRecordes();
+      }
       return true;
     } catch (erro) {
       console.error(`Não foi possível salvar ${chave}:`, erro);
@@ -1727,21 +1837,32 @@ function normalizarPartidasEliminatorias(partidas) {
 
 function lerHistorico() {
   const historicoRaw = safeStorageGet(STORAGE_KEY);
+  if (historicoRaw === cacheHistoricoRaw && cacheHistoricoNormalizado) {
+    return cacheHistoricoNormalizado;
+  }
   if (!historicoRaw) {
+    cacheHistoricoRaw = historicoRaw;
+    cacheHistoricoNormalizado = [];
     return [];
   }
 
   try {
     const historico = JSON.parse(historicoRaw);
     if (!Array.isArray(historico)) {
+      cacheHistoricoRaw = historicoRaw;
+      cacheHistoricoNormalizado = [];
       return [];
     }
 
-    return historico
+    cacheHistoricoNormalizado = historico
       .map((temporada) => validarTemporada(temporada))
       .filter(Boolean);
+    cacheHistoricoRaw = historicoRaw;
+    return cacheHistoricoNormalizado;
   } catch (erro) {
     console.error("Erro ao ler o histórico salvo:", erro);
+    cacheHistoricoRaw = historicoRaw;
+    cacheHistoricoNormalizado = [];
     return [];
   }
 }
@@ -1755,8 +1876,13 @@ function salvarHistorico(historico) {
     .map((temporada) => validarTemporada(temporada))
     .filter(Boolean);
 
-  const salvo = safeStorageSet(STORAGE_KEY, JSON.stringify(historicoValidado));
-  if (salvo) cacheMetricasCarreira = new WeakMap();
+  const historicoRaw = JSON.stringify(historicoValidado);
+  const salvo = safeStorageSet(STORAGE_KEY, historicoRaw);
+  if (salvo) {
+    cacheHistoricoRaw = historicoRaw;
+    cacheHistoricoNormalizado = historicoValidado;
+    cacheMetricasCarreira = new WeakMap();
+  }
   return salvo;
 }
 
@@ -3061,7 +3187,20 @@ function renderMapaCalorTemporadas(temporadas) {
     )}</div><p class="heatmap-legenda">Cada célula mostra gols (G) e assistências (A); quanto mais intensa, maior a produção ofensiva.</p>`;
 }
 
-function renderDetalhesCarreira(carreira) {
+function renderDetalhesCarreira(carreira, indiceRanking) {
+  const totalTemporadas = obterTemporadasDaCarreira(carreira).length;
+  return `<details class="detalhes-carreira" data-carreira-index="${indiceRanking}">
+        <summary class="detalhes-carreira-summary">
+            <span class="detalhes-carreira-icone">📊</span>
+            <span>Ver trajetória completa</span>
+            ${totalTemporadas ? `<span class="detalhes-carreira-badge">${totalTemporadas} temp.</span>` : ""}
+            <span class="detalhes-carreira-seta">▾</span>
+        </summary>
+        <div class="detalhes-carreira-conteudo"><p class="visual-vazio">Abra para carregar os detalhes da carreira.</p></div>
+    </details>`;
+}
+
+function renderConteudoDetalhesCarreira(carreira) {
   const temporadas = obterTemporadasDaCarreira(carreira);
   const totalTemporadas = temporadas.length;
   const totalTitulos = (carreira.trofeusColetivos || []).length;
@@ -3131,14 +3270,7 @@ function renderDetalhesCarreira(carreira) {
         .join("")
     : '<p class="trajetoria-vazio">Os dados por temporada não estão disponíveis para esta carreira antiga.</p>';
 
-  return `<details class="detalhes-carreira">
-        <summary class="detalhes-carreira-summary">
-            <span class="detalhes-carreira-icone">📊</span>
-            <span>Ver trajetória completa</span>
-            ${totalTemporadas ? `<span class="detalhes-carreira-badge">${totalTemporadas} temp.</span>` : ""}
-            <span class="detalhes-carreira-seta">▾</span>
-        </summary>
-        <div class="detalhes-carreira-conteudo">
+  return `<div class="detalhes-carreira-conteudo">
             <div class="trajetoria-resumo">
                 <div class="trajetoria-resumo-card">
                     <span class="trajetoria-resumo-label">Temporadas</span>
@@ -3174,8 +3306,7 @@ function renderDetalhesCarreira(carreira) {
             ${renderMapaCalorTemporadas(temporadas)}
             <h4 class="trajetoria-titulo-lista">Temporada por temporada</h4>
             <div class="trajetoria-lista">${listaTemporadas}</div>
-        </div>
-    </details>`;
+        </div>`;
 }
 
 const CONQUISTAS = [
@@ -4002,11 +4133,92 @@ function atualizarNotificacaoConquista(carreira, forcarExibicao = false) {
   notificacao.hidden = false;
 }
 
+function renderizarRecordes(listaRecordes, recordes) {
+  listaRecordes.removeAttribute("aria-busy");
+  listaRecordes.innerHTML = recordes
+    .map((recorde) => {
+      const melhor = recorde.melhor;
+      const valor = melhor ? Number(melhor[recorde.campo]) || 0 : 0;
+      return `<article class="recorde-card">
+            <span class="recorde-icone">🏆</span>
+            <div><strong>${escaparHTML(recorde.nome)}</strong>
+            <p>${melhor ? `${valor.toLocaleString("pt-BR")} ${recorde.sufixo}` : "Ainda sem dados"}</p>
+            <small>${melhor ? `${escaparHTML(recorde.carreira ? melhor.nome : melhor.carreiraNome)}${recorde.carreira ? "" : ` · ${escaparHTML(melhor.ano)}`}` : "Finalize uma carreira para registrar recordes"}</small></div>
+        </article>`;
+    })
+    .join("");
+}
+
+function atualizarRecordes(listaRecordes, carreiras) {
+  const chaveRanking = safeStorageGet(STORAGE_KEY_RANKING) || "[]";
+  if (chaveCacheRecordes === chaveRanking && cacheRecordesCalculados) {
+    renderizarRecordes(listaRecordes, cacheRecordesCalculados);
+    return;
+  }
+
+  const versao = ++versaoRenderizacaoRecordes;
+  const dadosCarreiras = carreiras.map((carreira) => ({
+    nome: carreira.nome,
+    gols: carreira.gols,
+    temporadas: obterTemporadasDaCarreira(carreira).map((temporada) => ({
+      ano: temporada.ano,
+      jogos: temporada.jogos,
+      gols: temporada.gols,
+      assistencias: temporada.assistencias,
+      overall: temporada.overall,
+      trofeusColetivos: temporada.trofeusColetivos,
+      trofeusIndividuais: temporada.trofeusIndividuais,
+      eventos: (Array.isArray(temporada.eventos) ? temporada.eventos : [])
+        .filter((evento) => evento.tipo === "hat-trick")
+        .map((evento) => ({ tipo: evento.tipo })),
+    })),
+  }));
+  listaRecordes.setAttribute("aria-busy", "true");
+
+  const salvarResultado = (recordes) => {
+    if (versao !== versaoRenderizacaoRecordes) return;
+    chaveCacheRecordes = chaveRanking;
+    cacheRecordesCalculados = recordes;
+    const secao = listaRecordes.closest("#conquistas");
+    if (!secao || secao.querySelector("details")?.open) {
+      renderizarRecordes(listaRecordes, recordes);
+    } else {
+      listaRecordes.removeAttribute("aria-busy");
+    }
+  };
+
+  calcularRecordesNoWorker(dadosCarreiras)
+    .then(salvarResultado)
+    .catch((erroWorker) => {
+      console.warn(
+        "[FootMain] Worker de recordes indisponível; usando cálculo local.",
+        erroWorker,
+      );
+      try {
+        salvarResultado(
+          window.FootMainCareerAnalysis.calcularRecordes(dadosCarreiras),
+        );
+      } catch (erroLocal) {
+        console.error(
+          "[FootMain] Não foi possível calcular os recordes no Worker nem na interface.",
+          erroLocal,
+        );
+        if (versao === versaoRenderizacaoRecordes) {
+          listaRecordes.removeAttribute("aria-busy");
+          listaRecordes.textContent =
+            "Não foi possível calcular os recordes desta carreira.";
+        }
+      }
+    });
+}
+
 function renderConquistas() {
   const seletor = document.getElementById("filtro-carreira-conquistas");
   const lista = document.getElementById("lista-conquistas");
   const listaRecordes = document.getElementById("lista-recordes");
   if (!seletor || !lista || !listaRecordes) return;
+  const secao = lista.closest("#conquistas");
+  if (secao && !secao.querySelector("details")?.open) return;
 
   const filtroCategoria = document.getElementById(
     "filtro-categoria-conquistas",
@@ -4108,118 +4320,7 @@ function renderConquistas() {
     }
   }
 
-  // ----- Recordes -----
-  const temporadasDeTodas = ordenadas.flatMap((item) =>
-    obterTemporadasDaCarreira(item).map((temporada) => ({
-      ...temporada,
-      carreiraNome: item.nome,
-      hatTricksTemporada: contarHatTricks([temporada]),
-      pontosTemporada: calcularPontuacao({
-        jogos: temporada.jogos,
-        gols: temporada.gols,
-        assistencias: temporada.assistencias,
-        premios: contarPremios(temporada),
-        trofeusColetivos: temporada.trofeusColetivos || [],
-        trofeusIndividuais: temporada.trofeusIndividuais || [],
-      }),
-      titulosTemporada:
-        (temporada.trofeusColetivos || []).length +
-        (temporada.trofeusIndividuais || []).length,
-    })),
-  );
-  const carreirasComMetricas = ordenadas.map((item) => ({
-    ...item,
-    hatTricksCarreira: contarHatTricks(obterTemporadasDaCarreira(item)),
-    maiorOver: obterMetricasCarreira(item).maiorOver,
-  }));
-
-  const recordes = [
-    {
-      nome: "Mais gols em uma temporada",
-      campo: "gols",
-      sufixo: "gols",
-      melhor: temporadasDeTodas.reduce(
-        (a, b) => (!a || b.gols > a.gols ? b : a),
-        null,
-      ),
-    },
-    {
-      nome: "Mais assistências em uma temporada",
-      campo: "assistencias",
-      sufixo: "assistências",
-      melhor: temporadasDeTodas.reduce(
-        (a, b) => (!a || b.assistencias > a.assistencias ? b : a),
-        null,
-      ),
-    },
-    {
-      nome: "Mais títulos em uma temporada",
-      campo: "titulosTemporada",
-      sufixo: "títulos",
-      melhor: temporadasDeTodas.reduce(
-        (a, b) => (!a || b.titulosTemporada > a.titulosTemporada ? b : a),
-        null,
-      ),
-    },
-    {
-      nome: "Maior pontuação em uma temporada",
-      campo: "pontosTemporada",
-      sufixo: "pontos",
-      melhor: temporadasDeTodas.reduce(
-        (a, b) => (!a || b.pontosTemporada > a.pontosTemporada ? b : a),
-        null,
-      ),
-    },
-    {
-      nome: "Mais hat-tricks em uma temporada",
-      campo: "hatTricksTemporada",
-      sufixo: "hat-tricks",
-      melhor: temporadasDeTodas.reduce(
-        (a, b) => (!a || b.hatTricksTemporada > a.hatTricksTemporada ? b : a),
-        null,
-      ),
-    },
-    {
-      nome: "Carreira com mais hat-tricks",
-      campo: "hatTricksCarreira",
-      sufixo: "hat-tricks",
-      melhor: carreirasComMetricas.reduce(
-        (a, b) => (!a || b.hatTricksCarreira > a.hatTricksCarreira ? b : a),
-        null,
-      ),
-      carreira: true,
-    },
-    {
-      nome: "Carreira com maior Over",
-      campo: "maiorOver",
-      sufixo: "Over",
-      melhor: carreirasComMetricas.reduce(
-        (a, b) => (!a || b.maiorOver > a.maiorOver ? b : a),
-        null,
-      ),
-      carreira: true,
-    },
-    {
-      nome: "Carreira com mais gols",
-      campo: "gols",
-      sufixo: "gols",
-      melhor: ordenadas.reduce((a, b) => (!a || b.gols > a.gols ? b : a), null),
-      carreira: true,
-    },
-  ];
-
-  listaRecordes.innerHTML = recordes
-    .map((recorde) => {
-      const melhor = recorde.melhor;
-      const valor = melhor ? Number(melhor[recorde.campo]) || 0 : 0;
-      return `<article class="recorde-card">
-            <span class="recorde-icone">🏆</span>
-            <div><strong>${escaparHTML(recorde.nome)}</strong>
-            <p>${melhor ? `${valor.toLocaleString("pt-BR")} ${recorde.sufixo}` : "Ainda sem dados"}</p>
-            <small>${melhor ? `${escaparHTML(recorde.carreira ? melhor.nome : melhor.carreiraNome)}${recorde.carreira ? "" : ` · ${escaparHTML(melhor.ano)}`}` : "Finalize uma carreira para registrar recordes"}</small></div>
-        </article>`;
-    })
-    .join("");
+  atualizarRecordes(listaRecordes, ordenadas);
 }
 
 function renderRanking() {
@@ -4227,6 +4328,11 @@ function renderRanking() {
   const filtroRanking = document.getElementById("filtro-ranking");
 
   if (!listaRanking) return;
+  const secaoRanking = listaRanking.closest("#ranking");
+  if (secaoRanking && !secaoRanking.querySelector("details")?.open) {
+    renderConquistas();
+    return;
+  }
 
   const criterio = filtroRanking?.value || "pontuacao";
   const filtroPosicao = document.getElementById("filtro-posicao-ranking");
@@ -4394,12 +4500,32 @@ function renderRanking() {
                       <div class="titulo-tags">${renderTrofeus(trofeusIndividuais, "individual")}</div>
                   </div>
               </div>
-              ${renderDetalhesCarreira(carreira)}
+              ${renderDetalhesCarreira(carreira, index)}
               <button type="button" class="remover-ranking" data-id="${escaparHTML(carreira.id || "")}" aria-label="Apagar ${escaparHTML(carreira.nome)} do ranking">Apagar</button>
           </li>
       `;
     })
     .join("");
+
+  listaRanking
+    .querySelectorAll("details.detalhes-carreira")
+    .forEach((detalhes) => {
+      detalhes.addEventListener("toggle", () => {
+        if (!detalhes.open || detalhes.dataset.renderizado === "true") return;
+        const carreira = ranking[Number(detalhes.dataset.carreiraIndex)];
+        const conteudo = detalhes.querySelector(
+          ".detalhes-carreira-conteudo",
+        );
+        if (!carreira || !conteudo) {
+          console.error(
+            "[FootMain] Não foi possível carregar os detalhes da carreira no ranking.",
+          );
+          return;
+        }
+        conteudo.outerHTML = renderConteudoDetalhesCarreira(carreira);
+        detalhes.dataset.renderizado = "true";
+      });
+    });
 
   renderConquistas();
 }
@@ -4529,11 +4655,13 @@ const TEMPORADAS_POR_PAGINA = 25;
 
 function renderHistorico() {
   const lista = document.getElementById("lista-temporadas");
+  if (!lista) return;
+  const secaoHistorico = lista.closest("#historico");
+  if (secaoHistorico && !secaoHistorico.querySelector("details")?.open) return;
+
   const filtroHistorico = document.getElementById("filtro-historico");
   const criterio = filtroHistorico?.value || "ordem";
   const historico = lerHistoricoAtiva();
-
-  if (!lista) return;
 
   let paginacao = document.getElementById("paginacao-temporadas");
   if (!paginacao) {
@@ -7762,6 +7890,9 @@ async function simularTudo() {
       anosContratoRestantes = 0;
     }
 
+    const totalTemporadasPrevistas = Math.max(1, idadeLimite - idade + 1);
+    let temporadasSimuladas = 0;
+
     while (idade <= idadeLimite) {
       if (!carreiraAtual.subiuProfissional) {
         const bases = obterBasesDaNacionalidade(nacionalidade);
@@ -7861,6 +7992,11 @@ async function simularTudo() {
       }
       carreiraAtual.salarioAtual = temporada.salario;
       historico.push(temporada);
+      temporadasSimuladas += 1;
+      atualizarCarregamentoFootMain(
+        `Simulando a carreira completa... (${temporadasSimuladas}/${totalTemporadasPrevistas} temporadas)`,
+      );
+      await cederControleFootMain();
 
       // Lesão gravíssima encerra a carreira imediatamente.
       if (temporada.lesaoCarreira) {
@@ -7975,6 +8111,9 @@ async function limparHistorico() {
 
   localStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem(STORAGE_KEY_CARREIRA_ATUAL);
+  cacheHistoricoRaw = undefined;
+  cacheHistoricoNormalizado = null;
+  invalidarCacheRecordes();
   document.getElementById("nome").value = "";
   document.getElementById("idade").value = String(
     getConfig().geral.idadeInicialPadrao ?? 18,
@@ -8017,6 +8156,7 @@ async function limparRanking() {
   }
 
   localStorage.removeItem(STORAGE_KEY_RANKING);
+  invalidarCacheRecordes();
   renderRanking();
 }
 
@@ -8278,6 +8418,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const filtroCategoriaConquistas = document.getElementById(
     "filtro-categoria-conquistas",
   );
+  document
+    .querySelector("#historico details.secao-colapsavel")
+    ?.addEventListener("toggle", (evento) => {
+      if (evento.currentTarget.open) renderHistorico();
+    });
+  document
+    .querySelector("#ranking details.secao-colapsavel")
+    ?.addEventListener("toggle", (evento) => {
+      if (evento.currentTarget.open) renderRanking();
+    });
+  document
+    .querySelector("#conquistas details.secao-colapsavel")
+    ?.addEventListener("toggle", (evento) => {
+      if (evento.currentTarget.open) renderConquistas();
+    });
 
   const campoIdade = document.getElementById("idade");
   const posicaoSelecionadaTexto = document.getElementById(

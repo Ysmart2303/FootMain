@@ -2119,7 +2119,9 @@
       const conteudo = salvamentoCompacto
         ? serializarEstadoCompacto()
         : JSON.stringify(estado);
-      localStorage.setItem(KEY, conteudo);
+      if (localStorage.getItem(KEY) !== conteudo) {
+        localStorage.setItem(KEY, conteudo);
+      }
       avisoArmazenamentoExibido = false;
     } catch (e) {
       if (!ehErroDeQuota(e)) {
@@ -2128,7 +2130,10 @@
         return;
       }
       try {
-        localStorage.setItem(KEY, serializarEstadoCompacto());
+        const conteudoCompacto = serializarEstadoCompacto();
+        if (localStorage.getItem(KEY) !== conteudoCompacto) {
+          localStorage.setItem(KEY, conteudoCompacto);
+        }
         salvamentoCompacto = true;
         avisoArmazenamentoExibido = false;
       } catch (erroCompacto) {
@@ -11361,6 +11366,12 @@
         }
         partidasSimuladas++;
         if (partidasSimuladas % 20 === 0) {
+          const textoCarregamento = loadingEl?.querySelector(
+            ".footmain-loading-texto",
+          );
+          if (textoCarregamento) {
+            textoCarregamento.textContent = `Simulando a temporada ${estado.ano}... (${partidasSimuladas} partidas concluídas)`;
+          }
           salvar();
           await new Promise((resolver) => {
             if (document.visibilityState === "hidden") {
@@ -12284,7 +12295,7 @@
       (item) => item.id === estado?.clubeId,
     );
     secao.hidden = !estado || !clube;
-    if (secao.hidden) return;
+    if (secao.hidden || !secao.open) return;
 
     const seletor = $("jja-ranking-competicao");
     const competicaoAtual = seletor?.value || "global";
@@ -12343,6 +12354,7 @@
   }
 
   function renderizar() {
+    if (simulandoCarreira) return;
     const ativo = !!estado;
 
     const proxima = ativo
@@ -12521,47 +12533,51 @@
       Number(e.jogadasCriadas) || 0,
     );
 
-    const tabela = estado.tabela
-      .filter((t) => !t.id.startsWith("__rodada__"))
-      .sort(
-        (a, b) => b.pts - a.pts || b.gp - b.gc - (a.gp - a.gc) || b.gp - a.gp,
-      );
-
-    const ligaParaZonas =
-      estado.liga ||
-      clubesDisponiveis().find((c) => c.id === estado.clubeId)?.liga ||
-      "";
-    const zonasClassificacao = obterZonasClassificacao(ligaParaZonas);
-    const totalTimesTabela = tabela.length;
-    const linhasTabela = tabela
-      .map((t, i) => {
-        const posicao = i + 1;
-        const zona = obterZonaPosicao(
-          zonasClassificacao,
-          posicao,
-          totalTimesTabela,
+    const tabelaEl = $("jja-tabela");
+    const painelTabela = tabelaEl?.closest("details");
+    if (tabelaEl && (!painelTabela || painelTabela.open)) {
+      const tabela = estado.tabela
+        .filter((t) => !t.id.startsWith("__rodada__"))
+        .sort(
+          (a, b) =>
+            b.pts - a.pts || b.gp - b.gc - (a.gp - a.gc) || b.gp - a.gp,
         );
-        const attrs = zona
-          ? ` data-zona="${escapar(zona.tipo)}" style="--zona-cor:${zona.cor}"`
-          : "";
-        const classe = t.id === estado.clubeId ? "meu-clube" : "";
-        return `<tr class="${classe}"${attrs}>
+
+      const ligaParaZonas =
+        estado.liga ||
+        clubesDisponiveis().find((c) => c.id === estado.clubeId)?.liga ||
+        "";
+      const zonasClassificacao = obterZonasClassificacao(ligaParaZonas);
+      const totalTimesTabela = tabela.length;
+      const linhasTabela = tabela
+        .map((t, i) => {
+          const posicao = i + 1;
+          const zona = obterZonaPosicao(
+            zonasClassificacao,
+            posicao,
+            totalTimesTabela,
+          );
+          const attrs = zona
+            ? ` data-zona="${escapar(zona.tipo)}" style="--zona-cor:${zona.cor}"`
+            : "";
+          const classe = t.id === estado.clubeId ? "meu-clube" : "";
+          return `<tr class="${classe}"${attrs}>
                 <td>${posicao}</td>
                 <td class="jja-clube-celula">${htmlEscudoClube(clubesDisponiveis().find((clube) => clube.id === t.id) || { id: t.id, nome: t.nome, liga: ligaParaZonas }, "pequeno")}${escapar(t.nome)}</td>
                 <td>${t.j}</td>
                 <td>${t.gp - t.gc}</td>
                 <td><strong>${t.pts}</strong></td>
             </tr>`;
-      })
-      .join("");
+        })
+        .join("");
 
-    const grupoDoJogador = Object.values(estado.copinha?.grupos || {}).find(
-      (grupo) => grupo.includes(estado.clubeId),
-    );
-    $("jja-tabela").innerHTML =
-      estado.copinha && grupoDoJogador
-        ? renderizarProgressoCompeticoes()
-        : `
+      const grupoDoJogador = Object.values(estado.copinha?.grupos || {}).find(
+        (grupo) => grupo.includes(estado.clubeId),
+      );
+      tabelaEl.innerHTML =
+        estado.copinha && grupoDoJogador
+          ? renderizarProgressoCompeticoes()
+          : `
                 <div class="jja-tabela-wrap">
                     <table class="jja-tabela">
                         <thead><tr><th>#</th><th>Clube</th><th>J</th><th>SG</th><th>Pts</th></tr></thead>
@@ -12570,9 +12586,13 @@
                 </div>
                 ${renderizarLegendaZonas(zonasClassificacao)}
                 ${renderizarProgressoCompeticoes()}`;
+    }
 
     // ---------- NOVO: calendário com pênaltis ----------
-    $("jja-calendario").innerHTML =
+    const calendarioEl = $("jja-calendario");
+    const painelCalendario = calendarioEl?.closest("details");
+    if (calendarioEl && (!painelCalendario || painelCalendario.open)) {
+      calendarioEl.innerHTML =
       `<div class="jja-lista-jogos">${estado.partidas
         .filter((p) => !ehPartidaDeIA(p))
         .map((p) => {
@@ -12614,6 +12634,7 @@
             </div>`;
         })
         .join("")}</div>`;
+    }
   }
   function mostrarDesempenhoTemporada(temporada) {
     const resultados = $("resultados");
@@ -12721,6 +12742,7 @@
     } finally {
       ocultarCarregamento();
       simulandoCarreira = false;
+      renderizar();
     }
   }
 
@@ -12940,6 +12962,15 @@
         estado?.nacionalidade || carreira.nacionalidade || "";
     }
     configurarDecisoesPartida();
+    ["jja-tabela", "jja-calendario"].forEach((id) => {
+      const painel = $(id)?.closest("details");
+      painel?.addEventListener("toggle", () => {
+        if (painel.open) renderizar();
+      });
+    });
+    $("jja-ranking-liga")?.addEventListener("toggle", () => {
+      if ($("jja-ranking-liga").open) renderizarRankingLiga();
+    });
     $("jja-ranking-liga")?.addEventListener("click", (evento) => {
       const botao = evento.target.closest("[data-ranking-metrica]");
       if (!botao) return;
