@@ -761,6 +761,17 @@
   let simulandoTemporada = false;
   let adiarPromocaoBaseAteFim = false;
   let promocaoBasePendente = null;
+  let clubesDisponiveisCache = null;
+  const forcasClubesCache = new Map();
+  let versaoResultados = 0;
+  let cacheTabelasContinentais = new Map();
+  let cacheEstatisticasBolaDeOuro = null;
+
+  function invalidarCachesDerivados() {
+    versaoResultados++;
+    cacheTabelasContinentais.clear();
+    cacheEstatisticasBolaDeOuro = null;
+  }
 
   function mostrarCarregamento(texto = "Simulando...") {
     if (!loadingEl) {
@@ -1218,33 +1229,40 @@
     return k - 1;
   }
   function clubesDisponiveis() {
+    if (clubesDisponiveisCache) return clubesDisponiveisCache;
     const clubes = [
       ...(typeof CLUBES !== "undefined" ? CLUBES : []),
       ...(typeof CLUBES_BASE !== "undefined" ? CLUBES_BASE : []),
     ];
-    return [
+    clubesDisponiveisCache = [
       ...new Map(
         clubes
           .filter((c) => c && c.id && c.nome && c.liga)
           .map((c) => [c.id, c]),
       ).values(),
     ];
+    return clubesDisponiveisCache;
   }
 
   function forcaClube(clube) {
+    if (!clube?.id) return 65;
     const cfg = typeof getConfig === "function" ? getConfig() : {};
     const forcaConfig = Number(cfg.clubes?.potencias?.[clube.id]);
+    const chave = `${clube.id}:${Number.isFinite(forcaConfig) ? forcaConfig : "regional"}`;
+    if (forcasClubesCache.has(chave)) return forcasClubesCache.get(chave);
+    let forca;
     if (Number.isFinite(forcaConfig) && forcaConfig > 0) {
-      return Math.max(35, Math.min(99, forcaConfig));
-    }
-    // Clubes regionais usam a tabela dedicada, fora do config editável.
-    if (
+      forca = Math.max(35, Math.min(99, forcaConfig));
+    } else if (
       typeof FORCAS_CLUBES_REGIONAIS !== "undefined" &&
       FORCAS_CLUBES_REGIONAIS[clube.id]
     ) {
-      return Math.max(35, Math.min(99, FORCAS_CLUBES_REGIONAIS[clube.id]));
+      forca = Math.max(35, Math.min(99, FORCAS_CLUBES_REGIONAIS[clube.id]));
+    } else {
+      forca = 65;
     }
-    return 65;
+    forcasClubesCache.set(chave, forca);
+    return forca;
   }
 
   /**
@@ -1279,6 +1297,12 @@
   }
 
   function calcularTabelaContinental(torneioId, timeIds) {
+    const chaveCache = JSON.stringify([torneioId, timeIds]);
+    const tabelaEmCache = cacheTabelasContinentais.get(chaveCache);
+    if (tabelaEmCache?.versao === versaoResultados) {
+      return tabelaEmCache.tabela.map((time) => ({ ...time }));
+    }
+
     const tabela = timeIds.map((id) => ({
       id,
       nome: obterClube(id)?.nome || "Clube",
@@ -1292,14 +1316,14 @@
       sg: 0,
     }));
 
-    const jogos = estado.partidas.filter(
-      (p) =>
-        p.torneioId === torneioId &&
-        (p.tipo === "grupo" || p.tipo === "grupo-ia") &&
-        p.status === "concluida",
-    );
-
-    jogos.forEach((jogo) => {
+    const tabelaPorId = new Map(tabela.map((time) => [time.id, time]));
+    for (const jogo of estado.partidas) {
+      if (
+        jogo.torneioId !== torneioId ||
+        (jogo.tipo !== "grupo" && jogo.tipo !== "grupo-ia") ||
+        jogo.status !== "concluida"
+      )
+        continue;
       const casaId =
         jogo.tipo === "grupo"
           ? jogo.casa
@@ -1314,9 +1338,9 @@
           : jogo.foraId;
       const golsCasa = jogo.golsCasa || 0;
       const golsFora = jogo.golsFora || 0;
-      const casa = tabela.find((t) => t.id === casaId);
-      const fora = tabela.find((t) => t.id === foraId);
-      if (!casa || !fora) return;
+      const casa = tabelaPorId.get(casaId);
+      const fora = tabelaPorId.get(foraId);
+      if (!casa || !fora) continue;
 
       casa.pj++;
       fora.pj++;
@@ -1339,11 +1363,15 @@
         casa.e++;
         fora.e++;
       }
-    });
+    }
 
     tabela.forEach((t) => (t.sg = t.gm - t.gc));
     tabela.sort((a, b) => b.pts - a.pts || b.sg - a.sg || b.gm - a.gm);
-    return tabela;
+    cacheTabelasContinentais.set(chaveCache, {
+      versao: versaoResultados,
+      tabela,
+    });
+    return tabela.map((time) => ({ ...time }));
   }
 
   function renderizarTabelaContinental(torneioId, timeIds) {
@@ -1539,6 +1567,77 @@
       (t) => String(t.carreiraId) === String(carreira.id),
     );
   }
+
+  function atualizarResumoCarreira(carreira, historico, temporada) {
+    const resumo = {
+      ...(carreira.resumoEstatisticas ||
+        (typeof somarTotaisHistorico === "function"
+          ? somarTotaisHistorico(historico)
+          : {})),
+    };
+    const valoresTemporada = {
+      jogos: temporada.jogos,
+      gols: temporada.gols,
+      assistencias: temporada.assistencias,
+      jogosClube: temporada.jogosClube ?? temporada.jogos,
+      golsClube: temporada.golsClube ?? temporada.gols,
+      assistenciasClube:
+        temporada.assistenciasClube ?? temporada.assistencias,
+      jogosSelecao: temporada.jogosSelecao,
+      golsSelecao: temporada.golsSelecao,
+      assistenciasSelecao: temporada.assistenciasSelecao,
+      caps: temporada.jogosSelecao,
+      motm: temporada.motm,
+      cartaoAmarelo: temporada.cartaoAmarelo,
+      cartaoVermelho: temporada.cartaoVermelho,
+      cleanSheets: temporada.cleanSheets,
+      penaltisDefendidos: temporada.penaltisDefendidos,
+      penaltisCometidos: temporada.penaltisCometidos,
+      minutosJogados: temporada.minutosJogados,
+      driblesCompletos: temporada.driblesCompletos,
+      desarmes: temporada.desarmes,
+      defesas: temporada.defesas,
+      jogadasCriadas: temporada.jogadasCriadas,
+      premios:
+        typeof contarPremios === "function"
+          ? contarPremios(temporada)
+          : (temporada.trofeusColetivos || []).length +
+            (temporada.trofeusIndividuais || []).length,
+    };
+    Object.entries(valoresTemporada).forEach(([campo, valor]) => {
+      resumo[campo] = (Number(resumo[campo]) || 0) + (Number(valor) || 0);
+    });
+    carreira.resumoEstatisticas = resumo;
+
+    const porClube = carreira.estatisticasPorClube || {};
+    if (!carreira.estatisticasPorClube) {
+      historico.forEach((item) => {
+        if (!item.clube) return;
+        const dados = (porClube[item.clube] ||= {
+          jogos: 0,
+          gols: 0,
+          assistencias: 0,
+        });
+        dados.jogos += Number(item.jogosClube ?? item.jogos) || 0;
+        dados.gols += Number(item.golsClube ?? item.gols) || 0;
+        dados.assistencias +=
+          Number(item.assistenciasClube ?? item.assistencias) || 0;
+      });
+    }
+    if (temporada.clube) {
+      const dados = (porClube[temporada.clube] ||= {
+        jogos: 0,
+        gols: 0,
+        assistencias: 0,
+      });
+      dados.jogos += Number(temporada.jogosClube ?? temporada.jogos) || 0;
+      dados.gols += Number(temporada.golsClube ?? temporada.gols) || 0;
+      dados.assistencias +=
+        Number(temporada.assistenciasClube ?? temporada.assistencias) || 0;
+    }
+    carreira.estatisticasPorClube = porClube;
+  }
+
   function carreiraEncerrada(carreira, historico) {
     if (!historico.length) return false;
     const ultimaTemporada = historico[historico.length - 1];
@@ -2012,6 +2111,10 @@
   }
 
   function salvar() {
+    invalidarCachesDerivados();
+    const finalizarMedicao = window.FootMainPerformance?.start(
+      "salvamento_jogo_a_jogo",
+    );
     try {
       const conteudo = salvamentoCompacto
         ? serializarEstadoCompacto()
@@ -2021,6 +2124,7 @@
     } catch (e) {
       if (!ehErroDeQuota(e)) {
         console.error("Não foi possível salvar a carreira beta", e);
+        finalizarMedicao?.();
         return;
       }
       try {
@@ -2042,6 +2146,7 @@
         }
       }
     }
+    finalizarMedicao?.();
   }
   function carregar() {
     try {
@@ -2160,6 +2265,9 @@
     }
   }
   function gerarRodadasLiga(times) {
+    const finalizarMedicao = window.FootMainPerformance?.start(
+      "geracao_calendario_rodadas",
+    );
     // Algoritmo de todos-contra-todos (circle method), com returno.
     const lista = [...times];
     if (lista.length % 2) lista.push(null);
@@ -2191,10 +2299,15 @@
         status: "agendado",
       })),
     );
-    return [...ida, ...volta];
+    const rodadas = [...ida, ...volta];
+    finalizarMedicao?.();
+    return rodadas;
   }
 
   function gerarCalendario(times, clubeUsuario, rodadas, ano) {
+    const finalizarMedicao = window.FootMainPerformance?.start(
+      "geracao_calendario_partidas_e_datas",
+    );
     const jogos = [];
     const cal =
       clubeUsuario.tipo === "base"
@@ -2207,22 +2320,33 @@
     const dataFim = criarDataUTC(anoFim, cal.mesFim, 20);
     const intervalo = (dataFim - dataInicio) / Math.max(1, rodadas.length - 1);
 
-    rodadas.forEach((confrontos, r) => {
-      const jogo = confrontos.find(
-        (j) => j.casaId === clubeUsuario.id || j.foraId === clubeUsuario.id,
-      );
-      if (!jogo) return;
+    for (let r = 0; r < rodadas.length; r++) {
+      let adversarioId;
+      let jogaEmCasa;
+      for (const confronto of rodadas[r]) {
+        if (confronto.casaId === clubeUsuario.id) {
+          adversarioId = confronto.foraId;
+          jogaEmCasa = true;
+          break;
+        }
+        if (confronto.foraId === clubeUsuario.id) {
+          adversarioId = confronto.casaId;
+          jogaEmCasa = false;
+          break;
+        }
+      }
+      if (adversarioId === undefined) continue;
       jogos.push({
         rodadaLiga: r,
         data: dataInicio + Math.round(r * intervalo),
-        adversarioId:
-          jogo.casaId === clubeUsuario.id ? jogo.foraId : jogo.casaId,
-        casa: jogo.casaId === clubeUsuario.id,
+        adversarioId,
+        casa: jogaEmCasa,
         competicao: clubeUsuario.liga,
         tipo: "liga",
         status: "agendada",
       });
-    });
+    }
+    finalizarMedicao?.();
     return jogos;
   }
 
@@ -2689,6 +2813,7 @@
   function simularPartidaGrupoSelecaoIA(partida) {
     if (!partida || partida.status !== "agendada") return;
     const placar = sortearResultadoSelecao(partida.casaId, partida.foraId);
+    invalidarCachesDerivados();
     Object.assign(partida, placar, { status: "concluida" });
     partida.eventosIndividuais = gerarEventosIndividuaisLiga(
       `${estado.ano}:${partida.torneioId}:${partida.rodadaGrupo}:${partida.casaId}:${partida.foraId}`,
@@ -7694,6 +7819,9 @@
   }
 
   function obterRankingOutrasLigas() {
+    const finalizarMedicao = window.FootMainPerformance?.start(
+      "simulacao_outras_ligas_e_clubes",
+    );
     const base =
       typeof ehClubeBase === "function" && ehClubeBase(estado?.clubeId);
     const jogosUsuario = contarJogosConcluidosTemporada();
@@ -7702,8 +7830,10 @@
       cache?.versao === 16 &&
       cache?.ano === estado.ano &&
       Array.isArray(cache.jogadores);
-    if (cacheValido && cache.jogosUsuario === jogosUsuario)
+    if (cacheValido && cache.jogosUsuario === jogosUsuario) {
+      finalizarMedicao?.();
       return cache.jogadores;
+    }
 
     const clubesAlvo = base
       ? (estado.tabela || [])
@@ -7840,6 +7970,7 @@
       jogosUsuario,
       jogadores,
     };
+    finalizarMedicao?.();
     return jogadores;
   }
 
@@ -8118,6 +8249,9 @@
   }
 
   function obterEstatisticasPonderadasBolaDeOuro() {
+    if (cacheEstatisticasBolaDeOuro?.versao === versaoResultados) {
+      return cacheEstatisticasBolaDeOuro.estatisticas;
+    }
     const estatisticas = new Map();
     const obterJogador = (id, clubeId = "") => {
       if (!id) return null;
@@ -8265,6 +8399,7 @@
       );
     });
 
+    cacheEstatisticasBolaDeOuro = { versao: versaoResultados, estatisticas };
     return estatisticas;
   }
 
@@ -9769,6 +9904,7 @@
       else if (golsCasa === golsFora) estado.estatisticas.empates++;
       else estado.estatisticas.derrotas++;
     }
+    invalidarCachesDerivados();
     partida.status = "concluida";
     partida.golsCasa = golsCasa;
     partida.golsFora = golsFora;
@@ -9815,6 +9951,7 @@
           const delta = (forcaClube(timeCasa) - forcaClube(timeFora)) / 25;
           jogoIA.golsCasa = sortearPoisson(Math.max(0.25, 1.35 + delta * 0.55));
           jogoIA.golsFora = sortearPoisson(Math.max(0.25, 1.15 - delta * 0.45));
+          invalidarCachesDerivados();
           jogoIA.status = "concluida";
           jogoIA.eventosIndividuais = gerarEventosIndividuaisLiga(
             `${estado.ano}:${jogoIA.torneioId}:${jogoIA.rodadaGrupo}:${jogoIA.casaId}:${jogoIA.foraId}`,
@@ -10027,6 +10164,7 @@
           const delta = (forcaClube(timeCasa) - forcaClube(timeFora)) / 25;
           jogoIA.golsCasa = sortearPoisson(Math.max(0.25, 1.35 + delta * 0.55));
           jogoIA.golsFora = sortearPoisson(Math.max(0.25, 1.15 - delta * 0.45));
+          invalidarCachesDerivados();
           jogoIA.status = "concluida";
           jogoIA.eventosIndividuais = gerarEventosIndividuaisLiga(
             `${estado.ano}:${jogoIA.torneioId}:${jogoIA.rodadaGrupo}:${jogoIA.casaId}:${jogoIA.foraId}`,
@@ -10061,6 +10199,9 @@
   }
 
   function simularOutrosJogosDaRodada(indiceRodada) {
+    const finalizarMedicao = window.FootMainPerformance?.start(
+      "simulacao_outros_jogos_da_rodada",
+    );
     const confrontos = estado.rodadas?.[indiceRodada] || [];
     const times = clubesDisponiveis();
     confrontos.forEach((j) => {
@@ -10094,6 +10235,7 @@
       if (j.casaId === estado.clubeId || j.foraId === estado.clubeId)
         j.status = "concluido";
     });
+    finalizarMedicao?.();
   }
   function criarLancesDaPartida() {
     const posicao =
@@ -11581,6 +11723,7 @@
           carreira.anosContratoRestantes > 0
             ? `Contrato ativo · ${carreira.anosContratoRestantes} temporada(s)`
             : "Contrato encerrado; negociar na próxima temporada";
+      atualizarResumoCarreira(carreira, historicoCarreira, temporada);
       const novoHistorico = [...historicoCompleto, temporada];
       if (
         typeof salvarHistorico !== "function" ||

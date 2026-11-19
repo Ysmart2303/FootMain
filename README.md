@@ -90,6 +90,19 @@ Todos os dados ficam salvos no localStorage do navegador, então suas carreiras,
 
 Não é necessário instalar nada, usar npm ou rodar um servidor. Basta abrir o arquivo. 😉
 
+### Diagnóstico de desempenho
+
+No console do navegador, habilite a coleta antes da simulação e consulte o relatório ao terminar:
+
+```js
+FootMainPerformance.reset();
+FootMainPerformance.enable();
+// Execute a simulação pelo jogo.
+FootMainPerformance.report();
+```
+
+O relatório agrega chamadas, tempo total, média e máximo por etapa. A coleta permanece desligada por padrão; use `FootMainPerformance.enable(false)` para desativá-la.
+
 🕹️ Primeiros passos
 
 1. Digite seu nome e idade inicial.

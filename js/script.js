@@ -15,6 +15,68 @@ const REGIOES_SELECOES = {
 
 const OVERALL_PADRAO = 50;
 let footmainLoadingOverlay = null;
+let cacheMetricasCarreira = new WeakMap();
+const desempenhoFootMain = new Map();
+let medicaoDesempenhoHabilitada = false;
+
+function medirEtapaFootMain(etapa, operacao) {
+  if (!medicaoDesempenhoHabilitada) return operacao();
+  const inicio = performance.now();
+  try {
+    return operacao();
+  } finally {
+    const duracao = performance.now() - inicio;
+    const registro = desempenhoFootMain.get(etapa) || {
+      chamadas: 0,
+      totalMs: 0,
+      maxMs: 0,
+    };
+    registro.chamadas += 1;
+    registro.totalMs += duracao;
+    registro.maxMs = Math.max(registro.maxMs, duracao);
+    desempenhoFootMain.set(etapa, registro);
+  }
+}
+
+window.FootMainPerformance = {
+  start: (etapa) => {
+    if (!medicaoDesempenhoHabilitada) return () => {};
+    const inicio = performance.now();
+    return () => {
+      const duracao = performance.now() - inicio;
+      const registro = desempenhoFootMain.get(etapa) || {
+        chamadas: 0,
+        totalMs: 0,
+        maxMs: 0,
+      };
+      registro.chamadas += 1;
+      registro.totalMs += duracao;
+      registro.maxMs = Math.max(registro.maxMs, duracao);
+      desempenhoFootMain.set(etapa, registro);
+    };
+  },
+  enable: (habilitado = true) => {
+    medicaoDesempenhoHabilitada = habilitado;
+  },
+  snapshot: () =>
+    Object.fromEntries(
+      [...desempenhoFootMain].map(([etapa, registro]) => [etapa, { ...registro }]),
+    ),
+  report: () => {
+    const dados = window.FootMainPerformance.snapshot();
+    console.table(
+      Object.entries(dados).map(([etapa, registro]) => ({
+        etapa,
+        chamadas: registro.chamadas,
+        totalMs: Number(registro.totalMs.toFixed(2)),
+        mediaMs: Number((registro.totalMs / registro.chamadas).toFixed(2)),
+        maxMs: Number(registro.maxMs.toFixed(2)),
+      })),
+    );
+    return dados;
+  },
+  reset: () => desempenhoFootMain.clear(),
+};
 
 async function mostrarCarregamentoFootMain(texto = "Processando...") {
   if (!footmainLoadingOverlay) {
@@ -108,14 +170,49 @@ const CLUBES_BASE = SELECOES.flatMap((selecao) => {
 
 CLUBES.push(...CLUBES_BASE);
 
+// Índices estáticos: evitam buscas lineares em pontos repetidos da simulação.
+// São referências aos mesmos objetos existentes, sem alterar dados ou aleatoriedade.
+const MAPA_CLUBES = new Map();
+const MAPA_SELECOES = new Map();
+const BASES_POR_NACIONALIDADE = new Map();
+const CLUBES_POR_LIGA = new Map();
+
+[...CLUBES, ...(typeof CLUBES_REGIONAIS !== "undefined" ? CLUBES_REGIONAIS : [])]
+  .forEach((clube) => {
+    if (clube?.id) MAPA_CLUBES.set(clube.id, clube);
+  });
+SELECOES.forEach((selecao) => {
+  if (selecao?.id) MAPA_SELECOES.set(selecao.id, selecao);
+});
+CLUBES_BASE.forEach((base) => {
+  if (!BASES_POR_NACIONALIDADE.has(base.nacionalidade)) {
+    BASES_POR_NACIONALIDADE.set(base.nacionalidade, []);
+  }
+  BASES_POR_NACIONALIDADE.get(base.nacionalidade).push(base);
+});
+CLUBES.forEach((clube) => {
+  if (!clube?.liga) return;
+  if (!CLUBES_POR_LIGA.has(clube.liga)) CLUBES_POR_LIGA.set(clube.liga, []);
+  CLUBES_POR_LIGA.get(clube.liga).push(clube);
+});
+
+const POSICOES_POR_LIGA_CACHE = new Map();
+
+window.FootMainIndexes = {
+  clubes: MAPA_CLUBES,
+  selecoes: MAPA_SELECOES,
+  basesPorNacionalidade: BASES_POR_NACIONALIDADE,
+  clubesPorLiga: CLUBES_POR_LIGA,
+};
+
 function obterBasesDaNacionalidade(nacionalidade) {
-  return CLUBES_BASE.filter(
-    (clube) => clube.nacionalidade === nacionalidade && clube.disponivelEscolha,
+  return (BASES_POR_NACIONALIDADE.get(nacionalidade) || []).filter(
+    (clube) => clube.disponivelEscolha,
   );
 }
 
 function obterClubesCopinhaDaNacionalidade(nacionalidade) {
-  return CLUBES_BASE.filter((clube) => clube.nacionalidade === nacionalidade);
+  return BASES_POR_NACIONALIDADE.get(nacionalidade) || [];
 }
 
 function ehClubeBase(clubeId) {
@@ -437,17 +534,15 @@ function calcularOverall(posicao, atributos) {
 }
 
 function obterClube(clubeId) {
-  return CLUBES.find((clube) => clube.id === clubeId) || null;
+  return MAPA_CLUBES.get(clubeId) || null;
+}
+
+function obterSelecao(selecaoId) {
+  return MAPA_SELECOES.get(selecaoId) || null;
 }
 
 function obterClubeParaExibicao(clubeId) {
-  return (
-    obterClube(clubeId) ||
-    (typeof CLUBES_REGIONAIS !== "undefined"
-      ? CLUBES_REGIONAIS.find((clube) => clube.id === clubeId)
-      : null) ||
-    null
-  );
+  return obterClube(clubeId);
 }
 
 // Escudos remotos: a identificação usa o país da liga e uma busca normalizada
@@ -1251,13 +1346,15 @@ function safeStorageGet(chave) {
 }
 
 function safeStorageSet(chave, valor) {
-  try {
-    localStorage.setItem(chave, valor);
-    return true;
-  } catch (erro) {
-    console.error(`Não foi possível salvar ${chave}:`, erro);
-    return false;
-  }
+  return medirEtapaFootMain("salvamento_dados", () => {
+    try {
+      localStorage.setItem(chave, valor);
+      return true;
+    } catch (erro) {
+      console.error(`Não foi possível salvar ${chave}:`, erro);
+      return false;
+    }
+  });
 }
 
 function normalizarNome(valor) {
@@ -1658,7 +1755,60 @@ function salvarHistorico(historico) {
     .map((temporada) => validarTemporada(temporada))
     .filter(Boolean);
 
-  return safeStorageSet(STORAGE_KEY, JSON.stringify(historicoValidado));
+  const salvo = safeStorageSet(STORAGE_KEY, JSON.stringify(historicoValidado));
+  if (salvo) cacheMetricasCarreira = new WeakMap();
+  return salvo;
+}
+
+const CAMPOS_RESUMO_CARREIRA = [
+  "jogos",
+  "gols",
+  "assistencias",
+  "jogosClube",
+  "golsClube",
+  "assistenciasClube",
+  "jogosSelecao",
+  "golsSelecao",
+  "assistenciasSelecao",
+  "caps",
+  "motm",
+  "cartaoAmarelo",
+  "cartaoVermelho",
+  "cleanSheets",
+  "penaltisDefendidos",
+  "penaltisCometidos",
+  "minutosJogados",
+  "driblesCompletos",
+  "desarmes",
+  "defesas",
+  "jogadasCriadas",
+  "premios",
+];
+
+function normalizarResumoEstatisticasCarreira(resumo) {
+  if (!resumo || typeof resumo !== "object") return null;
+  return Object.fromEntries(
+    CAMPOS_RESUMO_CARREIRA.map((campo) => [
+      campo,
+      Math.max(0, Number(resumo[campo]) || 0),
+    ]),
+  );
+}
+
+function normalizarEstatisticasPorClube(estatisticas) {
+  if (!estatisticas || typeof estatisticas !== "object") return null;
+  return Object.fromEntries(
+    Object.entries(estatisticas)
+      .filter(([clubeId, dados]) => clubeId && dados && typeof dados === "object")
+      .map(([clubeId, dados]) => [
+        clubeId,
+        {
+          jogos: Math.max(0, Number(dados.jogos) || 0),
+          gols: Math.max(0, Number(dados.gols) || 0),
+          assistencias: Math.max(0, Number(dados.assistencias) || 0),
+        },
+      ]),
+  );
 }
 
 function obterCarreiraAtual() {
@@ -1764,6 +1914,12 @@ function obterCarreiraAtual() {
             (nome) => typeof nome === "string",
           )
         : [],
+      resumoEstatisticas: normalizarResumoEstatisticasCarreira(
+        carreira.resumoEstatisticas,
+      ),
+      estatisticasPorClube: normalizarEstatisticasPorClube(
+        carreira.estatisticasPorClube,
+      ),
     };
   } catch (erro) {
     console.error("Erro ao ler a carreira atual:", erro);
@@ -1850,6 +2006,12 @@ function salvarCarreiraAtual(carreira) {
             (nome) => typeof nome === "string",
           )
         : [],
+      resumoEstatisticas: normalizarResumoEstatisticasCarreira(
+        carreiraAtual.resumoEstatisticas,
+      ),
+      estatisticasPorClube: normalizarEstatisticasPorClube(
+        carreiraAtual.estatisticasPorClube,
+      ),
     }),
   );
 }
@@ -1903,6 +2065,12 @@ function normalizarRanking(ranking) {
       temporadas: Array.isArray(carreira.temporadas)
         ? carreira.temporadas.map(validarTemporada).filter(Boolean)
         : [],
+      resumoEstatisticas: normalizarResumoEstatisticasCarreira(
+        carreira.resumoEstatisticas,
+      ),
+      estatisticasPorClube: normalizarEstatisticasPorClube(
+        carreira.estatisticasPorClube,
+      ),
     }));
 }
 
@@ -1925,10 +2093,12 @@ function salvarRanking(ranking) {
     return false;
   }
 
-  return safeStorageSet(
+  const salvo = safeStorageSet(
     STORAGE_KEY_RANKING,
     JSON.stringify(normalizarRanking(ranking)),
   );
+  if (salvo) cacheMetricasCarreira = new WeakMap();
+  return salvo;
 }
 
 async function confirmarAcao(mensagem, titulo = "Confirmar ação") {
@@ -2138,13 +2308,19 @@ function simularCampeaoCopinhaTemporada(
     grupos[indice % grupos.length].push(time.id),
   );
 
+  const potenciasConfiguradas = getConfig().clubes?.potencias || {};
+  const forcas = new Map(
+    times.map((time) => [
+      time.id,
+      Math.max(35, Math.min(99, Number(potenciasConfiguradas[time.id]) || 65)),
+    ]),
+  );
   const obterForca = (id) => {
-    const configurada = Number(getConfig().clubes?.potencias?.[id]) || 65;
     const impactoJogador =
       id === clubeJogador
         ? Math.max(-8, Math.min(8, (Number(overallJogador) - 65) * 0.3))
         : 0;
-    return Math.max(35, Math.min(99, configurada + impactoJogador));
+    return Math.max(35, Math.min(99, forcas.get(id) + impactoJogador));
   };
   const sortearGols = (lambda) => {
     const limite = Math.exp(-lambda);
@@ -2168,6 +2344,7 @@ function simularCampeaoCopinhaTemporada(
 
   const classificados = grupos.map((grupo) => {
     const tabela = grupo.map((id) => ({ id, pontos: 0, saldo: 0, gols: 0 }));
+    const tabelaPorId = new Map(tabela.map((time) => [time.id, time]));
     for (let indiceCasa = 0; indiceCasa < grupo.length; indiceCasa++) {
       for (
         let indiceFora = indiceCasa + 1;
@@ -2179,8 +2356,8 @@ function simularCampeaoCopinhaTemporada(
         const diferenca = (obterForca(casaId) - obterForca(foraId)) / 25;
         const golsCasa = sortearGols(Math.max(0.25, 1.35 + diferenca * 0.5));
         const golsFora = sortearGols(Math.max(0.25, 1.15 - diferenca * 0.5));
-        const registroCasa = tabela.find((time) => time.id === casaId);
-        const registroFora = tabela.find((time) => time.id === foraId);
+        const registroCasa = tabelaPorId.get(casaId);
+        const registroFora = tabelaPorId.get(foraId);
         registroCasa.gols += golsCasa;
         registroFora.gols += golsFora;
         registroCasa.saldo += golsCasa - golsFora;
@@ -2362,6 +2539,9 @@ function gerarTrofeusTemporada(
 
   const trofeusColetivos = [];
   const trofeusIndividuais = [];
+  const finalizarCompeticoes = window.FootMainPerformance?.start(
+    "competicoes_continentais_e_internacionais",
+  );
   const temporadaAtual = Number(ano) || ANO_INICIAL;
   const ciclo = Math.max(1, Number(t.cicloCopaDoMundo) || 4);
   const cicloCopaDoMundo =
@@ -2518,6 +2698,10 @@ function gerarTrofeusTemporada(
     trofeusColetivos.push("Mundial Sub-17");
   }
 
+  finalizarCompeticoes?.();
+  const finalizarPremiosIndividuais = window.FootMainPerformance?.start(
+    "premios_individuais",
+  );
   // ====== Prêmios individuais existentes ======
   const eventosDeDesempenho = Array.isArray(eventos) ? eventos : [];
   const defesasDecisivas = eventosDeDesempenho.filter((e) =>
@@ -2605,7 +2789,7 @@ function gerarTrofeusTemporada(
     trofeusIndividuais.push("MVP do Clube");
   }
   // Rei da América
-  const selecaoJogador = SELECOES.find((s) => s.id === nacionalidade);
+  const selecaoJogador = obterSelecao(nacionalidade);
   if (
     selecaoJogador?.regiao === "americaSul" &&
     clubeJogador &&
@@ -2653,6 +2837,7 @@ function gerarTrofeusTemporada(
     }
   }
 
+  finalizarPremiosIndividuais?.();
   return { trofeusColetivos, trofeusIndividuais };
 }
 
@@ -3646,7 +3831,19 @@ const CONQUISTAS = [
 ];
 
 function obterMetricasCarreira(carreira) {
+  const temporadasSnapshot = carreira.temporadas;
+  const cache = cacheMetricasCarreira.get(carreira);
+  if (
+    Array.isArray(temporadasSnapshot) &&
+    temporadasSnapshot.length > 0 &&
+    cache?.temporadas === temporadasSnapshot &&
+    cache.quantidade === temporadasSnapshot.length
+  ) {
+    return cache.metricas;
+  }
+
   const temporadas = obterTemporadasDaCarreira(carreira);
+  const resumoEstatisticas = carreira.resumoEstatisticas;
   const titulosColetivos = Array.isArray(carreira.trofeusColetivos)
     ? carreira.trofeusColetivos.length
     : 0;
@@ -3686,8 +3883,18 @@ function obterMetricasCarreira(carreira) {
     (s, t) => s + (Number(t.rendaTemporada ?? t.salario) || 0),
     0,
   );
+  const totalHistorico = (campo) =>
+    resumoEstatisticas
+      ? Number(resumoEstatisticas[campo]) || 0
+      : temporadas.reduce(
+            (total, temporada) =>
+              total + (Number(temporada[campo]) || 0),
+            0,
+          ) ||
+        Number(carreira[campo]) ||
+        0;
 
-  return {
+  const metricas = {
     gols: Number(carreira.gols) || 0,
     assistencias: Number(carreira.assistencias) || 0,
     jogos: Number(carreira.jogos) || 0,
@@ -3695,38 +3902,33 @@ function obterMetricasCarreira(carreira) {
     titulosIndividuais,
     temporadas: temporadas.length,
     hatTricks: contarHatTricks(temporadas),
-    motmTotal: temporadas.reduce((n, t) => n + (Number(t.motm) || 0), 0),
-    driblesCompletos:
-      temporadas.reduce((n, t) => n + (Number(t.driblesCompletos) || 0), 0) ||
-      Number(carreira.driblesCompletos) ||
-      0,
-    desarmes:
-      temporadas.reduce((n, t) => n + (Number(t.desarmes) || 0), 0) ||
-      Number(carreira.desarmes) ||
-      0,
-    defesas:
-      temporadas.reduce((n, t) => n + (Number(t.defesas) || 0), 0) ||
-      Number(carreira.defesas) ||
-      0,
-    jogadasCriadas:
-      temporadas.reduce((n, t) => n + (Number(t.jogadasCriadas) || 0), 0) ||
-      Number(carreira.jogadasCriadas) ||
-      0,
+    motmTotal: resumoEstatisticas
+      ? resumoEstatisticas.motm
+      : temporadas.reduce((n, t) => n + (Number(t.motm) || 0), 0),
+    driblesCompletos: totalHistorico("driblesCompletos"),
+    desarmes: totalHistorico("desarmes"),
+    defesas: totalHistorico("defesas"),
+    jogadasCriadas: totalHistorico("jogadasCriadas"),
     cartoesTotais: {
-      amarelos: temporadas.reduce(
-        (n, t) => n + (Number(t.cartaoAmarelo) || 0),
-        0,
-      ),
-      vermelhos: temporadas.reduce(
-        (n, t) => n + (Number(t.cartaoVermelho) || 0),
-        0,
-      ),
+      amarelos: resumoEstatisticas
+        ? resumoEstatisticas.cartaoAmarelo
+        : temporadas.reduce(
+            (n, t) => n + (Number(t.cartaoAmarelo) || 0),
+            0,
+          ),
+      vermelhos: resumoEstatisticas
+        ? resumoEstatisticas.cartaoVermelho
+        : temporadas.reduce(
+            (n, t) => n + (Number(t.cartaoVermelho) || 0),
+            0,
+          ),
     },
-    caps: temporadas.reduce((n, t) => n + (Number(t.jogosSelecao) || 0), 0),
-    cleanSheets: temporadas.reduce(
-      (n, t) => n + (Number(t.cleanSheets) || 0),
-      0,
-    ),
+    caps: resumoEstatisticas
+      ? resumoEstatisticas.caps
+      : temporadas.reduce((n, t) => n + (Number(t.jogosSelecao) || 0), 0),
+    cleanSheets: resumoEstatisticas
+      ? resumoEstatisticas.cleanSheets
+      : temporadas.reduce((n, t) => n + (Number(t.cleanSheets) || 0), 0),
     convocacoesSeguidasMax: temporadas.reduce(
       (r, t) => {
         r.atual = t.convocado || Number(t.jogosSelecao) > 0 ? r.atual + 1 : 0;
@@ -3735,10 +3937,9 @@ function obterMetricasCarreira(carreira) {
       },
       { atual: 0, max: 0 },
     ).max,
-    golsSelecao: temporadas.reduce(
-      (n, t) => n + (Number(t.golsSelecao) || 0),
-      0,
-    ),
+    golsSelecao: resumoEstatisticas
+      ? resumoEstatisticas.golsSelecao
+      : temporadas.reduce((n, t) => n + (Number(t.golsSelecao) || 0), 0),
     maiorOver: Math.max(
       0,
       ...temporadas.map((temporada) => Number(temporada.overall) || 0),
@@ -3772,6 +3973,14 @@ function obterMetricasCarreira(carreira) {
     maiorSalario: salarioMax,
     ganhosTotais,
   };
+  if (Array.isArray(temporadasSnapshot) && temporadasSnapshot.length > 0) {
+    cacheMetricasCarreira.set(carreira, {
+      temporadas: temporadasSnapshot,
+      quantidade: temporadasSnapshot.length,
+      metricas,
+    });
+  }
+  return metricas;
 }
 
 function atualizarNotificacaoConquista(carreira, forcarExibicao = false) {
@@ -4672,9 +4881,10 @@ function mostrarResumoFinal(
   posicao,
   opcoes = {},
 ) {
-  const totais = somarTotaisHistorico(historico);
-  const resumoFinal = document.getElementById("resumo-final");
   const carreiraAtual = obterCarreiraAtual();
+  const totais =
+    carreiraAtual.resumoEstatisticas || somarTotaisHistorico(historico);
+  const resumoFinal = document.getElementById("resumo-final");
 
   const trofeus = historico.reduce(
     (resultado, temporada) => {
@@ -4707,6 +4917,8 @@ function mostrarResumoFinal(
     jogosSelecao: totais.jogosSelecao,
     golsSelecao: totais.golsSelecao,
     assistenciasSelecao: totais.assistenciasSelecao,
+    resumoEstatisticas: totais,
+    estatisticasPorClube: carreiraAtual.estatisticasPorClube || {},
     driblesCompletos: totais.driblesCompletos,
     desarmes: totais.desarmes,
     defesas: totais.defesas,
@@ -5377,16 +5589,35 @@ function simularTemporadaPorJogo(
               : idade <= 35
                 ? 0.88
                 : 0.72;
-  const historicoEventos = temporadasAnteriores.flatMap((t) =>
-    Array.isArray(t.eventos) ? t.eventos : [],
-  );
-  const ultimaTemporada = temporadasAnteriores[temporadasAnteriores.length - 1];
-  const houveTrocaTreinador = (ultimaTemporada?.eventos || []).some(
-    (e) => e.tipo === "troca-treinador",
-  );
-  const eCapitao = historicoEventos.some(
-    (e) => e.tipo === "capitao-time" && e.clube === clubeId,
-  );
+  const indiceUltimaTemporada = temporadasAnteriores.length - 1;
+  let temporadasNoClube = 0;
+  let convocacoesAnteriores = 0;
+  let houveTrocaTreinador = false;
+  let eCapitao = false;
+  let jaFoiIdolo = false;
+  let aposentadoSelecaoNoHistorico = false;
+  for (let indice = 0; indice < temporadasAnteriores.length; indice++) {
+    const temporada = temporadasAnteriores[indice];
+    if (temporada.clube === clubeId) temporadasNoClube++;
+    if (temporada.convocado || Number(temporada.jogosSelecao) > 0)
+      convocacoesAnteriores++;
+    const eventosTemporada = Array.isArray(temporada.eventos)
+      ? temporada.eventos
+      : [];
+    for (const evento of eventosTemporada) {
+      if (
+        indice === indiceUltimaTemporada &&
+        evento.tipo === "troca-treinador"
+      )
+        houveTrocaTreinador = true;
+      if (evento.tipo === "aposentadoria-selecao")
+        aposentadoSelecaoNoHistorico = true;
+      if (evento.tipo === "idolo-torcida" && evento.clube === clubeId)
+        jaFoiIdolo = true;
+      if (evento.tipo === "capitao-time" && evento.clube === clubeId)
+        eCapitao = true;
+    }
+  }
   const probParticipar = Math.max(
     0.05,
     Math.min(
@@ -5411,9 +5642,7 @@ function simularTemporadaPorJogo(
   const idadeAposentadoriaSelecao =
     Number(cfg.geral.idadeAposentadoriaSelecao) || 32;
   const aposentadoSelecao =
-    temporadasAnteriores.some((t) =>
-      (t.eventos || []).some((e) => e.tipo === "aposentadoria-selecao"),
-    ) ||
+    aposentadoSelecaoNoHistorico ||
     (carreiraAtualRef.aposentadoriaSelecao === true &&
       idade >= idadeAposentadoriaSelecao);
 
@@ -5494,26 +5723,25 @@ function simularTemporadaPorJogo(
   let lesaoGrave = false,
     lesaoCarreira = false,
     jogosForaProximaTemporada = 0;
+  const finalizarHistorico = window.FootMainPerformance?.start(
+    "consulta_historico_e_estatisticas",
+  );
   // Eventos narrativos fora de campo: cada um é registrado uma vez por temporada.
   if (clubeId && Math.random() < 0.05)
     eventos.push({ tipo: "troca-treinador", jogo: 0, clube: clubeId });
   if (
     clubeId &&
-    temporadasAnteriores.filter((t) => t.clube === clubeId).length >= 4 &&
-    !historicoEventos.some(
-      (e) => e.tipo === "idolo-torcida" && e.clube === clubeId,
-    ) &&
+    temporadasNoClube >= 4 &&
+    !jaFoiIdolo &&
     Math.random() < 0.15
   ) {
     eventos.push({ tipo: "idolo-torcida", jogo: 0, clube: clubeId });
   }
   if (
     clubeId &&
-    temporadasAnteriores.filter((t) => t.clube === clubeId).length >= 2 &&
+    temporadasNoClube >= 2 &&
     overall > 80 &&
-    !historicoEventos.some(
-      (e) => e.tipo === "capitao-time" && e.clube === clubeId,
-    ) &&
+    !eCapitao &&
     Math.random() < 0.1
   ) {
     eventos.push({ tipo: "capitao-time", jogo: 0, clube: clubeId });
@@ -5524,13 +5752,17 @@ function simularTemporadaPorJogo(
     eventos.push({ tipo: "rumor-transferencia", jogo: 0, clube: clubeId });
   if (
     clubeId &&
-    temporadasAnteriores.filter((t) => t.clube === clubeId).length >= 2 &&
+    temporadasNoClube >= 2 &&
     overall < 68 &&
     Math.random() < 0.015
   ) {
     eventos.push({ tipo: "pedido-transferencia", jogo: 0, clube: clubeId });
   }
 
+  finalizarHistorico?.();
+  const finalizarPartidas = window.FootMainPerformance?.start(
+    "simulacao_partidas_jogador",
+  );
   for (let i = 0; i < maxJogosClube; i++) {
     if (jogosAfastado > 0) {
       jogosAfastado--;
@@ -5586,12 +5818,15 @@ function simularTemporadaPorJogo(
         eventos.push({ tipo: "penalti-causado", jogo: numeroJogo });
       }
     }
+    let interceptacaoDecisivaNesteJogo = false;
     if (
       posicao === "zag" &&
       ["ZCE", "ZCD"].includes(posicaoDetalhe) &&
       Math.random() < 0.04
-    )
+    ) {
       eventos.push({ tipo: "interceptacao-decisiva", jogo: numeroJogo });
+      interceptacaoDecisivaNesteJogo = true;
+    }
 
     // ====== CARTÕES (nova lógica) ======
     let expulsoNesteJogo = false;
@@ -5650,9 +5885,7 @@ function simularTemporadaPorJogo(
     if (posicao === "go" && cleanSheetNesteJogo) chanceMOTM += 0.18;
     if (
       posicao === "zag" &&
-      eventos.some(
-        (e) => e.jogo === numeroJogo && e.tipo === "interceptacao-decisiva",
-      )
+      interceptacaoDecisivaNesteJogo
     )
       chanceMOTM += 0.12;
     if (Math.random() < Math.min(chanceMOTM, 0.6)) motm++;
@@ -5686,11 +5919,16 @@ function simularTemporadaPorJogo(
         1 + Math.floor(Math.random() * 6),
       );
   }
+  finalizarPartidas?.();
   // Seleção: convocação depende de overall, idade, força nacional e histórico; não substitui jogos do clube.
-  const selecao = SELECOES.find((x) => x.id === nacionalidade),
+  const finalizarSelecoes = window.FootMainPerformance?.start(
+    "competicoes_selecoes_e_internacionais",
+  );
+  const selecao = obterSelecao(nacionalidade),
     potencia = Number(cfg.selecao?.potencias?.[nacionalidade]) || 50;
+  const clubeAtual = obterClube(clubeId);
   const jogaEuropa =
-    !!obterClube(clubeId)?.pais &&
+    !!clubeAtual?.pais &&
     [
       "Inglaterra",
       "Espanha",
@@ -5699,10 +5937,7 @@ function simularTemporadaPorJogo(
       "França",
       "Portugal",
       "Holanda",
-    ].some((p) => String(obterClube(clubeId).pais).includes(p));
-  const convocacoesAnteriores = temporadasAnteriores.filter(
-    (t) => t.convocado || Number(t.jogosSelecao) > 0,
-  ).length;
+    ].some((p) => String(clubeAtual.pais).includes(p));
   let chanceConvocacao = Math.max(0, Math.min(0.95, (overall - 65) / 35));
   chanceConvocacao +=
     Math.max(0, potencia - 50) / 250 +
@@ -5792,6 +6027,7 @@ function simularTemporadaPorJogo(
         (golsSelecaoPorCompeticao[competicao] || 0) + g;
     }
   }
+  finalizarSelecoes?.();
   return {
     jogosClube,
     golsClube,
@@ -5846,39 +6082,45 @@ function criarTemporada(
   const ultima = temporadasAnteriores[temporadasAnteriores.length - 1];
   const jogosForaInicio = ultima?.jogosForaProximaTemporada || 0;
 
-  const atributos = evoluirAtributos(
-    temporadasAnteriores,
-    categoria,
-    idade,
-    carreiraAtual.potencial,
+  const atributos = medirEtapaFootMain("evolucao_atributos", () =>
+    evoluirAtributos(
+      temporadasAnteriores,
+      categoria,
+      idade,
+      carreiraAtual.potencial,
+    ),
   );
   const overall = calcularOverall(categoria, atributos);
-  const sim = simularTemporadaPorJogo(
-    categoria,
-    atributos,
-    idade,
-    jogosForaInicio,
-    posicaoDetalhe,
-    nacionalidade,
-    clubeId,
-    temporadasAnteriores,
+  const sim = medirEtapaFootMain("simulacao_partidas_e_competicoes", () =>
+    simularTemporadaPorJogo(
+      categoria,
+      atributos,
+      idade,
+      jogosForaInicio,
+      posicaoDetalhe,
+      nacionalidade,
+      clubeId,
+      temporadasAnteriores,
+    ),
   );
 
-  const trofeus = gerarTrofeusTemporada(
-    dados.nome,
-    sim.jogos,
-    sim.gols,
-    sim.assistencias,
-    ano,
-    idade,
-    temporadasAnteriores,
-    nacionalidade,
-    clubeId,
-    sim.eventos,
-    overall,
-    posicaoDetalhe,
-    sim.convocado,
-    atributos,
+  const trofeus = medirEtapaFootMain("premiacoes", () =>
+    gerarTrofeusTemporada(
+      dados.nome,
+      sim.jogos,
+      sim.gols,
+      sim.assistencias,
+      ano,
+      idade,
+      temporadasAnteriores,
+      nacionalidade,
+      clubeId,
+      sim.eventos,
+      overall,
+      posicaoDetalhe,
+      sim.convocado,
+      atributos,
+    ),
   );
 
   const clube = obterClube(clubeId);
@@ -7582,14 +7824,16 @@ async function simularTudo() {
         }
         anosContratoRestantes = obterDuracaoContrato(idade, idadeLimite);
       }
-      const temporada = criarTemporada(
-        nome,
-        idade,
-        ano,
-        posicaoSelecionada.id,
-        historico,
-        nacionalidade,
-        clubeAtual,
+      const temporada = medirEtapaFootMain("temporada_completa", () =>
+        criarTemporada(
+          nome,
+          idade,
+          ano,
+          posicaoSelecionada.id,
+          historico,
+          nacionalidade,
+          clubeAtual,
+        ),
       );
       temporada.base = ehClubeBase(clubeAtual);
       temporada.campeaoCopinha =
@@ -7684,19 +7928,23 @@ async function simularTudo() {
     const historicoDeOutrasCarreiras = lerHistorico().filter(
       (temporada) => temporada.carreiraId !== carreiraAtual.id,
     );
-    salvarHistorico([...historicoDeOutrasCarreiras, ...historico]);
-    renderHistorico();
-    const ultimaTemporadaSimulada = historico[historico.length - 1] || null;
-    renderAtributos(ultimaTemporadaSimulada);
-    atualizarTitulosResultados(ultimaTemporadaSimulada);
-    atualizarMercadoResultados(ultimaTemporadaSimulada);
-    mostrarResumoFinal(
-      nome,
-      idadeLimite,
-      ano,
-      historico,
-      POSICOES_CAMPO[posicaoDetalhe]?.nome || dadosPosicao.nome,
+    medirEtapaFootMain("salvamento_historico", () =>
+      salvarHistorico([...historicoDeOutrasCarreiras, ...historico]),
     );
+    medirEtapaFootMain("renderizacao_historico", () => renderHistorico());
+    const ultimaTemporadaSimulada = historico[historico.length - 1] || null;
+    medirEtapaFootMain("renderizacao_interface", () => {
+      renderAtributos(ultimaTemporadaSimulada);
+      atualizarTitulosResultados(ultimaTemporadaSimulada);
+      atualizarMercadoResultados(ultimaTemporadaSimulada);
+      mostrarResumoFinal(
+        nome,
+        idadeLimite,
+        ano,
+        historico,
+        POSICOES_CAMPO[posicaoDetalhe]?.nome || dadosPosicao.nome,
+      );
+    });
   } catch (erro) {
     console.error("[FootMain] Erro em simularTudo():", erro);
     alert(
