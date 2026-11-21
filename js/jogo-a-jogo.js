@@ -12519,7 +12519,7 @@
     $("jja-simular-carreira").disabled =
       decisaoEmAndamento || bloqueioAcoesPartida || encerrada;
     const inicioPendente = !ativo && !historicoCarreira.length;
-    $("jja-jogar").hidden = inicioPendente || encerrada;
+    $("jja-jogar").hidden = inicioPendente || encerrada || !emAndamento;
     const botaoOpcoesSimulacao = $("jja-opcoes-simulacao");
     botaoOpcoesSimulacao.disabled =
       $("jja-simular-restantes").disabled &&
@@ -12548,7 +12548,10 @@
     const mobilePlay = $("mobile-action-play");
     const mobileOptions = $("mobile-action-options");
     const mobileRetire = $("mobile-action-retire");
-    if (mobilePlay) mobilePlay.disabled = $("jja-jogar").disabled;
+    if (mobilePlay) {
+      mobilePlay.disabled = $("jja-jogar").disabled;
+      mobilePlay.hidden = $("jja-jogar").hidden;
+    }
     if (mobileOptions)
       mobileOptions.disabled = botaoOpcoesSimulacao.disabled;
     if (mobileRetire) mobileRetire.disabled = botaoAposentar.disabled;
