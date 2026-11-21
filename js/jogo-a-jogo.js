@@ -12520,6 +12520,7 @@
       decisaoEmAndamento || bloqueioAcoesPartida || encerrada;
     const inicioPendente = !ativo && !historicoCarreira.length;
     $("jja-jogar").hidden = inicioPendente || encerrada || !emAndamento;
+    $("jja-simular-restantes").hidden = inicioPendente || encerrada || !proxima;
     const botaoOpcoesSimulacao = $("jja-opcoes-simulacao");
     botaoOpcoesSimulacao.disabled =
       $("jja-simular-restantes").disabled &&
