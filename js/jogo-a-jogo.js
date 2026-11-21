@@ -1259,6 +1259,20 @@
         })[c],
     );
   }
+
+  async function processarFilaModaisTitulos() {
+    const tiposPermitidos = new Set([
+      "trofeu",
+      "premio-individual",
+      "bola-de-ouro",
+    ]);
+    filaModaisPartida = filaModaisPartida.filter((item) =>
+      tiposPermitidos.has(item.tipo),
+    );
+    if (filaModaisPartida.length > 0) {
+      await processarFilaModais();
+    }
+  }
   function sortearPoisson(lambda) {
     const limite = Math.exp(-Math.max(0, lambda));
     let p = 1,
@@ -11490,6 +11504,7 @@
       }
     }
 
+    await processarFilaModaisTitulos();
     filaModaisPartida = [];
   }
 
