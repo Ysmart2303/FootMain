@@ -837,6 +837,11 @@
   }
 
   async function processarFilaModais() {
+    const prioridadeModal = (item) =>
+      item.tipo === "trofeu" ? 2 : item.tipo === "ultima-partida" ? 1 : 0;
+    filaModaisPartida.sort(
+      (a, b) => prioridadeModal(a) - prioridadeModal(b),
+    );
     while (filaModaisPartida.length > 0) {
       await aguardarCarregamentoLiberado();
       const item = filaModaisPartida.shift();
@@ -848,6 +853,8 @@
         await exibirModalBolaDeOuro(item.ranking);
       } else if (item.tipo === "evento") {
         await exibirModalEvento(item.tipoEvento, item.mensagem, item.icone);
+      } else if (item.tipo === "ultima-partida") {
+        await exibirModalUltimaPartida();
       }
     }
   }
@@ -1197,6 +1204,41 @@
       };
       const aoClicarFora = (e) => {
         if (e.target === modal) fechar();
+      };
+      continuar.addEventListener("click", fechar);
+      document.addEventListener("keydown", aoTeclar);
+      modal.addEventListener("click", aoClicarFora);
+    });
+  }
+
+  async function exibirModalUltimaPartida() {
+    await aguardarCarregamentoLiberado();
+    return new Promise((resolve) => {
+      const modal = $("jja-modal-ultima-partida");
+      const continuar = $("jja-ultima-partida-continuar");
+      if (!modal || !continuar) {
+        resolve();
+        return;
+      }
+
+      modal.hidden = false;
+      continuar.focus();
+
+      const fechar = () => {
+        modal.hidden = true;
+        continuar.removeEventListener("click", fechar);
+        document.removeEventListener("keydown", aoTeclar);
+        modal.removeEventListener("click", aoClicarFora);
+        resolve();
+      };
+      const aoTeclar = (evento) => {
+        if (evento.key === "Escape" || evento.key === "Enter") {
+          evento.preventDefault();
+          fechar();
+        }
+      };
+      const aoClicarFora = (evento) => {
+        if (evento.target === modal) fechar();
       };
       continuar.addEventListener("click", fechar);
       document.addEventListener("keydown", aoTeclar);
@@ -10116,6 +10158,8 @@
         );
       }
     }
+    if (mostrarResultado && !opcoesPenaltis?.simulacaoEmLote)
+      filaModaisPartida.push({ tipo: "ultima-partida" });
 
     if (!opcoesPenaltis?.simulacaoEmLote) {
       salvar();
@@ -11444,11 +11488,6 @@
             salvarCarreiraAtual(carreira);
         }
       }
-    }
-
-    // ─── NOVO: processar fila (troféus conquistados em auto-simulação) ───
-    if (!simulacaoAutomatica && filaModaisPartida.length > 0) {
-      await processarFilaModais();
     }
 
     filaModaisPartida = [];

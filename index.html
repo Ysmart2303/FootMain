@@ -205,7 +205,6 @@
                 <div id="jja-status" class="jja-status" role="status" aria-live="polite" hidden></div>
                 <div id="jja-conteudo-temporada" hidden>
                 <div id="jja-proximo" class="jja-proximo"></div>
-                <div class="jja-painel"><h3>Última partida</h3><div id="jja-ultima">Nenhuma partida disputada.</div></div>
                 <details class="jja-recolhivel jja-classificacao">
                     <summary>Classificação da liga</summary>
                     <div id="jja-tabela">Inicie uma temporada para ver a tabela.</div>
@@ -661,6 +660,16 @@
             <p id="jja-evento-mensagem"></p>
             <div class="jja-evento-acoes">
                 <button type="button" class="jja-evento-continuar" id="jja-evento-continuar">Continuar</button>
+            </div>
+        </div>
+    </div>
+    <div id="jja-modal-ultima-partida" class="modal-overlay jja-modal-evento" hidden>
+        <div class="jja-evento-caixa jja-ultima-partida-caixa" role="dialog" aria-modal="true" aria-labelledby="jja-ultima-partida-titulo" aria-describedby="jja-ultima" tabindex="-1">
+            <span class="jja-evento-icone" aria-hidden="true">⚽</span>
+            <h3 id="jja-ultima-partida-titulo">Última partida</h3>
+            <div id="jja-ultima"></div>
+            <div class="jja-evento-acoes">
+                <button type="button" class="jja-evento-continuar" id="jja-ultima-partida-continuar">Continuar</button>
             </div>
         </div>
     </div>

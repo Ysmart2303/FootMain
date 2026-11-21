@@ -710,6 +710,7 @@ html[data-theme="light"] .jja-penaltis-resumo {
     color: #e2e8f0;
     animation: eventoEntrada .3s ease;
 }
+.jja-ultima-partida-caixa { width: min(100%, 560px); }
 
 @keyframes eventoEntrada {
     from { opacity: 0; transform: translateY(-10px) scale(.95); }
