@@ -11100,6 +11100,64 @@
     });
   }
 
+  function configurarModalOpcoesSimulacao() {
+    const modal = $("jja-modal-simulacao");
+    const dialogo = modal?.querySelector('[role="dialog"]');
+    let elementoAnterior = null;
+
+    const fechar = () => {
+      if (!modal || modal.hidden) return;
+      modal.hidden = true;
+      elementoAnterior?.focus();
+    };
+
+    const abrir = (gatilho) => {
+      if (!modal || gatilho?.disabled) return;
+      elementoAnterior = gatilho;
+      modal.hidden = false;
+      const primeiraOpcao = [
+        ...modal.querySelectorAll("button:not([disabled])"),
+      ].find((botao) => !botao.hidden);
+      (primeiraOpcao || dialogo)?.focus();
+    };
+
+    $("jja-opcoes-simulacao")?.addEventListener("click", (evento) =>
+      abrir(evento.currentTarget),
+    );
+    $("mobile-action-options")?.addEventListener("click", (evento) =>
+      abrir(evento.currentTarget),
+    );
+    $("jja-simulacao-cancelar")?.addEventListener("click", fechar);
+    $("jja-simular-restantes")?.addEventListener("click", () => {
+      fechar();
+      simularRestantes(false, true);
+    });
+    $("jja-simular-carreira")?.addEventListener("click", () => {
+      fechar();
+      simularFimCarreira();
+    });
+    modal?.addEventListener("click", (evento) => {
+      if (evento.target === evento.currentTarget) fechar();
+    });
+    document.addEventListener("keydown", (evento) => {
+      if (evento.key === "Escape" && modal && !modal.hidden) fechar();
+      if (evento.key !== "Tab" || !modal || modal.hidden || !dialogo) return;
+      const botoes = [
+        ...dialogo.querySelectorAll("button:not([disabled])"),
+      ].filter((botao) => !botao.hidden);
+      if (!botoes.length) return;
+      const primeiro = botoes[0];
+      const ultimo = botoes[botoes.length - 1];
+      if (evento.shiftKey && document.activeElement === primeiro) {
+        evento.preventDefault();
+        ultimo.focus();
+      } else if (!evento.shiftKey && document.activeElement === ultimo) {
+        evento.preventDefault();
+        primeiro.focus();
+      }
+    });
+  }
+
   async function simularProximaAutomaticamente() {
     filaModaisPartida = [];
     if (bloqueioAcoesPartida || decisaoEmAndamento) return;
@@ -12431,6 +12489,7 @@
       : historicoCarreira.length
         ? "Próxima temporada"
         : "Iniciar";
+    botaoIniciar.hidden = emAndamento;
     botaoIniciar.disabled =
       bloqueioAcoesPartida ||
       emAndamento ||
@@ -12461,8 +12520,11 @@
       decisaoEmAndamento || bloqueioAcoesPartida || encerrada;
     const inicioPendente = !ativo && !historicoCarreira.length;
     $("jja-jogar").hidden = inicioPendente || encerrada;
-    $("jja-simular-restantes").hidden = inicioPendente || encerrada;
-    $("jja-simular-carreira").hidden = inicioPendente || encerrada;
+    const botaoOpcoesSimulacao = $("jja-opcoes-simulacao");
+    botaoOpcoesSimulacao.disabled =
+      $("jja-simular-restantes").disabled &&
+      $("jja-simular-carreira").disabled;
+    botaoOpcoesSimulacao.hidden = inicioPendente || encerrada;
     botaoAposentar.disabled =
       decisaoEmAndamento ||
       bloqueioAcoesPartida ||
@@ -12484,14 +12546,11 @@
       mobileStart.disabled = botaoIniciar.disabled;
     }
     const mobilePlay = $("mobile-action-play");
-    const mobileSimulate = $("mobile-action-simulate");
-    const mobileCareer = $("mobile-action-career");
+    const mobileOptions = $("mobile-action-options");
     const mobileRetire = $("mobile-action-retire");
     if (mobilePlay) mobilePlay.disabled = $("jja-jogar").disabled;
-    if (mobileSimulate)
-      mobileSimulate.disabled = $("jja-simular-restantes").disabled;
-    if (mobileCareer)
-      mobileCareer.disabled = $("jja-simular-carreira").disabled;
+    if (mobileOptions)
+      mobileOptions.disabled = botaoOpcoesSimulacao.disabled;
     if (mobileRetire) mobileRetire.disabled = botaoAposentar.disabled;
 
     if (!ativo) {
@@ -13049,20 +13108,13 @@
       renderizarRankingLiga,
     );
     configurarModalProximaPartida();
+    configurarModalOpcoesSimulacao();
     $("mobile-action-start")?.addEventListener("click", () =>
       $("jja-iniciar").click(),
     );
     $("mobile-action-play")?.addEventListener("click", () =>
       $("jja-jogar").click(),
     );
-    $("mobile-action-simulate")?.addEventListener("click", () =>
-      $("jja-simular-restantes").click(),
-    );
-    $("mobile-action-career")?.addEventListener("click", () => {
-      $("jja-simular-carreira").click();
-      $("mobile-action-menu").hidden = true;
-      $("mobile-action-more").setAttribute("aria-expanded", "false");
-    });
     $("mobile-action-retire")?.addEventListener("click", () => {
       $("jja-aposentar").click();
       $("mobile-action-menu").hidden = true;
@@ -13136,15 +13188,11 @@
         const painel = $("configuracao-jogador");
         if (painel) painel.open = false;
         $("jja-confirmar-inicio").hidden = true;
-        $("jja-iniciar").hidden = false;
+        const carreiraAtual =
+          typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : {};
+        $("jja-iniciar").hidden = temporadaEmAndamento(carreiraAtual);
       }
     });
-    $("jja-simular-restantes")?.addEventListener("click", () =>
-      simularRestantes(false, true),
-    );
-    $("jja-simular-carreira")?.addEventListener("click", () =>
-      simularFimCarreira(),
-    );
     $("jja-aposentar")?.addEventListener("click", aposentarJogador);
     $("jja-fim-encerrar")?.addEventListener("click", () =>
       finalizarFluxoFimCarreira(),

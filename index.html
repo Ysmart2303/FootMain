@@ -199,8 +199,7 @@
                 <div class="jja-botoes">
                     <button type="button" id="jja-iniciar">Iniciar</button>
                     <button type="button" id="jja-jogar" disabled>Próximo jogo</button>
-                    <button type="button" id="jja-simular-restantes" disabled>Simular restante da temporada</button>
-                    <button type="button" id="jja-simular-carreira" disabled>Simular fim de carreira</button>
+                    <button type="button" id="jja-opcoes-simulacao" disabled>Opções de simulação</button>
                     <button type="button" id="jja-aposentar" class="btn-aposentar" hidden>Aposentar jogador</button>
                 </div>
                 <div id="jja-status" class="jja-status" role="status" aria-live="polite" hidden></div>
@@ -521,11 +520,10 @@
             <button type="button" class="mobile-action-primary" id="mobile-action-start">Iniciar carreira</button>
             <div class="mobile-action-active" id="mobile-action-active" hidden>
                 <button type="button" id="mobile-action-play">Próximo jogo</button>
-                <button type="button" id="mobile-action-simulate">Simular restante</button>
+                <button type="button" id="mobile-action-options">Opções de simulação</button>
                 <div class="mobile-action-more-wrap">
                     <button type="button" id="mobile-action-more" aria-label="Mais ações" aria-expanded="false">⋯</button>
                     <div class="mobile-action-menu" id="mobile-action-menu" hidden>
-                        <button type="button" id="mobile-action-career">Simular fim de carreira</button>
                         <button type="button" id="mobile-action-retire">Aposentar</button>
                     </div>
                 </div>
@@ -544,6 +542,20 @@
             </div>
             <div class="jja-decisao-acoes">
                 <button type="button" class="jja-decisao-voltar" id="jja-proxima-cancelar">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    <div id="jja-modal-simulacao" class="modal-overlay jja-modal-decisao" hidden>
+        <div class="jja-decisao-caixa" role="dialog" aria-modal="true" aria-labelledby="jja-simulacao-titulo" aria-describedby="jja-simulacao-contexto" tabindex="-1">
+            <span class="jja-decisao-icone" aria-hidden="true">⚙</span>
+            <h3 id="jja-simulacao-titulo">Opções de simulação</h3>
+            <p id="jja-simulacao-contexto">Como deseja avançar na carreira?</p>
+            <div class="jja-proxima-opcoes">
+                <button type="button" class="jja-decisao-opcao" id="jja-simular-restantes" disabled>Simular restante da temporada</button>
+                <button type="button" class="jja-decisao-opcao jja-proxima-simular" id="jja-simular-carreira" disabled>Simular fim de carreira</button>
+            </div>
+            <div class="jja-decisao-acoes">
+                <button type="button" class="jja-decisao-voltar" id="jja-simulacao-cancelar">Cancelar</button>
             </div>
         </div>
     </div>
