@@ -900,8 +900,7 @@
     await aguardarCarregamentoLiberado();
     return new Promise((resolve) => {
       const possuiDados =
-        (Array.isArray(ranking?.jogadores) &&
-          ranking.jogadores.length > 0) ||
+        (Array.isArray(ranking?.jogadores) && ranking.jogadores.length > 0) ||
         (Array.isArray(ranking?.chuteira) && ranking.chuteira.length > 0);
       if (!ranking || !possuiDados) {
         resolve();
@@ -961,13 +960,13 @@
           }
           vitorias.hidden = ranking.totalVitoriasChuteira < 1;
           if (ranking.totalVitoriasChuteira > 0) {
-            const vezes =
-              ranking.totalVitoriasChuteira === 1 ? "vez" : "vezes";
+            const vezes = ranking.totalVitoriasChuteira === 1 ? "vez" : "vezes";
             vitorias.textContent = `Chuteira de Ouro na carreira: ${ranking.totalVitoriasChuteira} ${vezes}`;
           }
         } else {
           if (ranking.venceuNestaTemporada) {
-            mensagem.textContent = "Você venceu a Bola de Ouro nesta temporada.";
+            mensagem.textContent =
+              "Você venceu a Bola de Ouro nesta temporada.";
           } else if (ranking.posicaoUsuario > 0 && nomeVencedor) {
             const foraDoTop10 =
               ranking.posicaoUsuario > jogadores.length
@@ -1581,8 +1580,7 @@
       assistencias: temporada.assistencias,
       jogosClube: temporada.jogosClube ?? temporada.jogos,
       golsClube: temporada.golsClube ?? temporada.gols,
-      assistenciasClube:
-        temporada.assistenciasClube ?? temporada.assistencias,
+      assistenciasClube: temporada.assistenciasClube ?? temporada.assistencias,
       jogosSelecao: temporada.jogosSelecao,
       golsSelecao: temporada.golsSelecao,
       assistenciasSelecao: temporada.assistenciasSelecao,
@@ -5151,7 +5149,7 @@
       posicao: "CA",
       idadeAposentadoria: 41,
       destinos: ["ceara", "sao-paulo"],
-      chanceTransferencia: 0.10,
+      chanceTransferencia: 0.1,
       pesoRanking: 10,
       pesoRankingPico: 12,
       anoInicioProfissional: 2026,
@@ -5171,7 +5169,7 @@
       posicao: "CA",
       idadeAposentadoria: 41,
       destinos: ["santos", "chelsea"],
-      chanceTransferencia: 0.10,
+      chanceTransferencia: 0.1,
       pesoRanking: 10,
       pesoRankingPico: 12,
       anoInicioProfissional: 2026,
@@ -7208,9 +7206,7 @@
       (periodo) => ano >= periodo.inicio && ano <= periodo.fim,
     )?.clube;
     if (ano < 2026 || clubeHistorico) {
-      return (
-        clubeHistorico || ""
-      );
+      return clubeHistorico || "";
     }
 
     let clubeId = jogador.clube;
@@ -7807,16 +7803,14 @@
       .flat()
       .filter(
         (partida) =>
-          (partida.status === "concluida" ||
-            partida.status === "concluido") &&
+          (partida.status === "concluida" || partida.status === "concluido") &&
           ((partida.casaId || partida.clubeCasaId) === estado.clubeId ||
             (partida.foraId || partida.clubeForaId) === estado.clubeId) &&
           !ehPartidaDeIA(partida),
       ).length;
     const jogosOutrasCompeticoes = (estado?.partidas || []).filter(
       (partida) =>
-        (partida.status === "concluida" ||
-          partida.status === "concluido") &&
+        (partida.status === "concluida" || partida.status === "concluido") &&
         partida.competicao !== estado?.liga &&
         !ehPartidaDeIA(partida),
     ).length;
@@ -8563,14 +8557,17 @@
   function obterJogosReferenciaClube(clubeId, estatisticas = {}) {
     const partidasLiga = (estado?.rodadas || []).flatMap((rodada) => rodada);
     const jogosLiga = partidasLiga.filter(
-      (partida) =>
-        partida.casaId === clubeId || partida.foraId === clubeId,
+      (partida) => partida.casaId === clubeId || partida.foraId === clubeId,
     ).length;
     if (jogosLiga > 0) return jogosLiga;
     return Math.max(0, Number(estatisticas.jogosReferencia) || 0);
   }
 
-  function ordenarClubesCampanha(clubes, identificador, usarTabelaReal = false) {
+  function ordenarClubesCampanha(
+    clubes,
+    identificador,
+    usarTabelaReal = false,
+  ) {
     if (usarTabelaReal) {
       const posicoes = new Map(
         (estado.tabela || [])
@@ -8583,13 +8580,11 @@
           const timeB = posicoes.get(b.id);
           return (
             Number(timeB.pts || 0) - Number(timeA.pts || 0) ||
-            (Number(timeB.gp || 0) - Number(timeB.gc || 0)) -
+            Number(timeB.gp || 0) -
+              Number(timeB.gc || 0) -
               (Number(timeA.gp || 0) - Number(timeA.gc || 0)) ||
             Number(timeB.gp || 0) - Number(timeA.gp || 0) ||
-            String(a.nome || "").localeCompare(
-              String(b.nome || ""),
-              "pt-BR",
-            )
+            String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR")
           );
         });
       }
@@ -8648,9 +8643,7 @@
       );
     }
 
-    const campanhasPorClube = new Map(
-      clubes.map((clube) => [clube.id, []]),
-    );
+    const campanhasPorClube = new Map(clubes.map((clube) => [clube.id, []]));
     const nomesPorLiga = new Map();
     const ligas = new Map();
     const titulosReais = new Set(estado.trofeusClube || []);
@@ -8696,11 +8689,7 @@
             }).length
           : 0;
       ordem.forEach((clube, indice) => {
-        const nivel = obterNivelCampanha(
-          indice,
-          tipo,
-          vagasContinentais,
-        );
+        const nivel = obterNivelCampanha(indice, tipo, vagasContinentais);
         campanhasPorClube.get(clube.id)?.push({
           titulo,
           nivel,
@@ -8713,12 +8702,7 @@
     ligas.forEach((participantes, liga) => {
       const nomes = nomesPorLiga.get(liga) || {};
       registrarCampanha(nomes.liga, participantes, "liga", `${liga}:liga`);
-      registrarCampanha(
-        nomes.copa,
-        participantes,
-        "mata-mata",
-        `${liga}:copa`,
-      );
+      registrarCampanha(nomes.copa, participantes, "mata-mata", `${liga}:copa`);
     });
 
     const clubesPorId = new Map(clubes.map((clube) => [clube.id, clube]));
@@ -8842,18 +8826,14 @@
 
     const campanhasPorClube = obterResultadosColetivosTemporada();
     const estatisticasPonderadas = obterEstatisticasPonderadasBolaDeOuro();
-    temporada.trofeusIndividuais = (
-      temporada.trofeusIndividuais || []
-    ).filter((titulo) => titulo !== "Chuteira de Ouro");
+    temporada.trofeusIndividuais = (temporada.trofeusIndividuais || []).filter(
+      (titulo) => titulo !== "Chuteira de Ouro",
+    );
     const golsPonderadosMaximos = [...estatisticasPonderadas.values()]
       .filter(
-        (dados) =>
-          dados.gols > 0 && obterClube(dados.clubeId)?.tipo !== "base",
+        (dados) => dados.gols > 0 && obterClube(dados.clubeId)?.tipo !== "base",
       )
-      .reduce(
-        (maximo, dados) => Math.max(maximo, dados.golsPonderados),
-        0,
-      );
+      .reduce((maximo, dados) => Math.max(maximo, dados.golsPonderados), 0);
     const dadosUsuarioPonderados = estatisticasPonderadas.get(idUsuario);
     if (
       usuarioElegivel &&
@@ -8992,17 +8972,12 @@
         );
         const notaColetiva =
           pesoMaximoColetivoGlobal > 0
-            ? Math.min(
-                100,
-                (pontosColetivos / pesoMaximoColetivoGlobal) * 100,
-              )
+            ? Math.min(100, (pontosColetivos / pesoMaximoColetivoGlobal) * 100)
             : 0;
         const notaParticipacao = participacao * 100;
         const notaIndividual = desempenho.notaIndividual;
         const pontuacao =
-          notaIndividual * 0.75 +
-          notaColetiva * 0.15 +
-          notaParticipacao * 0.1;
+          notaIndividual * 0.75 + notaColetiva * 0.15 + notaParticipacao * 0.1;
         const campanhasComResultado = campanhas
           .filter((campanha) => campanha.nivel > 0)
           .map((campanha) => {
@@ -9078,8 +9053,7 @@
               ]
             : ["golsPonderadosPorJogo", "assistenciasPonderadasPorJogo"];
         for (const criterio of criterios) {
-          if (a[criterio] !== b[criterio])
-            return b[criterio] - a[criterio];
+          if (a[criterio] !== b[criterio]) return b[criterio] - a[criterio];
         }
         if (a.gols !== b.gols) return b.gols - a.gols;
         if (a.assistencias !== b.assistencias)
@@ -9107,9 +9081,7 @@
     ).length;
 
     return {
-      vencedor: avaliados[0]
-        ? { nome: avaliados[0].nome || "Jogador" }
-        : null,
+      vencedor: avaliados[0] ? { nome: avaliados[0].nome || "Jogador" } : null,
       chuteira: rankingChuteira.slice(0, 10),
       chuteiraVencedor: rankingChuteira[0]
         ? { nome: rankingChuteira[0].nome }
@@ -11792,6 +11764,7 @@
           [...historicoCarreira, temporada],
           temporada.posicao,
         );
+        abrirModalFimCarreira();
       }
       if (
         aposentarPorLimiteBase &&
@@ -11810,6 +11783,81 @@
       );
     }
   }
+  function limparCamposConfiguracao() {
+    const nome = $("nome");
+    const idade = $("idade");
+    const limite = $("idade-limite");
+    const nacionalidade = $("nacionalidade");
+    const baseClube = $("base-clube");
+    const clubeAlvo = $("clube-alvo");
+    const ano = $("ano-inicial-carreira");
+    if (nome) nome.value = "";
+    if (idade) idade.value = "18";
+    if (limite)
+      limite.value = String(
+        typeof IDADE_LIMITE_PADRAO !== "undefined" ? IDADE_LIMITE_PADRAO : 40,
+      );
+    if (ano) {
+      ano.value = String(
+        typeof getConfig === "function"
+          ? Number(getConfig()?.geral?.anoInicial) || 2026
+          : 2026,
+      );
+      ano.disabled = false;
+    }
+    document.querySelectorAll('input[name="posicao"]').forEach((radio) => {
+      radio.checked = false;
+    });
+    if (nacionalidade) nacionalidade.value = "";
+    const filtroRegiao = $("filtro-regiao-nacionalidade");
+    if (filtroRegiao) filtroRegiao.value = "";
+    const posicaoSelecionada = $("posicao-selecionada");
+    if (posicaoSelecionada)
+      posicaoSelecionada.textContent = "Nenhuma posição selecionada";
+    if (baseClube) {
+      baseClube.innerHTML =
+        '<option value="">Escolha a nacionalidade primeiro</option>';
+      baseClube.disabled = true;
+    }
+    if (clubeAlvo) clubeAlvo.textContent = "Escolher clube-alvo";
+    const painel = $("configuracao-jogador");
+    if (painel) painel.open = false;
+    $("jja-confirmar-inicio").hidden = false;
+    $("jja-iniciar").hidden = false;
+    $("jja-iniciar").textContent = "Iniciar";
+    $("mobile-action-start").hidden = false;
+    $("mobile-action-active").hidden = true;
+  }
+
+  function finalizarFluxoFimCarreira() {
+    $("jja-modal-fim-carreira").hidden = true;
+    $("resumo-final").hidden = true;
+    $("resultados").hidden = false;
+    const carreira =
+      typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : {};
+    carreira.nome = "";
+    carreira.posicao = "";
+    carreira.posicaoDetalhe = "";
+    carreira.nacionalidade = "";
+    carreira.baseClube = "";
+    carreira.clubeAlvo = "";
+    if (typeof salvarCarreiraAtual === "function")
+      salvarCarreiraAtual(carreira);
+    estado = null;
+    try {
+      localStorage.removeItem(KEY);
+    } catch (erro) {
+      console.warn("Não foi possível limpar o progresso finalizado:", erro);
+    }
+    limparCamposConfiguracao();
+    renderizar();
+  }
+
+  function abrirModalFimCarreira() {
+    const modal = $("jja-modal-fim-carreira");
+    if (modal) modal.hidden = false;
+  }
+
   function informar(texto, erro = false) {
     const el = $("jja-status");
     if (el) {
@@ -12367,12 +12415,22 @@
     const historicoCarreira = obterHistoricoCarreira(carreira);
     const encerrada = carreiraEncerrada(carreira, historicoCarreira);
     const emAndamento = temporadaEmAndamento(carreira);
+    // Informações específicas da temporada só aparecem depois que uma carreira
+    // foi iniciada. Mantém os painéis visíveis entre temporadas, mas os recolhe
+    // ao encerrar e voltar à tela inicial.
+    const conteudoTemporada = $("jja-conteudo-temporada");
+    if (conteudoTemporada) {
+      conteudoTemporada.hidden = !(
+        ativo ||
+        (historicoCarreira.length > 0 && !!carreira.nome)
+      );
+    }
     const botaoIniciar = $("jja-iniciar");
     botaoIniciar.textContent = encerrada
-      ? "Iniciar nova carreira"
+      ? "Iniciar"
       : historicoCarreira.length
         ? "Próxima temporada"
-        : "Iniciar carreira";
+        : "Iniciar";
     botaoIniciar.disabled =
       bloqueioAcoesPartida ||
       emAndamento ||
@@ -12401,6 +12459,10 @@
       decisaoEmAndamento || bloqueioAcoesPartida || !ativo || !proxima;
     $("jja-simular-carreira").disabled =
       decisaoEmAndamento || bloqueioAcoesPartida || encerrada;
+    const inicioPendente = !ativo && !historicoCarreira.length;
+    $("jja-jogar").hidden = inicioPendente || encerrada;
+    $("jja-simular-restantes").hidden = inicioPendente || encerrada;
+    $("jja-simular-carreira").hidden = inicioPendente || encerrada;
     botaoAposentar.disabled =
       decisaoEmAndamento ||
       bloqueioAcoesPartida ||
@@ -12413,7 +12475,7 @@
     const mobileActive = $("mobile-action-active");
     const mobileStart = $("mobile-action-start");
     const mobileIsActive =
-      !!estado || (historicoCarreira.length > 0 && !encerrada);
+      !encerrada && (!!estado || historicoCarreira.length > 0);
     if (mobileBar) mobileBar.hidden = false;
     if (mobileActive) mobileActive.hidden = !mobileIsActive;
     if (mobileStart) {
@@ -12539,8 +12601,7 @@
       const tabela = estado.tabela
         .filter((t) => !t.id.startsWith("__rodada__"))
         .sort(
-          (a, b) =>
-            b.pts - a.pts || b.gp - b.gc - (a.gp - a.gc) || b.gp - a.gp,
+          (a, b) => b.pts - a.pts || b.gp - b.gc - (a.gp - a.gc) || b.gp - a.gp,
         );
 
       const ligaParaZonas =
@@ -12592,8 +12653,7 @@
     const calendarioEl = $("jja-calendario");
     const painelCalendario = calendarioEl?.closest("details");
     if (calendarioEl && (!painelCalendario || painelCalendario.open)) {
-      calendarioEl.innerHTML =
-      `<div class="jja-lista-jogos">${estado.partidas
+      calendarioEl.innerHTML = `<div class="jja-lista-jogos">${estado.partidas
         .filter((p) => !ehPartidaDeIA(p))
         .map((p) => {
           const adv = clubesDisponiveis().find((c) => c.id === p.adversarioId);
@@ -12728,6 +12788,7 @@
           temporadaFinal.posicao,
         );
         mostrarDesempenhoTemporada(temporadaFinal);
+        abrirModalFimCarreira();
       }
       atualizarCampoAnoInicial(carreira, historico);
       informar(
@@ -13018,7 +13079,7 @@
     const ajustarAccordionsMobile = () => {
       const mobile = window.matchMedia("(max-width: 600px)").matches;
       document.querySelectorAll(".mobile-accordion").forEach((el) => {
-        el.open = !mobile;
+        if (el.id !== "configuracao-jogador") el.open = !mobile;
       });
       const desempenho = document.querySelector(".jja-desempenho-painel");
       if (desempenho) desempenho.open = !mobile;
@@ -13027,7 +13088,57 @@
     window
       .matchMedia("(max-width: 600px)")
       .addEventListener?.("change", ajustarAccordionsMobile);
-    $("jja-iniciar")?.addEventListener("click", iniciarOuAvancar);
+    $("configuracao-jogador")?.addEventListener("toggle", () => {
+      const carreiraAtual =
+        typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : {};
+      const historicoAtual = obterHistoricoCarreira(carreiraAtual);
+      const podeConfigurar =
+        !estado &&
+        (!historicoAtual.length ||
+          carreiraEncerrada(carreiraAtual, historicoAtual));
+      if ($("configuracao-jogador").open && podeConfigurar) {
+        $("jja-confirmar-inicio").hidden = false;
+        $("jja-iniciar").hidden = true;
+        $("mobile-action-start").hidden = true;
+      } else if (!$("configuracao-jogador").open && podeConfigurar) {
+        $("jja-confirmar-inicio").hidden = true;
+        $("jja-iniciar").hidden = false;
+        $("mobile-action-start").hidden = false;
+      }
+    });
+    const abrirConfiguracaoInicial = () => {
+      const painel = $("configuracao-jogador");
+      if (painel) {
+        painel.open = true;
+        painel.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+      $("jja-iniciar").hidden = true;
+      $("mobile-action-start").hidden = true;
+      $("jja-confirmar-inicio").hidden = false;
+    };
+    $("jja-iniciar")?.addEventListener("click", () => {
+      const carreiraAtual =
+        typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : {};
+      const historicoAtual = obterHistoricoCarreira(carreiraAtual);
+      if (
+        !estado &&
+        (!historicoAtual.length ||
+          carreiraEncerrada(carreiraAtual, historicoAtual))
+      ) {
+        abrirConfiguracaoInicial();
+        return;
+      }
+      iniciarOuAvancar();
+    });
+    $("jja-confirmar-inicio")?.addEventListener("click", async () => {
+      await iniciarOuAvancar();
+      if (estado) {
+        const painel = $("configuracao-jogador");
+        if (painel) painel.open = false;
+        $("jja-confirmar-inicio").hidden = true;
+        $("jja-iniciar").hidden = false;
+      }
+    });
     $("jja-simular-restantes")?.addEventListener("click", () =>
       simularRestantes(false, true),
     );
@@ -13035,6 +13146,33 @@
       simularFimCarreira(),
     );
     $("jja-aposentar")?.addEventListener("click", aposentarJogador);
+    $("jja-fim-encerrar")?.addEventListener("click", () =>
+      finalizarFluxoFimCarreira(),
+    );
+    $("jja-fim-resumo")?.addEventListener("click", () => {
+      $("jja-modal-fim-carreira").hidden = true;
+      $("resumo-final").hidden = false;
+      $("resultados").hidden = true;
+      const carreira =
+        typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : {};
+      carreira.nome = "";
+      carreira.posicao = "";
+      carreira.posicaoDetalhe = "";
+      carreira.nacionalidade = "";
+      carreira.baseClube = "";
+      carreira.clubeAlvo = "";
+      if (typeof salvarCarreiraAtual === "function")
+        salvarCarreiraAtual(carreira);
+      estado = null;
+      try {
+        localStorage.removeItem(KEY);
+      } catch (erro) {
+        console.warn("Não foi possível limpar o progresso finalizado:", erro);
+      }
+      $("resumo-final").scrollIntoView({ behavior: "smooth", block: "start" });
+      limparCamposConfiguracao();
+      renderizar();
+    });
     if (estado) {
       estado.trofeusClube = estado.trofeusClube || [];
       estado.trofeusSelecao = estado.trofeusSelecao || [];
@@ -13057,6 +13195,7 @@
         historicoCarreira,
         temporadaFinal.posicao,
       );
+      abrirModalFimCarreira();
     }
   }
   if (document.readyState === "loading")

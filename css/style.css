@@ -5361,3 +5361,48 @@ html[data-theme="light"] .jja-tabela-grupo tr.meu-clube { background: #e1f0e2; c
 
 .trofeu-clubes { display: flex; justify-content: center; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
 .trofeu-clubes .escudo-clube { width: 18px; height: 18px; }
+
+
+/* Fluxo inicial e encerramento de carreira */
+.jja-config-acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+.jja-config-acoes button {
+  min-height: 44px;
+  padding: 10px 20px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--cor-destaque, #22c55e);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+.jja-modal-fim-carreira .modal-caixa {
+  max-width: 440px;
+}
+.jja-modal-fim-carreira .modal-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+.jja-modal-fim-carreira .modal-btn {
+  min-width: 125px;
+}
+@media (max-width: 600px) {
+  .jja-config-acoes {
+    justify-content: stretch;
+  }
+  .jja-config-acoes button {
+    width: 100%;
+  }
+  .jja-modal-fim-carreira .modal-acoes {
+    flex-direction: column-reverse;
+  }
+  .jja-modal-fim-carreira .modal-btn {
+    width: 100%;
+  }
+}
