@@ -5433,3 +5433,11 @@ html[data-theme="light"] .jja-tabela-grupo tr.meu-clube { background: #e1f0e2; c
     width: 100%;
   }
 }
+
+
+/* Coletivas de imprensa */
+.modal-coletiva-imprensa { z-index: 1200; }
+.modal-coletiva-imprensa .modal-caixa { max-width: 520px; }
+.coletiva-categoria { display: block; color: var(--cor-texto-secundario, #8b929e); font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin: 0 0 .45rem; }
+.coletiva-respostas { display: grid; gap: .65rem; margin-top: 1.1rem; }
+.coletiva-resposta { width: 100%; min-height: 48px; text-align: left; white-space: normal; line-height: 1.4; }

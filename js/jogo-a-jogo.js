@@ -1761,9 +1761,11 @@
     const pos = String(estado.posicao || "CA").toUpperCase();
     const forcaTime = forcaClube(meuClube);
     // O titular depende do nível do jogador em relação ao clube, não só do overall isolado.
+    const relacaoTreinador = Number(estado.relacaoTreinador ?? 60);
+    const fatorRelacaoTreinador = relacaoTreinador < 20 ? 0.78 : relacaoTreinador < 35 ? 0.86 : relacaoTreinador < 50 ? 0.93 : 1;
     const chanceJogar = Math.max(
-      0.72,
-      Math.min(0.99, 0.9 + (estado.overall - forcaTime) * 0.006),
+      0.68,
+      Math.min(0.99, (0.9 + (estado.overall - forcaTime) * 0.006) * fatorRelacaoTreinador),
     );
     const participou =
       participacaoForcada === null
@@ -2219,6 +2221,9 @@
       ) {
         estado = valor;
         estado.versao = 4;
+        estado.pontosReputacaoTemporada = Number(estado.pontosReputacaoTemporada) || 0;
+        estado.coletivasTemporada = Number(estado.coletivasTemporada) || 0;
+        estado.relacaoTreinador = Number.isFinite(Number(estado.relacaoTreinador)) ? Math.max(0, Math.min(100, Number(estado.relacaoTreinador))) : 60;
         estado.desempenhoPosicional = {
           ...desempenhoPosicionalInicial(),
           ...(estado.desempenhoPosicional || {}),
@@ -4697,6 +4702,9 @@
           jogadasCriadas: 0,
         },
         eventos: [],
+        pontosReputacaoTemporada: 0,
+        coletivasTemporada: 0,
+        relacaoTreinador: 60,
         competicoes: {},
         trofeusClube: [],
         trofeusSelecao: [],
@@ -9956,6 +9964,9 @@
     partida.jogadasCriadas = participou
       ? estatisticasComplementares.jogadasCriadas
       : 0;
+    if (typeof concluirColetivaImprensa === "function") {
+      concluirColetivaImprensa(partida, estado);
+    }
     partida.casaNome = casa.nome;
     partida.foraNome = fora.nome;
 
@@ -10119,6 +10130,13 @@
       titulo: `${partida.competicao} · ${resumo}`,
       texto: detalhes,
     });
+    if (partida.coletivaPendente) {
+      const impacto = Number(partida.coletivaResultado) || 0;
+      estado.feed.unshift({
+        titulo: "Coletiva de imprensa",
+        texto: `${partida.coletivaPendente.resposta} · ${impacto > 0 ? "+" : ""}${impacto} pontos de reputação`,
+      });
+    }
     estado.feed = estado.feed.slice(0, 12);
     if (partida.tipo === "liga") simularOutrosJogosDaRodada(partida.rodadaLiga);
     if (!opcoesPenaltis?.simulacaoEmLote) obterRankingOutrasLigas();
@@ -11326,6 +11344,14 @@
       return;
     }
     const partida = estado.partidas[indice];
+    if (
+      !partida.coletivaPendente &&
+      !partida.coletivaProcessada &&
+      typeof abrirColetivaImprensa === "function"
+    ) {
+      await abrirColetivaImprensa(partida, estado, false);
+      salvar();
+    }
     const pelaSelecao = partida.tipo === "selecao";
     const disponibilidade = estado.disponibilidade || disponibilidadeInicial();
     const chaveEquipe = pelaSelecao ? "selecao" : "clube";
@@ -11353,9 +11379,11 @@
     const forcaTime = pelaSelecao
       ? Number(getConfig()?.selecao?.potencias?.[meuClube.id]) || 60
       : forcaClube(meuClube);
+    const relacaoTreinador = Number(estado.relacaoTreinador ?? 60);
+    const fatorRelacaoTreinador = relacaoTreinador < 20 ? 0.78 : relacaoTreinador < 35 ? 0.86 : relacaoTreinador < 50 ? 0.93 : 1;
     const chanceJogar = Math.max(
-      0.72,
-      Math.min(0.99, 0.9 + (estado.overall - forcaTime) * 0.006),
+      0.68,
+      Math.min(0.99, (0.9 + (estado.overall - forcaTime) * 0.006) * fatorRelacaoTreinador),
     );
     const participou = Math.random() < chanceJogar;
     if (!participou) {
@@ -11441,6 +11469,13 @@
         )) >= 0
       ) {
         const partida = estado.partidas[indice];
+        if (
+          !partida.coletivaPendente &&
+          !partida.coletivaProcessada &&
+          typeof abrirColetivaImprensa === "function"
+        ) {
+          await abrirColetivaImprensa(partida, estado, true);
+        }
         await simularPartida(indice, false, null, {
           interativo: false,
           simulacaoEmLote: true,
@@ -11699,13 +11734,14 @@
       }
       estado.trofeusColetivos = temporada.trofeusColetivos;
       estado.trofeusIndividuais = temporada.trofeusIndividuais;
+      temporada.pontosReputacaoTemporada = Number(estado.pontosReputacaoTemporada) || 0;
       const reputacao =
-        typeof calcularReputacao === "function"
-          ? calcularReputacao({ clube: estado.clubeId }, [
-              ...historicoCarreira,
-              temporada,
-            ])
-          : 0;
+        typeof consolidarReputacaoTemporada === "function"
+          ? consolidarReputacaoTemporada(carreira, temporada)
+          : typeof calcularReputacao === "function"
+            ? calcularReputacao(carreira, [...historicoCarreira, temporada])
+            : 0;
+      temporada.coletivasTemporada = Number(estado.coletivasTemporada) || 0;
       temporada.reputacao = reputacao;
       temporada.valorMercado = temporada.base
         ? 0

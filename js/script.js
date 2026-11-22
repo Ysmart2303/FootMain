@@ -95,7 +95,10 @@ function calcularRecordesNoWorker(carreiras) {
       }
 
       id = ++proximoIdCalculoCarreira;
-      calculosCarreiraPendentes.set(id, { resolve: resolver, reject: rejeitar });
+      calculosCarreiraPendentes.set(id, {
+        resolve: resolver,
+        reject: rejeitar,
+      });
       workerAnaliseCarreiras.postMessage({
         id,
         tipo: "calcular-recordes",
@@ -149,7 +152,10 @@ window.FootMainPerformance = {
   },
   snapshot: () =>
     Object.fromEntries(
-      [...desempenhoFootMain].map(([etapa, registro]) => [etapa, { ...registro }]),
+      [...desempenhoFootMain].map(([etapa, registro]) => [
+        etapa,
+        { ...registro },
+      ]),
     ),
   report: () => {
     const dados = window.FootMainPerformance.snapshot();
@@ -283,10 +289,12 @@ const MAPA_SELECOES = new Map();
 const BASES_POR_NACIONALIDADE = new Map();
 const CLUBES_POR_LIGA = new Map();
 
-[...CLUBES, ...(typeof CLUBES_REGIONAIS !== "undefined" ? CLUBES_REGIONAIS : [])]
-  .forEach((clube) => {
-    if (clube?.id) MAPA_CLUBES.set(clube.id, clube);
-  });
+[
+  ...CLUBES,
+  ...(typeof CLUBES_REGIONAIS !== "undefined" ? CLUBES_REGIONAIS : []),
+].forEach((clube) => {
+  if (clube?.id) MAPA_CLUBES.set(clube.id, clube);
+});
 SELECOES.forEach((selecao) => {
   if (selecao?.id) MAPA_SELECOES.set(selecao.id, selecao);
 });
@@ -841,7 +849,8 @@ function obterCadastroClubeParaEscudo(clube) {
     return { ...clube, ...CACHE_CADASTRO_ESCUDOS_POR_ID.get(chaveCache) };
   const cadastroPorId = obterClubeParaExibicao(clube.id);
   if (cadastroPorId) {
-    if (chaveCache) CACHE_CADASTRO_ESCUDOS_POR_ID.set(chaveCache, cadastroPorId);
+    if (chaveCache)
+      CACHE_CADASTRO_ESCUDOS_POR_ID.set(chaveCache, cadastroPorId);
     return { ...clube, ...cadastroPorId };
   }
   if (clube.nome) {
@@ -951,7 +960,10 @@ function encontrarArquivoEscudo(clube, arquivos, mapa = null) {
     .map(normalizarNomeParaEscudo)
     .filter(Boolean);
   mapa ||= new Map(
-    arquivos.map((arquivo) => [normalizarNomeParaEscudo(arquivo.nome), arquivo]),
+    arquivos.map((arquivo) => [
+      normalizarNomeParaEscudo(arquivo.nome),
+      arquivo,
+    ]),
   );
   for (const chave of chaves) {
     const encontrado = mapa.get(chave);
@@ -972,7 +984,10 @@ function resolverEscudosPendentes(pais) {
   obterIndiceEscudosPais(pais)
     .then((arquivos) => {
       const mapa = new Map(
-        arquivos.map((arquivo) => [normalizarNomeParaEscudo(arquivo.nome), arquivo]),
+        arquivos.map((arquivo) => [
+          normalizarNomeParaEscudo(arquivo.nome),
+          arquivo,
+        ]),
       );
       CACHE_MAPA_ESCUDOS_POR_PAIS.set(pais, mapa);
       document
@@ -990,7 +1005,9 @@ function resolverEscudosPendentes(pais) {
             imagem.dataset.escudoCandidatoIndice = "-1";
             imagem.src = encontrado.url;
           } else if (!imagem.dataset.escudoCandidatos) {
-            imagem.src = criarEscudoGenericoSvg(imagem.dataset.escudoNome || "Clube");
+            imagem.src = criarEscudoGenericoSvg(
+              imagem.dataset.escudoNome || "Clube",
+            );
           }
         });
     })
@@ -1002,7 +1019,9 @@ function resolverEscudosPendentes(pais) {
         .forEach((imagem) => {
           imagem.dataset.escudoPendente = "0";
           if (!imagem.dataset.escudoCandidatos)
-            imagem.src = criarEscudoGenericoSvg(imagem.dataset.escudoNome || "Clube");
+            imagem.src = criarEscudoGenericoSvg(
+              imagem.dataset.escudoNome || "Clube",
+            );
         });
     })
     .finally(() => PAISES_ESCUDOS_EM_RESOLUCAO.delete(pais));
@@ -1046,9 +1065,10 @@ function htmlEscudoClube(clube, tamanho = "pequeno", classeExtra = "") {
     !clube?.logoUrl
   )
     url = urlsDiretas[0];
-  const atributosBusca = pais && !arquivosPais
-    ? `data-escudo-pais="${escaparHTML(pais)}" data-escudo-id="${escaparHTML(cadastroEscudo?.id || clube?.id || "")}" data-escudo-pendente="1"`
-    : "";
+  const atributosBusca =
+    pais && !arquivosPais
+      ? `data-escudo-pais="${escaparHTML(pais)}" data-escudo-id="${escaparHTML(cadastroEscudo?.id || clube?.id || "")}" data-escudo-pendente="1"`
+      : "";
   const atributosFallback = urlsDiretas.length
     ? `data-escudo-candidatos="${escaparHTML(JSON.stringify(urlsDiretas))}" data-escudo-candidato-indice="${url === urlsDiretas[0] ? "0" : "-1"}"`
     : "";
@@ -1061,11 +1081,11 @@ const MAPA_TROFEUS_POR_LIGA = {
   // Ligas estaduais dos clubes regionais
   Pernambucano: { liga: "Pernambucano", copa: "", continental: "" },
   Cearense: { liga: "Cearense", copa: "", continental: "" },
-  "Baianão": { liga: "Baianão", copa: "", continental: "" },
+  Baianão: { liga: "Baianão", copa: "", continental: "" },
   Mineiro: { liga: "Mineiro", copa: "", continental: "" },
-  "Gauchão": { liga: "Gauchão", copa: "", continental: "" },
+  Gauchão: { liga: "Gauchão", copa: "", continental: "" },
   Carioca: { liga: "Carioca", copa: "", continental: "" },
-  "Paulistão": { liga: "Paulistão", copa: "", continental: "" },
+  Paulistão: { liga: "Paulistão", copa: "", continental: "" },
 
   // Europa
   "Premier League": {
@@ -1738,6 +1758,25 @@ function validarTemporada(temporada) {
         ? temporada.carreiraId
         : "legacy",
     reputacao,
+    pontosReputacaoTemporada: limitarPontosReputacao(
+      temporada.pontosReputacaoTemporada,
+      -8,
+      8,
+    ),
+    pontosReputacaoDesempenho: Math.max(
+      0,
+      Math.min(3, Math.floor(Number(temporada.pontosReputacaoDesempenho) || 0)),
+    ),
+    variacaoReputacao: Math.max(
+      -8,
+      Math.min(8, Math.floor(Number(temporada.variacaoReputacao) || 0)),
+    ),
+    reputacaoConsolidada: !!temporada.reputacaoConsolidada,
+    coletivasTemporada: Math.max(
+      0,
+      Math.min(6, Math.floor(Number(temporada.coletivasTemporada) || 0)),
+    ),
+    coletivasGeradas: !!temporada.coletivasGeradas,
     valorMercado,
     salario,
     anosContrato,
@@ -1784,6 +1823,7 @@ function normalizarEventosTemporada(eventos) {
     "convocacao-surpresa",
     "pedido-aumento",
     "aposentadoria-voluntaria",
+    "coletiva-imprensa",
   ]);
 
   return eventos
@@ -1806,6 +1846,14 @@ function normalizarEventosTemporada(eventos) {
       clube: typeof evento.clube === "string" ? evento.clube : "",
       motivo:
         typeof evento.motivo === "string" ? evento.motivo.slice(0, 120) : "",
+      pontosReputacao: Math.max(
+        -10,
+        Math.min(10, Math.round(Number(evento.pontosReputacao) || 0)),
+      ),
+      resposta:
+        typeof evento.resposta === "string"
+          ? evento.resposta.slice(0, 160)
+          : "",
     }));
 }
 
@@ -1925,7 +1973,9 @@ function normalizarEstatisticasPorClube(estatisticas) {
   if (!estatisticas || typeof estatisticas !== "object") return null;
   return Object.fromEntries(
     Object.entries(estatisticas)
-      .filter(([clubeId, dados]) => clubeId && dados && typeof dados === "object")
+      .filter(
+        ([clubeId, dados]) => clubeId && dados && typeof dados === "object",
+      )
       .map(([clubeId, dados]) => [
         clubeId,
         {
@@ -1953,6 +2003,7 @@ function obterCarreiraAtual() {
     anosContratoRestantes: 0,
     rompimentosContratoUsados: 0,
     saldo: 0,
+    reputacaoGeral: 0,
     clubeQualificado: "",
     competicoesQualificadas: [],
   };
@@ -2026,6 +2077,19 @@ function obterCarreiraAtual() {
           )
         : 0,
       potencial: calcularPotencialDaCarreira(carreira),
+      reputacaoGeral: Number.isFinite(Number(carreira.reputacaoGeral))
+        ? Math.max(
+            0,
+            Math.min(100, Math.floor(Number(carreira.reputacaoGeral))),
+          )
+        : Math.min(
+            35,
+            Math.round(
+              (lerHistorico()
+                .filter((t) => String(t.carreiraId) === String(carreira.id))
+                .slice(-1)[0]?.reputacao || 0) * 0.35,
+            ),
+          ),
       aposentadoriaSelecao: !!carreira.aposentadoriaSelecao,
       aposentadoriaVoluntaria: !!carreira.aposentadoriaVoluntaria,
       salarioAtual: Number.isFinite(Number(carreira.salarioAtual))
@@ -2115,6 +2179,10 @@ function salvarCarreiraAtual(carreira) {
           )
         : 0,
       potencial: calcularPotencialDaCarreira(carreiraAtual),
+      reputacaoGeral: Math.max(
+        0,
+        Math.min(100, Math.floor(Number(carreiraAtual.reputacaoGeral) || 0)),
+      ),
 
       aposentadoriaSelecao: !!carreiraAtual.aposentadoriaSelecao,
       aposentadoriaVoluntaria: !!carreiraAtual.aposentadoriaVoluntaria,
@@ -4018,10 +4086,9 @@ function obterMetricasCarreira(carreira) {
     resumoEstatisticas
       ? Number(resumoEstatisticas[campo]) || 0
       : temporadas.reduce(
-            (total, temporada) =>
-              total + (Number(temporada[campo]) || 0),
-            0,
-          ) ||
+          (total, temporada) => total + (Number(temporada[campo]) || 0),
+          0,
+        ) ||
         Number(carreira[campo]) ||
         0;
 
@@ -4043,16 +4110,10 @@ function obterMetricasCarreira(carreira) {
     cartoesTotais: {
       amarelos: resumoEstatisticas
         ? resumoEstatisticas.cartaoAmarelo
-        : temporadas.reduce(
-            (n, t) => n + (Number(t.cartaoAmarelo) || 0),
-            0,
-          ),
+        : temporadas.reduce((n, t) => n + (Number(t.cartaoAmarelo) || 0), 0),
       vermelhos: resumoEstatisticas
         ? resumoEstatisticas.cartaoVermelho
-        : temporadas.reduce(
-            (n, t) => n + (Number(t.cartaoVermelho) || 0),
-            0,
-          ),
+        : temporadas.reduce((n, t) => n + (Number(t.cartaoVermelho) || 0), 0),
     },
     caps: resumoEstatisticas
       ? resumoEstatisticas.caps
@@ -4513,9 +4574,7 @@ function renderRanking() {
       detalhes.addEventListener("toggle", () => {
         if (!detalhes.open || detalhes.dataset.renderizado === "true") return;
         const carreira = ranking[Number(detalhes.dataset.carreiraIndex)];
-        const conteudo = detalhes.querySelector(
-          ".detalhes-carreira-conteudo",
-        );
+        const conteudo = detalhes.querySelector(".detalhes-carreira-conteudo");
         if (!carreira || !conteudo) {
           console.error(
             "[FootMain] Não foi possível carregar os detalhes da carreira no ranking.",
@@ -4611,7 +4670,7 @@ function atualizarResumoJogador(
 
   const historicoAtual = lerHistoricoAtiva();
   const ultimaTemp = historicoAtual[historicoAtual.length - 1];
-  const reputacaoAtual = ultimaTemp ? Number(ultimaTemp.reputacao) || 0 : 0;
+  const reputacaoAtual = calcularReputacao(carreiraAtual, historicoAtual);
   const valorAtual = ultimaTemp ? Number(ultimaTemp.valorMercado) || 0 : 0;
   const salarioAtualMostrar =
     carreiraAtual.salarioAtual ||
@@ -4894,6 +4953,8 @@ function formatarEventosTemporada(eventos) {
     "pedido-aumento": () => "💶 Você pediu um aumento salarial",
     "aposentadoria-voluntaria": () =>
       "🏁 Você anunciou sua aposentadoria voluntária",
+    "coletiva-imprensa": (evento) =>
+      `🎙️ Coletiva: ${evento.resposta || evento.motivo || "declaração à imprensa"} (${evento.pontosReputacao > 0 ? "+" : ""}${evento.pontosReputacao || 0} reputação)`,
   };
 
   return `<div class="eventos-tags">${eventosValidos
@@ -5647,8 +5708,7 @@ function obterClassificacaoCopaPorForca(nacionalidade) {
 function obterClassificacaoCopaNaTemporada(nacionalidade, ano) {
   const ehAnoCopa =
     ano >= ANO_BASE_COPA_DO_MUNDO_SELECOES &&
-    (ano - ANO_BASE_COPA_DO_MUNDO_SELECOES) %
-      CICLO_COPA_DO_MUNDO_SELECOES ===
+    (ano - ANO_BASE_COPA_DO_MUNDO_SELECOES) % CICLO_COPA_DO_MUNDO_SELECOES ===
       0;
   const ehAnoFinalEliminatorias =
     ano >= ANO_BASE_COPA_DO_MUNDO_SELECOES + 3 &&
@@ -5733,10 +5793,7 @@ function simularTemporadaPorJogo(
       ? temporada.eventos
       : [];
     for (const evento of eventosTemporada) {
-      if (
-        indice === indiceUltimaTemporada &&
-        evento.tipo === "troca-treinador"
-      )
+      if (indice === indiceUltimaTemporada && evento.tipo === "troca-treinador")
         houveTrocaTreinador = true;
       if (evento.tipo === "aposentadoria-selecao")
         aposentadoSelecaoNoHistorico = true;
@@ -6011,11 +6068,7 @@ function simularTemporadaPorJogo(
 
     let chanceMOTM = 0.015 + golsJ * 0.14 + assJ * 0.09;
     if (posicao === "go" && cleanSheetNesteJogo) chanceMOTM += 0.18;
-    if (
-      posicao === "zag" &&
-      interceptacaoDecisivaNesteJogo
-    )
-      chanceMOTM += 0.12;
+    if (posicao === "zag" && interceptacaoDecisivaNesteJogo) chanceMOTM += 0.12;
     if (Math.random() < Math.min(chanceMOTM, 0.6)) motm++;
     const lesao = Math.random();
     if (lesao < cCar) {
@@ -6656,8 +6709,16 @@ function criarOfertaContrato(
   const anosContrato = obterDuracaoContrato(idade, idadeLimite);
   const overall = Number(temporadaAnterior?.overall) || 50;
   const reputacao = temporadaAnterior
-    ? calcularReputacao({ clube: clube.id }, historico)
-    : 50;
+    ? calcularReputacao(
+        temporadaAnterior.reputacaoConsolidada
+          ? {
+              reputacaoGeral: Number(temporadaAnterior.reputacao) || 0,
+              clube: clube.id,
+            }
+          : { clube: clube.id },
+        historico,
+      )
+    : 0;
   const valorMercado = calcularValorMercado(
     overall,
     idade,
@@ -6940,7 +7001,7 @@ async function escolherContratoParaTemporada(
         ? calcularValorMercado(
             ultimaTemporada.overall,
             idade,
-            ultimaTemporada.reputacao || 0,
+            carreiraAtual.reputacaoGeral,
             carreiraAtual.anosContratoRestantes,
           )
         : 0,
@@ -7165,29 +7226,402 @@ function sortearIndicePorPesos(pesos) {
 }
 
 function calcularReputacao(carreira, temporadas = []) {
+  const valorSalvo = Number(carreira?.reputacaoGeral);
+  if (Number.isFinite(valorSalvo))
+    return Math.max(0, Math.min(100, Math.floor(valorSalvo)));
   const lista = Array.isArray(temporadas) ? temporadas : [];
-  const maiorOverall = Math.max(0, ...lista.map((t) => Number(t.overall) || 0));
-  const individuais = lista.flatMap((t) =>
-    Array.isArray(t.trofeusIndividuais) ? t.trofeusIndividuais : [],
-  );
-  const coletivos = lista.flatMap((t) =>
-    Array.isArray(t.trofeusColetivos) ? t.trofeusColetivos : [],
-  );
-  let rep =
-    maiorOverall * 0.4 + individuais.length * 3 + coletivos.length * 1.2;
-  rep += individuais.filter((t) => t === "Bola de Ouro").length * 8;
-  const clubeId = carreira?.clube || lista[lista.length - 1]?.clube;
-  const forca = Number(getConfig()?.clubes?.potencias?.[clubeId]) || 50;
-  rep += (forca - 50) * 0.2;
   const ultima = lista[lista.length - 1];
-  if (ultima) {
-    rep += Math.min(
-      10,
-      ((Number(ultima.gols) || 0) + (Number(ultima.assistencias) || 0)) / 10,
+  // Migração gradual: carreiras antigas não começam novamente em 100.
+  return Math.max(
+    0,
+    Math.min(35, Math.round((Number(ultima?.reputacao) || 0) * 0.35)),
+  );
+}
+
+function limitarPontosReputacao(valor, minimo = -8, maximo = 8) {
+  return Math.max(minimo, Math.min(maximo, Math.round(Number(valor) || 0)));
+}
+
+function calcularBonusDesempenhoReputacao(temporada) {
+  if (!temporada) return 0;
+  const overall = Number(temporada.overall) || 0;
+  const jogos = Math.max(1, Number(temporada.jogos) || 1);
+  const participacoes =
+    (Number(temporada.gols) || 0) + (Number(temporada.assistencias) || 0);
+  const participacoesPorJogo = participacoes / jogos;
+  let pontos =
+    overall >= 92
+      ? 1.2
+      : overall >= 87
+        ? 0.9
+        : overall >= 82
+          ? 0.6
+          : overall >= 77
+            ? 0.3
+            : 0;
+  if (participacoesPorJogo >= 0.9) pontos += 0.5;
+  else if (participacoesPorJogo >= 0.55) pontos += 0.3;
+  if ((Number(temporada.motm) || 0) >= 8) pontos += 0.3;
+  const coletivos = Array.isArray(temporada.trofeusColetivos)
+    ? temporada.trofeusColetivos.length
+    : 0;
+  const individuais = Array.isArray(temporada.trofeusIndividuais)
+    ? temporada.trofeusIndividuais.length
+    : 0;
+  pontos += Math.min(0.8, coletivos * 0.12 + individuais * 0.18);
+  return Math.min(2, Math.round(pontos));
+}
+
+function consolidarReputacaoTemporada(carreira, temporada) {
+  if (!carreira || !temporada) return 0;
+  if (temporada.reputacaoConsolidada) {
+    temporada.reputacao = Math.max(
+      0,
+      Math.min(100, Math.floor(Number(temporada.reputacao) || 0)),
     );
-    rep += Math.min(5, (Number(ultima.motm) || 0) * 0.5);
+    return temporada.reputacao;
   }
-  return Math.max(0, Math.min(100, Math.round(rep)));
+  const base = calcularReputacao(carreira);
+  const entrevistas = Number(temporada.pontosReputacaoTemporada) || 0;
+  const desempenho = calcularBonusDesempenhoReputacao(temporada);
+  const variacao = limitarPontosReputacao(entrevistas + desempenho);
+  const total = Math.max(0, Math.min(100, base + variacao));
+  carreira.reputacaoGeral = total;
+  temporada.pontosReputacaoDesempenho = desempenho;
+  temporada.variacaoReputacao = total - base;
+  temporada.reputacao = total;
+  temporada.reputacaoConsolidada = true;
+  return total;
+}
+
+const BANCO_COLETIVAS_IMPRENSA = [
+  {
+    id: "confianca",
+    categoria: "Confiança",
+    pergunta: "Você acredita que sua equipe é favorita para a partida de hoje?",
+    respostas: [
+      {
+        texto: "Sim. Estamos preparados para vencer.",
+        pontos: 3,
+        criterio: "vitoria",
+        relacao: 1,
+      },
+      {
+        texto: "Respeitamos o adversário. Será um jogo difícil.",
+        pontos: 1,
+        criterio: "resultado-positivo",
+        relacao: 2,
+      },
+    ],
+  },
+  {
+    id: "gols",
+    categoria: "Desempenho",
+    pergunta: "Quantos gols você espera marcar nesta partida?",
+    respostas: [
+      {
+        texto: "Pelo menos um. Quero decidir o jogo.",
+        pontos: 4,
+        criterio: "marcou",
+        promessa: "gol",
+      },
+      {
+        texto: "O importante é ajudar a equipe, com ou sem gols.",
+        pontos: 1,
+        criterio: "resultado-positivo",
+      },
+    ],
+  },
+  {
+    id: "tecnico",
+    categoria: "Treinador",
+    pergunta: "Como está sua relação com o treinador?",
+    respostas: [
+      {
+        texto: "Tenho confiança no trabalho dele e respeito suas decisões.",
+        pontos: 2,
+        criterio: "sempre",
+        relacao: 4,
+      },
+      {
+        texto: "Acredito que mereço mais oportunidades como titular.",
+        pontos: -1,
+        criterio: "sempre",
+        relacao: -15,
+      },
+    ],
+  },
+  {
+    id: "elenco",
+    categoria: "Companheiros",
+    pergunta: "Você acredita que o elenco está unido para esta decisão?",
+    respostas: [
+      {
+        texto: "Sim. Somos um grupo forte e unido.",
+        pontos: 2,
+        criterio: "resultado-positivo",
+        relacao: 2,
+      },
+      {
+        texto: "Precisamos mostrar mais dentro de campo.",
+        pontos: -1,
+        criterio: "vitoria",
+        relacao: -1,
+      },
+    ],
+  },
+  {
+    id: "torcida",
+    categoria: "Torcida",
+    pergunta: "A torcida está cobrando uma vitória. Isso aumenta a pressão?",
+    respostas: [
+      {
+        texto: "A cobrança faz parte. Estamos aqui para corresponder.",
+        pontos: 2,
+        criterio: "resultado-positivo",
+      },
+      {
+        texto: "A torcida precisa ter mais paciência com a equipe.",
+        pontos: -2,
+        criterio: "sempre",
+      },
+    ],
+  },
+  {
+    id: "rival",
+    categoria: "Rivalidade",
+    pergunta: "O adversário afirmou que é superior. O que você responde?",
+    respostas: [
+      {
+        texto: "Vamos responder dentro de campo.",
+        pontos: 3,
+        criterio: "vitoria",
+      },
+      {
+        texto: "Prefiro não entrar em provocações.",
+        pontos: 1,
+        criterio: "resultado-positivo",
+      },
+    ],
+  },
+  {
+    id: "futuro",
+    categoria: "Futuro",
+    pergunta: "Você pretende continuar no clube na próxima temporada?",
+    respostas: [
+      {
+        texto: "Sim. Estou feliz e quero construir uma história aqui.",
+        pontos: 2,
+        criterio: "sempre",
+        relacao: 2,
+      },
+      {
+        texto: "No futebol, nunca sabemos o que pode acontecer.",
+        pontos: -1,
+        criterio: "sempre",
+      },
+    ],
+  },
+  {
+    id: "titulo",
+    categoria: "Objetivos",
+    pergunta: "Você acredita que pode conquistar um título nesta temporada?",
+    respostas: [
+      {
+        texto: "Vamos lutar até o fim para levantar um troféu.",
+        pontos: 4,
+        criterio: "titulo",
+        promessa: "titulo",
+      },
+      {
+        texto: "Nosso foco é evoluir jogo após jogo.",
+        pontos: 1,
+        criterio: "resultado-positivo",
+      },
+    ],
+  },
+];
+
+function partidaMereceColetivaImprensa(partida, estado) {
+  if (!partida || !estado) return false;
+  if (partida.tipo === "amistoso" && Math.random() > 0.05) return false;
+  const total = Number(estado.coletivasTemporada) || 0;
+  if (total >= 6) return false;
+  const competicao = String(partida.competicao || "").toLowerCase();
+  const fase = String(partida.fase || partida.faseMataMata || "").toLowerCase();
+  const faseDecisiva =
+    Number(partida.fase) > 0 &&
+    Number(partida.totalFases) > 0 &&
+    Number(partida.fase) === Number(partida.totalFases);
+  if (
+    faseDecisiva ||
+    /final|semifinal|quartas|decisiva|mata-mata/.test(`${competicao} ${fase}`)
+  )
+    return Math.random() < 0.9;
+  if (
+    /champions|libertadores|copa do mundo|copa am[eé]rica|eurocopa/.test(
+      competicao,
+    )
+  )
+    return Math.random() < 0.48;
+  const forcaAdversario =
+    Number(getConfig()?.clubes?.potencias?.[partida.adversarioId]) || 50;
+  const forcaClubeAtual =
+    Number(getConfig()?.clubes?.potencias?.[estado.clubeId]) || 50;
+  if (forcaAdversario >= forcaClubeAtual + 12) return Math.random() < 0.55;
+  return total < 3 && Math.random() < 0.08;
+}
+
+function avaliarRespostaColetiva(resposta, partida, estado) {
+  const vitoria = partida.casa
+    ? partida.golsCasa > partida.golsFora
+    : partida.golsFora > partida.golsCasa;
+  const empate = Number(partida.golsCasa) === Number(partida.golsFora);
+  const resultadoPositivo = vitoria || empate;
+  const golsJogador = Number(partida.golsJogador) || 0;
+  let pontos = Number(resposta?.pontos) || 0;
+  switch (resposta?.criterio) {
+    case "vitoria":
+      if (!vitoria) pontos -= 3;
+      break;
+    case "resultado-positivo":
+      if (!resultadoPositivo) pontos -= 2;
+      break;
+    case "marcou":
+      pontos = golsJogador > 0 ? pontos : -4;
+      break;
+    case "titulo": {
+      const decisiva =
+        /final/.test(
+          `${partida.fase || ""} ${partida.competicao || ""}`.toLowerCase(),
+        ) ||
+        (Number(partida.fase) > 0 &&
+          Number(partida.totalFases) > 0 &&
+          Number(partida.fase) === Number(partida.totalFases));
+      pontos = vitoria && decisiva ? pontos : -2;
+      break;
+    }
+  }
+  return limitarPontosReputacao(pontos, -5, 5);
+}
+
+async function abrirColetivaImprensa(partida, estado, automatica = false) {
+  if (!partidaMereceColetivaImprensa(partida, estado)) return null;
+  const pergunta =
+    BANCO_COLETIVAS_IMPRENSA[
+      Math.floor(Math.random() * BANCO_COLETIVAS_IMPRENSA.length)
+    ];
+  const resposta = automatica
+    ? pergunta.respostas[Math.floor(Math.random() * pergunta.respostas.length)]
+    : await new Promise((resolve) => {
+        const overlay = document.getElementById("modal-coletiva-imprensa");
+        const perguntaEl = document.getElementById("coletiva-pergunta");
+        const categoriaEl = document.getElementById("coletiva-categoria");
+        const opcoesEl = document.getElementById("coletiva-respostas");
+        if (!overlay || !perguntaEl || !opcoesEl)
+          return resolve(pergunta.respostas[0]);
+        categoriaEl.textContent = `Coletiva de imprensa · ${pergunta.categoria}`;
+        perguntaEl.textContent = pergunta.pergunta;
+        opcoesEl.replaceChildren();
+        pergunta.respostas.forEach((opcao, indice) => {
+          const botao = document.createElement("button");
+          botao.type = "button";
+          botao.className = "modal-btn modal-btn--confirmar coletiva-resposta";
+          botao.textContent = opcao.texto;
+          botao.addEventListener(
+            "click",
+            () => {
+              overlay.hidden = true;
+              resolve(opcao);
+            },
+            { once: true },
+          );
+          opcoesEl.appendChild(botao);
+        });
+        overlay.hidden = false;
+      });
+  estado.coletivasTemporada = (Number(estado.coletivasTemporada) || 0) + 1;
+  partida.coletivaPendente = {
+    perguntaId: pergunta.id,
+    pergunta: pergunta.pergunta,
+    resposta: resposta.texto,
+    pontosBase: resposta.pontos,
+    criterio: resposta.criterio,
+    promessa: resposta.promessa || "",
+    relacao: resposta.relacao || 0,
+  };
+  return partida.coletivaPendente;
+}
+
+function concluirColetivaImprensa(partida, estado) {
+  const coletiva = partida?.coletivaPendente;
+  if (!coletiva || partida.coletivaProcessada) return 0;
+  const resposta = { pontos: coletiva.pontosBase, criterio: coletiva.criterio };
+  const pontos = avaliarRespostaColetiva(resposta, partida, estado);
+  estado.pontosReputacaoTemporada = limitarPontosReputacao(
+    (Number(estado.pontosReputacaoTemporada) || 0) + pontos,
+    -8,
+    8,
+  );
+  estado.relacaoTreinador = Math.max(
+    0,
+    Math.min(
+      100,
+      (Number(estado.relacaoTreinador) || 60) + Number(coletiva.relacao || 0),
+    ),
+  );
+  estado.eventos ||= [];
+  estado.eventos.push({
+    tipo: "coletiva-imprensa",
+    jogo: Number(estado.estatisticas?.jogos) || 0,
+    motivo: coletiva.pergunta,
+    resposta: coletiva.resposta,
+    pontosReputacao: pontos,
+  });
+  partida.coletivaProcessada = true;
+  partida.coletivaResultado = pontos;
+  return pontos;
+}
+
+function simularColetivasAutomaticasTemporada(temporada) {
+  if (!temporada || temporada.coletivasGeradas) return;
+  const quantidade = 3 + Math.floor(Math.random() * 4);
+  const eventos = Array.isArray(temporada.eventos)
+    ? temporada.eventos
+    : (temporada.eventos = []);
+  let pontos = Number(temporada.pontosReputacaoTemporada) || 0;
+  for (let i = 0; i < quantidade; i++) {
+    const pergunta =
+      BANCO_COLETIVAS_IMPRENSA[
+        Math.floor(Math.random() * BANCO_COLETIVAS_IMPRENSA.length)
+      ];
+    const resposta =
+      pergunta.respostas[Math.floor(Math.random() * pergunta.respostas.length)];
+    const resultado =
+      Math.random() < (temporada.trofeusColetivos?.length ? 0.68 : 0.52);
+    const marcou = (Number(temporada.gols) || 0) > 0 && Math.random() < 0.65;
+    let delta = resposta.pontos;
+    if (resposta.criterio === "vitoria" && !resultado) delta -= 3;
+    if (resposta.criterio === "resultado-positivo" && !resultado) delta -= 2;
+    if (resposta.criterio === "marcou" && !marcou) delta = -4;
+    if (
+      resposta.criterio === "titulo" &&
+      !(temporada.trofeusColetivos || []).length
+    )
+      delta = -2;
+    delta = limitarPontosReputacao(delta, -5, 5);
+    pontos += delta;
+    eventos.push({
+      tipo: "coletiva-imprensa",
+      jogo: i + 1,
+      motivo: pergunta.pergunta,
+      resposta: resposta.texto,
+      pontosReputacao: delta,
+    });
+  }
+  temporada.pontosReputacaoTemporada = limitarPontosReputacao(pontos, -8, 8);
+  temporada.coletivasTemporada = quantidade;
+  temporada.coletivasGeradas = true;
 }
 
 function calcularValorMercado(overall, idade, reputacao, anosContrato) {
@@ -7322,7 +7756,14 @@ function sortearClubeParaTemporada(
     .filter((valor) => valor > 0);
   const maiorPrestigio = Math.max(0, ...prestigiosAnteriores);
   const ultimoOver = Number(temporadas[temporadas.length - 1]?.overall) || 50;
-  const reputacao = Math.max(maiorPrestigio, ultimoOver);
+  const ultimaTemporada = temporadas[temporadas.length - 1];
+  const reputacaoHistorica = ultimaTemporada?.reputacaoConsolidada
+    ? Number(ultimaTemporada.reputacao) || 0
+    : Math.min(
+        35,
+        Math.round((Number(ultimaTemporada?.reputacao) || 0) * 0.35),
+      );
+  const reputacao = Math.max(maiorPrestigio, ultimoOver, reputacaoHistorica);
   const pesos = candidatos.map((candidato) => {
     const prestigio = obterPrestigioClube(obterClube(candidato.id));
     // Permanecer é uma opção real, mas um destino compatível pode vencer.
@@ -7654,9 +8095,10 @@ async function gerar() {
 
     // Calcular reputação, valor e salário da temporada
     const temporadasParaReputacao = [...historico, temporada];
-    temporada.reputacao = calcularReputacao(
-      { clube: contratoEscolhido.clube },
-      temporadasParaReputacao,
+    simularColetivasAutomaticasTemporada(temporada);
+    temporada.reputacao = consolidarReputacaoTemporada(
+      carreiraAtual,
+      temporada,
     );
     temporada.anosContrato = carreiraAtual.anosContratoRestantes;
     temporada.valorMercado = temporada.base
@@ -7970,9 +8412,10 @@ async function simularTudo() {
       temporada.campeaoCopinha =
         temporada.base && temporada.trofeusColetivos.includes("Copinha");
       const temporadasParaReputacao = [...historico, temporada];
-      temporada.reputacao = calcularReputacao(
-        { clube: clubeAtual },
-        temporadasParaReputacao,
+      simularColetivasAutomaticasTemporada(temporada);
+      temporada.reputacao = consolidarReputacaoTemporada(
+        carreiraAtual,
+        temporada,
       );
       temporada.anosContrato = anosContratoRestantes;
       temporada.valorMercado = calcularValorMercado(
@@ -8383,15 +8826,21 @@ function atualizarMercadoResultados(temporada) {
   const repEl = document.getElementById("resultado-reputacao");
   const valorEl = document.getElementById("resultado-valor");
   const salarioEl = document.getElementById("resultado-salario");
+  const variacaoEl = document.getElementById("resultado-variacao-reputacao");
   if (!repEl || !valorEl || !salarioEl) return;
 
   if (!temporada) {
     repEl.textContent = "-";
+    if (variacaoEl) variacaoEl.textContent = "-";
     valorEl.textContent = "-";
     salarioEl.textContent = "-";
     return;
   }
   repEl.textContent = Number(temporada.reputacao) || 0;
+  if (variacaoEl) {
+    const variacao = Number(temporada.variacaoReputacao) || 0;
+    variacaoEl.textContent = `${variacao > 0 ? "+" : ""}${variacao} pontos`;
+  }
   valorEl.textContent = formatarValorCompacto(temporada.valorMercado || 0);
   salarioEl.textContent = formatarValorCompacto(temporada.salario || 0);
 }

@@ -293,7 +293,8 @@
                             </div>
                             <div id="mercado-resultados" class="mercado-resultados">
                                 <h3>Mercado do jogador</h3>
-                                <div><span>Reputação</span><strong id="resultado-reputacao">-</strong></div>
+                                <div><span>Reputação geral</span><strong id="resultado-reputacao">-</strong></div>
+                                <div><span>Variação na temporada</span><strong id="resultado-variacao-reputacao">-</strong></div>
                                 <div><span>Valor de mercado</span><strong id="resultado-valor">-</strong></div>
                                 <div><span>Salário anual</span><strong id="resultado-salario">-</strong></div>
                             </div>
@@ -536,7 +537,7 @@
             <p id="jja-proxima-contexto">Como deseja avançar nesta partida?</p>
             <div class="jja-proxima-opcoes">
                 <button type="button" class="jja-decisao-opcao" id="jja-proxima-jogar">Jogar partida</button>
-                <button type="button" class="jja-decisao-opcao jja-proxima-simular" id="jja-proxima-simular">Simula partida</button>
+                <button type="button" class="jja-decisao-opcao jja-proxima-simular" id="jja-proxima-simular">Simular partida</button>
                 <button type="button" class="jja-decisao-opcao jja-proxima-simular" id="jja-proxima-lesao" hidden>Simular partidas até o fim da lesão</button>
             </div>
             <div class="jja-decisao-acoes">
@@ -589,6 +590,16 @@
                 <button type="button" id="modal-cancelar" class="modal-btn modal-btn--cancelar">Cancelar</button>
                 <button type="button" id="modal-confirmar" class="modal-btn modal-btn--confirmar">Confirmar</button>
             </div>
+        </div>
+    </div>
+
+    <div id="modal-coletiva-imprensa" class="modal-overlay modal-coletiva-imprensa" hidden>
+        <div class="modal-caixa" role="dialog" aria-modal="true" aria-labelledby="coletiva-pergunta">
+            <div class="modal-icone" aria-hidden="true">🎙️</div>
+            <span id="coletiva-categoria" class="coletiva-categoria">Coletiva de imprensa</span>
+            <h3 id="coletiva-pergunta">Pergunta do jornalista</h3>
+            <p>Escolha como deseja responder. O resultado da partida poderá alterar o impacto da declaração.</p>
+            <div id="coletiva-respostas" class="coletiva-respostas"></div>
         </div>
     </div>
 
