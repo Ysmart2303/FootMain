@@ -4777,6 +4777,27 @@ html[data-theme="light"] .jja-legenda-zonas {
 .jja-ranking-clube { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
 .jja-ranking-sigla { display: inline-grid; flex: 0 0 26px; width: 26px; height: 26px; place-items: center; border: 1px solid #42614e; border-radius: 5px; background: rgba(34, 197, 94, .1); color: #bbf7d0; font-size: .65rem; font-weight: 900; }
 .jja-ranking-vazio { margin: 8px 2px 3px; color: #94a3b8; font-size: .84rem; }
+.jja-elenco-clube { min-width: 0; margin-top: 12px; }
+.jja-elenco-conteudo { padding: 0 12px 12px; }
+.jja-elenco-resumo { margin: 0 0 10px; color: #aab8ca; font-size: .82rem; }
+.jja-elenco-painel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.jja-elenco-grupo { min-width: 0; }
+.jja-elenco-grupo h3 { margin: 0 0 8px; color: #e2e8f0; font-size: .9rem; }
+.jja-elenco-wrap { max-height: 340px; overflow: auto; }
+.jja-elenco-tabela { width: 100%; border-collapse: collapse; font-size: .82rem; }
+.jja-elenco-tabela th, .jja-elenco-tabela td { padding: 7px 6px; border-bottom: 1px solid #263449; text-align: left; }
+.jja-elenco-tabela th { position: sticky; top: 0; background: #111c2e; color: #9fb0c5; }
+.jja-elenco-tabela th:nth-last-child(-n+2), .jja-elenco-tabela td:nth-last-child(-n+2) { width: 1%; text-align: right; white-space: nowrap; }
+.jja-elenco-tabela tr.meu-elenco { background: rgba(34, 197, 94, .12); }
+.jja-elenco-real { color: #86efac; }
+.jja-rompimento-detalhes { margin: 8px 0 14px; padding: 10px; border-radius: 8px; background: rgba(148, 163, 184, .08); color: #cbd5e1; font-size: .85rem; }
+html[data-theme="light"] .jja-elenco-resumo { color: #475569; }
+html[data-theme="light"] .jja-elenco-grupo h3 { color: #315642; }
+html[data-theme="light"] .jja-elenco-tabela th { background: #e8eef0; color: #475569; }
+html[data-theme="light"] .jja-elenco-tabela td { border-color: #dbe3e7; }
+@media (max-width: 700px) {
+    .jja-elenco-painel { grid-template-columns: minmax(0, 1fr); }
+}
 html[data-theme="light"] .jja-ranking-seletor { color: #475569; }
 html[data-theme="light"] .jja-ranking-seletor select { background: #fff; color: #1e293b; border-color: #cbd5e1; }
 html[data-theme="light"] .jja-ranking-tabs { background: #f1f5f9; border-color: #cbd5e1; }

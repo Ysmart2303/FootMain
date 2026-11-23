@@ -224,6 +224,13 @@
                         <div id="jja-ranking-painel" class="jja-ranking-painel"></div>
                     </div>
                 </details>
+                <details id="jja-elenco-clube" class="jja-recolhivel jja-elenco-clube" aria-label="Elenco do clube atual" hidden>
+                    <summary>Elenco do clube</summary>
+                    <div class="jja-elenco-conteudo">
+                        <p id="jja-elenco-resumo" class="jja-elenco-resumo"></p>
+                        <div id="jja-elenco-painel" class="jja-elenco-painel"></div>
+                    </div>
+                </details>
                 <details class="jja-recolhivel jja-calendario-painel">
                     <summary>Calendário completo</summary>
                     <div id="jja-calendario">As partidas aparecerão aqui.</div>
@@ -707,6 +714,19 @@
                 <button type="button" id="jja-bola-de-ouro-continuar">Continuar</button>
             </div>
         </section>
+    </div>
+
+    <div id="jja-modal-rompimento" class="modal-overlay jja-modal-decisao" hidden>
+        <div class="jja-decisao-caixa" role="dialog" aria-modal="true" aria-labelledby="jja-rompimento-titulo" aria-describedby="jja-rompimento-contexto" tabindex="-1">
+            <span class="jja-decisao-icone" aria-hidden="true">🤝</span>
+            <h3 id="jja-rompimento-titulo">Reunião sobre o futuro</h3>
+            <p id="jja-rompimento-contexto">Diretoria e treinador avaliarão seu desempenho no clube.</p>
+            <div id="jja-rompimento-detalhes" class="jja-rompimento-detalhes"></div>
+            <div class="jja-proxima-opcoes">
+                <button type="button" class="jja-decisao-opcao" id="jja-rompimento-ficar">Aceitar proposta para ficar</button>
+                <button type="button" class="jja-decisao-opcao jja-proxima-simular" id="jja-rompimento-sair">Sair e ficar livre no mercado</button>
+            </div>
+        </div>
     </div>
 
     <div id="jja-modal-resumo-temporada" class="modal-overlay jja-modal-resumo-temporada" hidden>
