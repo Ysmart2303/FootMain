@@ -5153,6 +5153,7 @@ function mostrarResumoFinal(
   document.getElementById("gols").textContent = totais.gols;
   document.getElementById("assi").textContent = totais.assistencias;
   document.getElementById("prem").textContent = totais.premios;
+  atualizarVisibilidadeEstatisticasTemporada();
 
   document.getElementById("resumo-nome").textContent = nome;
   document.getElementById("resumo-posicao").textContent = posicao || "-";
@@ -8264,6 +8265,7 @@ async function gerar() {
     document.getElementById("gols").textContent = temporada.gols;
     document.getElementById("assi").textContent = temporada.assistencias;
     document.getElementById("prem").textContent = contarPremios(temporada);
+    atualizarVisibilidadeEstatisticasTemporada();
     atualizarTitulosResultados(temporada);
     atualizarMercadoResultados(temporada);
 
@@ -8308,11 +8310,18 @@ function atualizarTitulosResultados(temporada) {
     "titulos-individuais-resultados",
   );
   if (!anoElemento || !coletivosElemento || !individuaisElemento) return;
+  const titulosPainel = document.getElementById("titulos-resultados");
+  const coletivosLinha = coletivosElemento.closest("p");
+  const individuaisLinha = individuaisElemento.closest("p");
 
   if (!temporada) {
     anoElemento.textContent = "Títulos da temporada";
     coletivosElemento.textContent = "Nenhum";
     individuaisElemento.textContent = "Nenhum";
+    if (coletivosLinha) coletivosLinha.hidden = true;
+    if (individuaisLinha) individuaisLinha.hidden = true;
+    if (titulosPainel) titulosPainel.hidden = true;
+    atualizarVisibilidadeDetalhesResultados();
     return;
   }
 
@@ -8325,6 +8334,27 @@ function atualizarTitulosResultados(temporada) {
   individuaisElemento.textContent = individuais.length
     ? individuais.join(", ")
     : "Nenhum";
+  if (coletivosLinha) coletivosLinha.hidden = coletivos.length === 0;
+  if (individuaisLinha) individuaisLinha.hidden = individuais.length === 0;
+  if (titulosPainel)
+    titulosPainel.hidden = coletivos.length === 0 && individuais.length === 0;
+  atualizarVisibilidadeDetalhesResultados();
+}
+
+function atualizarVisibilidadeEstatisticasTemporada() {
+  document
+    .querySelectorAll("#resultados .resultado-estatistica")
+    .forEach((cartao) => {
+      const valorTexto = cartao.querySelector("strong")?.textContent.trim();
+      const valor = Number(valorTexto);
+      cartao.hidden = !Number.isFinite(valor) || valor === 0;
+    });
+}
+
+function atualizarVisibilidadeDetalhesResultados() {
+  const detalhes = document.querySelector("#resultados .resultado-detalhes");
+  if (detalhes)
+    detalhes.hidden = [...detalhes.children].every((item) => item.hidden);
 }
 
 async function simularTudo() {
@@ -8944,6 +8974,7 @@ function atualizarMercadoResultados(temporada) {
   const valorEl = document.getElementById("resultado-valor");
   const salarioEl = document.getElementById("resultado-salario");
   const variacaoEl = document.getElementById("resultado-variacao-reputacao");
+  const mercadoPainel = document.getElementById("mercado-resultados");
   if (!repEl || !valorEl || !salarioEl) return;
 
   if (!temporada) {
@@ -8951,15 +8982,32 @@ function atualizarMercadoResultados(temporada) {
     if (variacaoEl) variacaoEl.textContent = "-";
     valorEl.textContent = "-";
     salarioEl.textContent = "-";
+    [repEl, variacaoEl, valorEl, salarioEl].forEach((elemento) => {
+      if (elemento) elemento.closest("div").hidden = true;
+    });
+    if (mercadoPainel) mercadoPainel.hidden = true;
+    atualizarVisibilidadeDetalhesResultados();
     return;
   }
-  repEl.textContent = Number(temporada.reputacao) || 0;
+  const reputacao = Number(temporada.reputacao) || 0;
+  repEl.textContent = reputacao;
+  repEl.closest("div").hidden = reputacao === 0;
   if (variacaoEl) {
     const variacao = Number(temporada.variacaoReputacao) || 0;
-    variacaoEl.textContent = `${variacao > 0 ? "+" : ""}${variacao} pontos`;
+    variacaoEl.textContent = String(variacao);
+    variacaoEl.closest("div").hidden = variacao === 0;
   }
-  valorEl.textContent = formatarValorCompacto(temporada.valorMercado || 0);
-  salarioEl.textContent = formatarValorCompacto(temporada.salario || 0);
+  const valorMercado = Number(temporada.valorMercado) || 0;
+  valorEl.textContent = formatarValorCompacto(valorMercado);
+  valorEl.closest("div").hidden = valorMercado === 0;
+  const salario = Number(temporada.salario) || 0;
+  salarioEl.textContent = formatarValorCompacto(salario);
+  salarioEl.closest("div").hidden = salario === 0;
+  if (mercadoPainel)
+    mercadoPainel.hidden = [repEl, variacaoEl, valorEl, salarioEl].every(
+      (elemento) => !elemento || elemento.closest("div").hidden,
+    );
+  atualizarVisibilidadeDetalhesResultados();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -9270,4 +9318,5 @@ document.addEventListener("DOMContentLoaded", () => {
   renderAtributos(ultimaTemporadaInicial);
   atualizarTitulosResultados(ultimaTemporadaInicial);
   atualizarMercadoResultados(ultimaTemporadaInicial);
+  atualizarVisibilidadeEstatisticasTemporada();
 });

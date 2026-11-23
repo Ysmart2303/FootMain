@@ -838,7 +838,13 @@
 
   async function processarFilaModais() {
     const prioridadeModal = (item) =>
-      item.tipo === "trofeu" ? 2 : item.tipo === "ultima-partida" ? 1 : 0;
+      item.tipo === "resumo-temporada"
+        ? 3
+        : item.tipo === "trofeu"
+          ? 2
+          : item.tipo === "ultima-partida"
+            ? 1
+            : 0;
     filaModaisPartida.sort(
       (a, b) => prioridadeModal(a) - prioridadeModal(b),
     );
@@ -855,8 +861,72 @@
         await exibirModalEvento(item.tipoEvento, item.mensagem, item.icone);
       } else if (item.tipo === "ultima-partida") {
         await exibirModalUltimaPartida();
+      } else if (item.tipo === "resumo-temporada") {
+        await exibirModalResumoTemporada(item.temporada);
       }
     }
+  }
+
+  async function exibirModalResumoTemporada(temporada) {
+    await aguardarCarregamentoLiberado();
+    return new Promise((resolve) => {
+      const modal = $("jja-modal-resumo-temporada");
+      const continuar = $("jja-resumo-temporada-continuar");
+      if (!modal || !continuar) {
+        resolve();
+        return;
+      }
+
+      const reputacao = Number(temporada.variacaoReputacao) || 0;
+      const reputacaoEl = $("jja-resumo-temporada-reputacao");
+      $("jja-resumo-temporada-ano").textContent = String(temporada.ano || "-");
+      $("jja-resumo-temporada-gols").textContent = String(
+        Number(temporada.gols) || 0,
+      );
+      $("jja-resumo-temporada-assistencias").textContent = String(
+        Number(temporada.assistencias) || 0,
+      );
+      if (reputacaoEl) {
+        reputacaoEl.textContent = `${reputacao > 0 ? "+" : ""}${reputacao} ${
+          Math.abs(reputacao) === 1 ? "ponto" : "pontos"
+        }`;
+        reputacaoEl.classList.toggle("jja-reputacao-positiva", reputacao > 0);
+        reputacaoEl.classList.toggle("jja-reputacao-negativa", reputacao < 0);
+      }
+      $("jja-resumo-temporada-coletivos").textContent = [
+        ...new Set([
+          ...(temporada.trofeusColetivos || []),
+          ...(temporada.trofeusClube || []),
+          ...(temporada.trofeusSelecao || []),
+        ]),
+      ].join(", ") || "Nenhum";
+      $("jja-resumo-temporada-individuais").textContent = [
+        ...new Set(temporada.trofeusIndividuais || []),
+      ].join(", ") || "Nenhum";
+
+      modal.hidden = false;
+      continuar.focus();
+
+      const fechar = () => {
+        modal.hidden = true;
+        continuar.removeEventListener("click", fechar);
+        document.removeEventListener("keydown", aoTeclar);
+        modal.removeEventListener("click", aoClicarFora);
+        resolve();
+      };
+      const aoTeclar = (evento) => {
+        if (evento.key === "Escape" || evento.key === "Enter") {
+          evento.preventDefault();
+          fechar();
+        }
+      };
+      const aoClicarFora = (evento) => {
+        if (evento.target === modal) fechar();
+      };
+      continuar.addEventListener("click", fechar);
+      document.addEventListener("keydown", aoTeclar);
+      modal.addEventListener("click", aoClicarFora);
+    });
   }
 
   async function exibirModalTrofeu(competicao, tipoTrofeu) {
@@ -1265,6 +1335,7 @@
       "trofeu",
       "premio-individual",
       "bola-de-ouro",
+      "resumo-temporada",
     ]);
     filaModaisPartida = filaModaisPartida.filter((item) =>
       tiposPermitidos.has(item.tipo),
@@ -11945,6 +12016,7 @@
         renderizar();
       }
       limparInformacao();
+      filaModaisPartida.push({ tipo: "resumo-temporada", temporada });
     } catch (erro) {
       console.error("Falha ao registrar temporada jogo a jogo:", erro);
       informar(
@@ -12574,6 +12646,12 @@
   function renderizar() {
     if (simulandoCarreira) return;
     const ativo = !!estado;
+    if (ativo && !estado.salvaOficialmente) {
+      if (typeof atualizarTitulosResultados === "function")
+        atualizarTitulosResultados(null);
+      if (typeof atualizarMercadoResultados === "function")
+        atualizarMercadoResultados(null);
+    }
 
     const proxima = ativo
       ? estado.partidas.find(
@@ -12782,7 +12860,7 @@
     );
     const variacaoReputacaoEl = $("jja-variacao-reputacao");
     if (variacaoReputacaoEl) {
-      variacaoReputacaoEl.textContent = `${variacaoReputacao > 0 ? "+" : ""}${variacaoReputacao} ${Math.abs(variacaoReputacao) === 1 ? "ponto" : "pontos"}`;
+      variacaoReputacaoEl.textContent = String(variacaoReputacao);
       variacaoReputacaoEl.classList.toggle(
         "jja-reputacao-positiva",
         variacaoReputacao > 0,
@@ -12792,6 +12870,8 @@
         variacaoReputacao < 0,
       );
     }
+    if (typeof atualizarVisibilidadeEstatisticasTemporada === "function")
+      atualizarVisibilidadeEstatisticasTemporada();
 
     const tabelaEl = $("jja-tabela");
     const painelTabela = tabelaEl?.closest("details");
@@ -12897,7 +12977,18 @@
   function mostrarDesempenhoTemporada(temporada) {
     const resultados = $("resultados");
     if (resultados) resultados.hidden = false;
-    if (!temporada) return;
+    if (!temporada) {
+      resultados
+        ?.querySelectorAll(".resultado-estatistica")
+        .forEach((cartao) => {
+          cartao.hidden = true;
+        });
+      if (typeof atualizarTitulosResultados === "function")
+        atualizarTitulosResultados(null);
+      if (typeof atualizarMercadoResultados === "function")
+        atualizarMercadoResultados(null);
+      return;
+    }
     const coletivos = new Set([
       ...(temporada.trofeusColetivos || []),
       ...(temporada.trofeusClube || []),
@@ -12922,10 +13013,14 @@
     put("jja-desarmes", temporada.desarmes);
     put("jja-defesas", temporada.defesas);
     put("jja-jogadas-criadas", temporada.jogadasCriadas);
+    const variacaoReputacao = Number(temporada.variacaoReputacao) || 0;
+    put("jja-variacao-reputacao", variacaoReputacao);
     if (typeof atualizarTitulosResultados === "function")
       atualizarTitulosResultados(temporada);
     if (typeof atualizarMercadoResultados === "function")
       atualizarMercadoResultados(temporada);
+    if (typeof atualizarVisibilidadeEstatisticasTemporada === "function")
+      atualizarVisibilidadeEstatisticasTemporada();
   }
 
   async function simularFimCarreira() {

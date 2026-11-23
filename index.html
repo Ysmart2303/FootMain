@@ -235,72 +235,72 @@
                             <span>Desempenho</span>
                             <h2>Estatísticas da temporada</h2>
                         </div>
-                        <div class="resultado-estatistica">
+                        <div class="resultado-estatistica" hidden>
                             <span>Jogos</span>
                             <strong id="jogos">0</strong>
                         </div>
-                        <div class="resultado-estatistica">
+                        <div class="resultado-estatistica" hidden>
                             <span>Gols</span>
                             <strong id="gols">0</strong>
                         </div>
-                        <div class="resultado-estatistica">
+                        <div class="resultado-estatistica" hidden>
                             <span>Assistências</span>
                             <strong id="assi">0</strong>
                         </div>
-                        <div class="resultado-estatistica">
+                        <div class="resultado-estatistica" hidden>
                             <span>Prêmios</span>
                             <strong id="prem">0</strong>
                         </div>
-                        <div class="resultado-estatistica">
+                        <div class="resultado-estatistica" hidden>
                             <span>Variação da reputação (coletivas)</span>
-                            <strong id="jja-variacao-reputacao" aria-live="polite">0 pontos</strong>
+                            <strong id="jja-variacao-reputacao" aria-live="polite">0</strong>
                         </div>
-                        <div class="resultado-estatistica">
+                        <div class="resultado-estatistica" hidden>
                             <span>MOTM</span>
                             <strong id="jja-motm">0</strong>
                         </div>
-                        <div class="resultado-estatistica">
+                        <div class="resultado-estatistica" hidden>
                             <span>Cartões amarelos</span>
                             <strong id="jja-amarelos">0</strong>
                         </div>
-                        <div class="resultado-estatistica">
+                        <div class="resultado-estatistica" hidden>
                             <span>Cartões vermelhos</span>
                             <strong id="jja-vermelhos">0</strong>
                         </div>
-                        <div class="resultado-estatistica">
+                        <div class="resultado-estatistica" hidden>
                             <span>Hat-tricks</span>
                             <strong id="jja-hattricks">0</strong>
                         </div>
-                        <div class="resultado-estatistica">
+                        <div class="resultado-estatistica" hidden>
                             <span>Dribles completos</span>
                             <strong id="jja-dribles">0</strong>
                         </div>
-                        <div class="resultado-estatistica">
+                        <div class="resultado-estatistica" hidden>
                             <span>Desarmes</span>
                             <strong id="jja-desarmes">0</strong>
                         </div>
-                        <div class="resultado-estatistica">
+                        <div class="resultado-estatistica" hidden>
                             <span>Defesas</span>
                             <strong id="jja-defesas">0</strong>
                         </div>
-                        <div class="resultado-estatistica">
+                        <div class="resultado-estatistica" hidden>
                             <span>Jogadas criadas</span>
                             <strong id="jja-jogadas-criadas">0</strong>
                         </div>
-                        <div class="resultado-detalhes">
-                            <div id="titulos-resultados" class="titulos-resultados">
+                        <div class="resultado-detalhes" hidden>
+                            <div id="titulos-resultados" class="titulos-resultados" hidden>
                                 <div>
                                     <strong id="ano-titulos-resultados">Títulos da temporada</strong>
-                                    <p><b>Coletivos:</b> <span id="titulos-coletivos-resultados">Nenhum</span></p>
-                                    <p><b>Individuais:</b> <span id="titulos-individuais-resultados">Nenhum</span></p>
+                                    <p hidden><b>Coletivos:</b> <span id="titulos-coletivos-resultados">Nenhum</span></p>
+                                    <p hidden><b>Individuais:</b> <span id="titulos-individuais-resultados">Nenhum</span></p>
                                 </div>
                             </div>
-                            <div id="mercado-resultados" class="mercado-resultados">
+                            <div id="mercado-resultados" class="mercado-resultados" hidden>
                                 <h3>Mercado do jogador</h3>
-                                <div><span>Reputação geral</span><strong id="resultado-reputacao">-</strong></div>
-                                <div><span>Variação na temporada</span><strong id="resultado-variacao-reputacao">-</strong></div>
-                                <div><span>Valor de mercado</span><strong id="resultado-valor">-</strong></div>
-                                <div><span>Salário anual</span><strong id="resultado-salario">-</strong></div>
+                                <div hidden><span>Reputação geral</span><strong id="resultado-reputacao">-</strong></div>
+                                <div hidden><span>Variação na temporada</span><strong id="resultado-variacao-reputacao">-</strong></div>
+                                <div hidden><span>Valor de mercado</span><strong id="resultado-valor">-</strong></div>
+                                <div hidden><span>Salário anual</span><strong id="resultado-salario">-</strong></div>
                             </div>
                         </div>
                     </div>
@@ -705,6 +705,25 @@
             <ol id="jja-bola-de-ouro-lista" class="jja-bola-de-ouro-lista"></ol>
             <div class="jja-bola-de-ouro-acoes">
                 <button type="button" id="jja-bola-de-ouro-continuar">Continuar</button>
+            </div>
+        </section>
+    </div>
+
+    <div id="jja-modal-resumo-temporada" class="modal-overlay jja-modal-resumo-temporada" hidden>
+        <section class="jja-resumo-temporada-caixa" role="dialog" aria-modal="true" aria-labelledby="jja-resumo-temporada-titulo">
+            <span class="jja-resumo-temporada-icone" aria-hidden="true">📋</span>
+            <span class="jja-resumo-temporada-chamada">TEMPORADA CONCLUÍDA</span>
+            <h3 id="jja-resumo-temporada-titulo">Resumo da temporada</h3>
+            <dl class="jja-resumo-temporada-dados">
+                <div><dt>Temporada atual</dt><dd id="jja-resumo-temporada-ano">-</dd></div>
+                <div><dt>Gols</dt><dd id="jja-resumo-temporada-gols">0</dd></div>
+                <div><dt>Assistências</dt><dd id="jja-resumo-temporada-assistencias">0</dd></div>
+                <div><dt>Reputação ganha/perdida</dt><dd id="jja-resumo-temporada-reputacao">0 pontos</dd></div>
+                <div class="jja-resumo-temporada-titulos"><dt>Títulos coletivos</dt><dd id="jja-resumo-temporada-coletivos">Nenhum</dd></div>
+                <div class="jja-resumo-temporada-titulos"><dt>Títulos individuais</dt><dd id="jja-resumo-temporada-individuais">Nenhum</dd></div>
+            </dl>
+            <div class="jja-resumo-temporada-acoes">
+                <button type="button" id="jja-resumo-temporada-continuar">Continuar</button>
             </div>
         </section>
     </div>

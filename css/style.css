@@ -4407,6 +4407,10 @@ html[data-theme="light"] .trofeu-popup::after {
     border-radius: 12px;
 }
 
+#resultados [hidden] {
+    display: none !important;
+}
+
 .resultado-estatistica span {
     color: #a7b5c8;
     font-size: 0.72rem;
