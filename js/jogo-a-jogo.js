@@ -10114,6 +10114,13 @@
       amarelo,
       vermelho,
       penaltis: partida.penaltis || null,
+      coletiva: partida.coletivaPendente
+        ? {
+            categoria: partida.coletivaPendente.categoria,
+            resposta: partida.coletivaPendente.resposta,
+            impacto: Number(partida.coletivaResultado) || 0,
+          }
+        : null,
     };
     estado.eventos = estado.eventos || [];
     if (hatTrick)
@@ -11250,8 +11257,23 @@
       return;
     }
 
-    bloquearAcoesPartida();
-    await simularPartidaComCarregamento(indice, "Simulando partida...");
+    const partida = estado.partidas[indice];
+    bloqueioAcoesPartida = true;
+    renderizar();
+    try {
+      if (
+        !partida.coletivaPendente &&
+        !partida.coletivaProcessada &&
+        typeof abrirColetivaImprensa === "function"
+      ) {
+        await abrirColetivaImprensa(partida, estado, false);
+        salvar();
+      }
+      await simularPartidaComCarregamento(indice, "Simulando partida...");
+    } finally {
+      bloqueioAcoesPartida = false;
+      renderizar();
+    }
   }
 
   async function simularPartidaComCarregamento(
@@ -12703,6 +12725,14 @@
       Number(ultimaPartida?.jogadasCriadas ?? partidaSalva?.jogadasCriadas) ||
       0;
     const estatisticaUltimaPartida = `<p><strong>Defesas:</strong> ${ultimaDefesas} · <strong>Desarmes:</strong> ${ultimaDesarmes} · <strong>Dribles completos:</strong> ${ultimaDribles} · <strong>Jogadas criadas:</strong> ${ultimaJogadas}</p>`;
+    const coletivaUltima =
+      ultimaPartida?.coletiva || partidaSalva?.coletivaPendente;
+    const impactoColetiva = Number(
+      ultimaPartida?.coletiva?.impacto ?? partidaSalva?.coletivaResultado,
+    ) || 0;
+    const feedbackColetiva = coletivaUltima
+      ? `<p class="coletiva-feedback ${impactoColetiva > 0 ? "coletiva-feedback--positivo" : impactoColetiva < 0 ? "coletiva-feedback--negativo" : "coletiva-feedback--neutro"}" role="status">Sua declaração${coletivaUltima.categoria ? ` · ${escapar(coletivaUltima.categoria)}` : ""}: ${escapar(coletivaUltima.resposta)} · ${impactoColetiva > 0 ? "+" : ""}${impactoColetiva} pontos de reputação</p>`
+      : "";
 
     // ---------- NOVO: bloco de pênaltis na última partida ----------
     const penaltisUltima =
@@ -12721,7 +12751,7 @@
     }
 
     $("jja-ultima").innerHTML = ultimaPartida
-      ? `<div class="jja-placar">${escapar(ultimaPartida.resumo)}</div><p>${escapar(ultimaPartida.detalhes)}</p>${ultimaPartida.participou ? estatisticaUltimaPartida : ""}${blocoPenaltisUltima}`
+      ? `<div class="jja-placar">${escapar(ultimaPartida.resumo)}</div><p>${escapar(ultimaPartida.detalhes)}</p>${feedbackColetiva}${ultimaPartida.participou ? estatisticaUltimaPartida : ""}${blocoPenaltisUltima}`
       : "Nenhuma partida disputada.";
 
     $("jogos").textContent = String(Number(e.jogos) || 0);
@@ -12747,6 +12777,21 @@
     $("jja-jogadas-criadas").textContent = String(
       Number(e.jogadasCriadas) || 0,
     );
+    const variacaoReputacao = Math.round(
+      Number(estado.pontosReputacaoTemporada) || 0,
+    );
+    const variacaoReputacaoEl = $("jja-variacao-reputacao");
+    if (variacaoReputacaoEl) {
+      variacaoReputacaoEl.textContent = `${variacaoReputacao > 0 ? "+" : ""}${variacaoReputacao} ${Math.abs(variacaoReputacao) === 1 ? "ponto" : "pontos"}`;
+      variacaoReputacaoEl.classList.toggle(
+        "jja-reputacao-positiva",
+        variacaoReputacao > 0,
+      );
+      variacaoReputacaoEl.classList.toggle(
+        "jja-reputacao-negativa",
+        variacaoReputacao < 0,
+      );
+    }
 
     const tabelaEl = $("jja-tabela");
     const painelTabela = tabelaEl?.closest("details");

@@ -1854,6 +1854,16 @@ function normalizarEventosTemporada(eventos) {
         typeof evento.resposta === "string"
           ? evento.resposta.slice(0, 160)
           : "",
+      categoria:
+        typeof evento.categoria === "string"
+          ? evento.categoria.slice(0, 40)
+          : "",
+      data:
+        typeof evento.data === "string" && evento.data
+          ? evento.data.slice(0, 40)
+          : "",
+      placar:
+        typeof evento.placar === "string" ? evento.placar.slice(0, 40) : "",
     }));
 }
 
@@ -4954,7 +4964,7 @@ function formatarEventosTemporada(eventos) {
     "aposentadoria-voluntaria": () =>
       "🏁 Você anunciou sua aposentadoria voluntária",
     "coletiva-imprensa": (evento) =>
-      `🎙️ Coletiva: ${evento.resposta || evento.motivo || "declaração à imprensa"} (${evento.pontosReputacao > 0 ? "+" : ""}${evento.pontosReputacao || 0} reputação)`,
+      `🎙️ Coletiva${evento.categoria ? ` · ${evento.categoria}` : ""}${evento.jogo ? ` no jogo ${evento.jogo}` : ""}${evento.motivo ? ` — ${evento.motivo}` : ""}: ${evento.resposta || "declaração à imprensa"} (${evento.pontosReputacao > 0 ? "+" : ""}${evento.pontosReputacao || 0} reputação)`,
   };
 
   return `<div class="eventos-tags">${eventosValidos
@@ -7506,51 +7516,155 @@ function avaliarRespostaColetiva(resposta, partida, estado) {
 }
 
 async function abrirColetivaImprensa(partida, estado, automatica = false) {
+  if (
+    !partida ||
+    !estado ||
+    partida.coletivaPendente ||
+    partida.coletivaProcessada
+  )
+    return partida?.coletivaPendente || null;
+  if (partida.coletivaEmAndamento)
+    return partida.coletivaEmAndamento;
   if (!partidaMereceColetivaImprensa(partida, estado)) return null;
-  const pergunta =
-    BANCO_COLETIVAS_IMPRENSA[
-      Math.floor(Math.random() * BANCO_COLETIVAS_IMPRENSA.length)
-    ];
-  const resposta = automatica
-    ? pergunta.respostas[Math.floor(Math.random() * pergunta.respostas.length)]
-    : await new Promise((resolve) => {
-        const overlay = document.getElementById("modal-coletiva-imprensa");
-        const perguntaEl = document.getElementById("coletiva-pergunta");
-        const categoriaEl = document.getElementById("coletiva-categoria");
-        const opcoesEl = document.getElementById("coletiva-respostas");
-        if (!overlay || !perguntaEl || !opcoesEl)
-          return resolve(pergunta.respostas[0]);
-        categoriaEl.textContent = `Coletiva de imprensa · ${pergunta.categoria}`;
-        perguntaEl.textContent = pergunta.pergunta;
-        opcoesEl.replaceChildren();
-        pergunta.respostas.forEach((opcao, indice) => {
-          const botao = document.createElement("button");
-          botao.type = "button";
-          botao.className = "modal-btn modal-btn--confirmar coletiva-resposta";
-          botao.textContent = opcao.texto;
-          botao.addEventListener(
-            "click",
-            () => {
-              overlay.hidden = true;
-              resolve(opcao);
-            },
-            { once: true },
-          );
-          opcoesEl.appendChild(botao);
+  const perguntas = Array.isArray(BANCO_COLETIVAS_IMPRENSA)
+    ? BANCO_COLETIVAS_IMPRENSA.filter(
+        (item) => item && Array.isArray(item.respostas) && item.respostas.length,
+      )
+    : [];
+  const pergunta = perguntas.length
+    ? perguntas[Math.floor(Math.random() * perguntas.length)]
+    : {
+        id: "fallback",
+        categoria: "Geral",
+        pergunta: "Como você avalia sua preparação para esta partida?",
+        respostas: [
+          {
+            texto: "Estou preparado para ajudar a equipe.",
+            pontos: 0,
+            criterio: "sempre",
+          },
+        ],
+      };
+  const promessaColetiva = (async () => {
+    const resposta = automatica
+      ? pergunta.respostas[
+          Math.floor(Math.random() * pergunta.respostas.length)
+        ]
+      : await new Promise((resolve) => {
+          const overlay = document.getElementById("modal-coletiva-imprensa");
+          const dialogo = overlay?.querySelector('[role="dialog"]');
+          const perguntaEl = document.getElementById("coletiva-pergunta");
+          const categoriaEl = document.getElementById("coletiva-categoria");
+          const feedbackEl = document.getElementById("coletiva-feedback");
+          const opcoesEl = document.getElementById("coletiva-respostas");
+          if (!overlay || !dialogo || !perguntaEl || !opcoesEl)
+            return resolve(pergunta.respostas[0]);
+
+          const categoriaNormalizada = pergunta.categoria
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, "");
+          const focoAnterior = document.activeElement;
+          let resolvida = false;
+          const opcoes = [];
+          const focarOpcao = (indice) => {
+            const atual = opcoes.indexOf(document.activeElement);
+            if (atual >= 0) opcoes[atual].tabIndex = -1;
+            const proxima = opcoes[(indice + opcoes.length) % opcoes.length];
+            if (proxima) {
+              proxima.tabIndex = 0;
+              proxima.focus();
+            }
+          };
+          const finalizar = (opcao) => {
+            if (resolvida) return;
+            resolvida = true;
+            overlay.hidden = true;
+            overlay.removeEventListener("keydown", aoTeclar);
+            if (focoAnterior instanceof HTMLElement && focoAnterior.isConnected)
+              focoAnterior.focus();
+            resolve(opcao);
+          };
+          const aoTeclar = (evento) => {
+            if (evento.key === "Escape") {
+              evento.preventDefault();
+              return;
+            }
+            if (evento.key === "Tab") {
+              evento.preventDefault();
+              focarOpcao(evento.shiftKey ? opcoes.length - 1 : 0);
+              return;
+            }
+            if (
+              evento.key === "ArrowDown" ||
+              evento.key === "ArrowRight" ||
+              evento.key === "ArrowUp" ||
+              evento.key === "ArrowLeft"
+            ) {
+              evento.preventDefault();
+              const atual = opcoes.indexOf(document.activeElement);
+              const direcao =
+                evento.key === "ArrowDown" || evento.key === "ArrowRight" ? 1 : -1;
+              focarOpcao(atual + direcao);
+            }
+          };
+
+          categoriaEl.textContent = `Coletiva de imprensa · ${pergunta.categoria}`;
+          categoriaEl.dataset.categoria = categoriaNormalizada;
+          perguntaEl.textContent = pergunta.pergunta;
+          if (feedbackEl) {
+            feedbackEl.textContent =
+              "Sua resposta será avaliada após a partida.";
+            feedbackEl.className = "coletiva-feedback";
+          }
+          opcoesEl.replaceChildren();
+          pergunta.respostas.forEach((opcao) => {
+            const botao = document.createElement("button");
+            botao.type = "button";
+            botao.className = "coletiva-resposta";
+            botao.setAttribute("role", "radio");
+            botao.setAttribute("aria-checked", "false");
+            botao.tabIndex = opcoes.length === 0 ? 0 : -1;
+            botao.textContent = opcao.texto;
+            botao.addEventListener(
+              "click",
+              () => {
+                botao.setAttribute("aria-checked", "true");
+                if (feedbackEl)
+                  feedbackEl.textContent =
+                    "Resposta registrada. O impacto será calculado após o jogo.";
+                finalizar(opcao);
+              },
+              { once: true },
+            );
+            opcoes.push(botao);
+            opcoesEl.appendChild(botao);
+          });
+          overlay.addEventListener("keydown", aoTeclar);
+          overlay.hidden = false;
+          (opcoes[0] || dialogo).focus();
         });
-        overlay.hidden = false;
-      });
-  estado.coletivasTemporada = (Number(estado.coletivasTemporada) || 0) + 1;
-  partida.coletivaPendente = {
-    perguntaId: pergunta.id,
-    pergunta: pergunta.pergunta,
-    resposta: resposta.texto,
-    pontosBase: resposta.pontos,
-    criterio: resposta.criterio,
-    promessa: resposta.promessa || "",
-    relacao: resposta.relacao || 0,
-  };
-  return partida.coletivaPendente;
+    estado.coletivasTemporada = (Number(estado.coletivasTemporada) || 0) + 1;
+    partida.coletivaPendente = {
+      perguntaId: pergunta.id,
+      categoria: pergunta.categoria,
+      pergunta: pergunta.pergunta,
+      resposta: resposta.texto,
+      pontosBase: resposta.pontos,
+      criterio: resposta.criterio,
+      promessa: resposta.promessa || "",
+      relacao: resposta.relacao || 0,
+    };
+    return partida.coletivaPendente;
+  })();
+  partida.coletivaEmAndamento = promessaColetiva;
+  try {
+    return await promessaColetiva;
+  } finally {
+    partida.coletivaEmAndamento = null;
+  }
 }
 
 function concluirColetivaImprensa(partida, estado) {
@@ -7576,6 +7690,9 @@ function concluirColetivaImprensa(partida, estado) {
     jogo: Number(estado.estatisticas?.jogos) || 0,
     motivo: coletiva.pergunta,
     resposta: coletiva.resposta,
+    categoria: coletiva.categoria,
+    data: new Date().toISOString(),
+    placar: `${partida.golsCasa} × ${partida.golsFora}`,
     pontosReputacao: pontos,
   });
   partida.coletivaProcessada = true;

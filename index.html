@@ -252,6 +252,10 @@
                             <strong id="prem">0</strong>
                         </div>
                         <div class="resultado-estatistica">
+                            <span>Variação da reputação (coletivas)</span>
+                            <strong id="jja-variacao-reputacao" aria-live="polite">0 pontos</strong>
+                        </div>
+                        <div class="resultado-estatistica">
                             <span>MOTM</span>
                             <strong id="jja-motm">0</strong>
                         </div>
@@ -594,12 +598,13 @@
     </div>
 
     <div id="modal-coletiva-imprensa" class="modal-overlay modal-coletiva-imprensa" hidden>
-        <div class="modal-caixa" role="dialog" aria-modal="true" aria-labelledby="coletiva-pergunta">
+        <div class="modal-caixa" role="dialog" aria-modal="true" aria-labelledby="coletiva-pergunta" tabindex="-1">
             <div class="modal-icone" aria-hidden="true">🎙️</div>
             <span id="coletiva-categoria" class="coletiva-categoria">Coletiva de imprensa</span>
             <h3 id="coletiva-pergunta">Pergunta do jornalista</h3>
-            <p>Escolha como deseja responder. O resultado da partida poderá alterar o impacto da declaração.</p>
-            <div id="coletiva-respostas" class="coletiva-respostas"></div>
+            <p>Escolha uma resposta para continuar. O resultado da partida poderá alterar o impacto da declaração.</p>
+            <p id="coletiva-feedback" class="coletiva-feedback" aria-live="polite"></p>
+            <div id="coletiva-respostas" class="coletiva-respostas" role="radiogroup" aria-labelledby="coletiva-pergunta"></div>
         </div>
     </div>
 
