@@ -47,6 +47,33 @@
     color: #dcfce7;
 }
 
+.footmain-loading-progresso {
+    width: min(420px, 82vw);
+    height: 14px;
+    border: 0;
+    border-radius: 999px;
+    overflow: hidden;
+    appearance: none;
+    background: rgba(148, 163, 184, 0.28);
+    accent-color: #4ade80;
+}
+
+.footmain-loading-progresso::-webkit-progress-bar {
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.28);
+}
+
+.footmain-loading-progresso::-webkit-progress-value {
+    border-radius: 999px;
+    background: linear-gradient(90deg, #22c55e, #86efac);
+    transition: width .2s ease;
+}
+
+.footmain-loading-progresso::-moz-progress-bar {
+    border-radius: 999px;
+    background: linear-gradient(90deg, #22c55e, #86efac);
+}
+
 /* Tema claro: mantém contraste escuro para o overlay não parecer "site branco" */
 html[data-theme="light"] .footmain-loading-overlay {
     background: rgba(15, 23, 42, 0.55);

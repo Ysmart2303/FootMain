@@ -17,7 +17,9 @@ const OVERALL_PADRAO = 50;
 let footmainLoadingOverlay = null;
 let cacheMetricasCarreira = new WeakMap();
 const desempenhoFootMain = new Map();
-let medicaoDesempenhoHabilitada = false;
+// A coleta usa apenas performance.now() e acumula contadores em memória.
+// Mantê-la ligada por padrão permite detectar regressões sem instrumentação manual.
+let medicaoDesempenhoHabilitada = true;
 let workerAnaliseCarreiras = null;
 let proximoIdCalculoCarreira = 0;
 let versaoRenderizacaoRecordes = 0;

@@ -783,14 +783,33 @@
       loadingEl.setAttribute("aria-busy", "true");
       loadingEl.innerHTML = `
                 <div class="footmain-loading-spinner" aria-hidden="true"></div>
-                <p class="footmain-loading-texto"></p>`;
+                <p class="footmain-loading-texto"></p>
+                <progress class="footmain-loading-progresso" max="100" value="0" aria-label="Progresso"></progress>`;
       document.body.append(loadingEl);
     }
     carregamentoAtivo = true;
     loadingEl.querySelector(".footmain-loading-texto").textContent = texto;
+    const progresso = loadingEl.querySelector(".footmain-loading-progresso");
+    const spinner = loadingEl.querySelector(".footmain-loading-spinner");
+    if (progresso) {
+      progresso.value = 0;
+      progresso.hidden = !texto.startsWith("Simulando o restante da temporada") && !texto.startsWith("Simulando a temporada");
+    }
+    if (spinner) spinner.hidden = !progresso?.hidden;
     loadingEl.hidden = false;
     // Libera o frame para o navegador pintar o overlay antes da simulação bloquear a thread.
     return new Promise((resolve) => setTimeout(resolve, 30));
+  }
+
+  function atualizarProgressoCarregamento(valor, texto) {
+    if (!loadingEl) return;
+    const progresso = loadingEl.querySelector(".footmain-loading-progresso");
+    if (progresso) {
+      progresso.hidden = false;
+      progresso.value = Math.max(0, Math.min(100, Number(valor) || 0));
+    }
+    const rotulo = loadingEl.querySelector(".footmain-loading-texto");
+    if (rotulo && texto) rotulo.textContent = texto;
   }
 
   function ocultarCarregamento() {
@@ -3274,13 +3293,21 @@
     const placar = sortearResultadoSelecao(partida.casaId, partida.foraId);
     invalidarCachesDerivados();
     Object.assign(partida, placar, { status: "concluida" });
-    partida.eventosIndividuais = gerarEventosIndividuaisLiga(
-      `${estado.ano}:${partida.torneioId}:${partida.rodadaGrupo}:${partida.casaId}:${partida.foraId}`,
-      partida.casaId,
-      partida.foraId,
-      placar.golsCasa,
-      placar.golsFora,
-    );
+    if (estado?.modoSimulacaoTemporada === "coletiva") {
+      partida.eventosIndividuais = [];
+      partida.jogadoresParticipantes = [];
+      partida.estatisticasColetivasPendentes = true;
+      partida.estatisticasJogadorTemporarias = null;
+      partida.estatisticasColetivasProcessadas = false;
+    } else {
+      partida.eventosIndividuais = gerarEventosIndividuaisLiga(
+        `${estado.ano}:${partida.torneioId}:${partida.rodadaGrupo}:${partida.casaId}:${partida.foraId}`,
+        partida.casaId,
+        partida.foraId,
+        placar.golsCasa,
+        placar.golsFora,
+      );
+    }
   }
 
   function calcularTabelaGrupoSelecao(torneioId, selecoesGrupo) {
@@ -7996,6 +8023,27 @@
     golsFora,
     opcoes = {},
   ) {
+    if (
+      estado?.modoSimulacaoTemporada === "coletiva" &&
+      opcoes.partida
+    ) {
+      const partidaColetiva = opcoes.partida;
+      partidaColetiva.casaId ||= casaId;
+      partidaColetiva.foraId ||= foraId;
+      partidaColetiva.eventosIndividuais = [];
+      partidaColetiva.jogadoresParticipantes = [];
+      partidaColetiva.estatisticasColetivasPendentes = true;
+      partidaColetiva.estatisticasJogadorTemporarias = {
+        id: opcoes.jogadorId ?? estado.carreiraId,
+        nome: opcoes.nomeJogador || estado.nome || "Jogador",
+        posicao: String(estado.posicao || "CA").toUpperCase(),
+        clubeId: opcoes.clubeJogadorId ?? estado.clubeId,
+        participou: !!opcoes.jogadorParticipou,
+        gols: Math.max(0, Math.floor(Number(opcoes.golsJogador) || 0)),
+        assistencias: Math.max(0, Math.floor(Number(opcoes.assistenciasJogador) || 0)),
+      };
+      return [];
+    }
     estado.elencosLiga ||= {};
     const jogadorId = opcoes.jogadorId ?? estado.carreiraId;
     const clubeJogadorId = opcoes.clubeJogadorId ?? estado.clubeId;
@@ -8211,12 +8259,6 @@
     "Ligue 1",
     "Brasileirão",
   ]);
-  const JOGADORES_FAMOSOS_NPCS = new Set([
-    "messi",
-    "cristiano-ronaldo",
-    "neymar",
-  ]);
-
   function limitarNumeroRanking(valor, minimo, maximo) {
     return Math.max(minimo, Math.min(maximo, Number(valor) || 0));
   }
@@ -8240,80 +8282,6 @@
     return limitarNumeroRanking(0.9 + Math.log2(peso) * 0.12, 0.78, 1.42);
   }
 
-  function obterMultiplicadorHistoricoNpc(jogador, ano) {
-    const id = String(jogador.id || "").replace(/^real:/, "");
-    // Bônus restritos a temporadas históricas específicas; não são aplicados
-    // a jogadores fictícios nem a todos os anos de auge dos jogadores reais.
-    if (id === "messi" && Number(ano) === 2012) return 3.35;
-    if (id === "cristiano-ronaldo" && Number(ano) === 2008) return 2.25;
-    return 1;
-  }
-
-  function obterEscalacaoNpc(elenco, clubeId, rodada, ano) {
-    const escalacao = [];
-    const titulares = elenco.filter(
-      (jogador) => jogador.statusElenco === "titular",
-    );
-    const jogadoresEscalacao = titulares.length ? titulares : elenco;
-    POSICOES_ELENCO_LIGA.forEach((posicao) => {
-      const candidatos = jogadoresEscalacao.filter(
-        (jogador) => String(jogador.posicao || "").toUpperCase() === posicao,
-      );
-      if (!candidatos.length) return;
-      const sorteador = criarSorteadorRanking(
-        `${ano}:${clubeId}:${rodada}:titular:${posicao}`,
-      );
-      const escolhido = escolherComPesoRanking(
-        candidatos,
-        (jogador) =>
-          limitarNumeroRanking(Number(jogador.pesoRanking) || 1, 0.5, 15),
-        sorteador,
-      );
-      if (escolhido) escalacao.push(escolhido);
-    });
-    return escalacao;
-  }
-
-  function obterPesosGolsNpc(jogador, ano) {
-    const posicao = String(jogador.posicao || "").toUpperCase();
-    const pesos = {
-      GOL: 0.015,
-      ZCE: 0.16,
-      ZCD: 0.16,
-      LE: 0.28,
-      LD: 0.28,
-      ME: 0.78,
-      MC: 0.68,
-      MD: 0.78,
-      PE: 2.0,
-      CA: 2.8,
-      PD: 2.0,
-    };
-    return (
-      (pesos[posicao] || 0.5) *
-      obterPesoQualidadeNpc(jogador) *
-      obterMultiplicadorHistoricoNpc(jogador, ano)
-    );
-  }
-
-  function obterPesosAssistenciasNpc(jogador) {
-    const posicao = String(jogador.posicao || "").toUpperCase();
-    const pesos = {
-      GOL: 0.02,
-      ZCE: 0.18,
-      ZCD: 0.18,
-      LE: 0.62,
-      LD: 0.62,
-      ME: 2.15,
-      MC: 2.3,
-      MD: 2.15,
-      PE: 1.65,
-      CA: 0.72,
-      PD: 1.65,
-    };
-    return (pesos[posicao] || 0.5) * obterPesoQualidadeNpc(jogador);
-  }
-
   function obterForcaRelativaNpc(clube, mediaForca) {
     const forca = clube ? forcaClube(clube) : 65;
     return limitarNumeroRanking(1 + (forca - mediaForca) * 0.008, 0.78, 1.22);
@@ -8324,23 +8292,17 @@
     visitante,
     rodada,
     ano,
-    jogadoresPorClube,
+    estatisticasPorClube,
     mediaForca,
   ) {
+    // O ranking das outras ligas precisa apenas do desempenho coletivo durante
+    // a amostra de jogos. Nenhum elenco ou escalação é montado nesta etapa.
     const sorteador = criarSorteadorRanking(
       `${ano}:${mandante.liga || ""}:${rodada}:${mandante.id}:${visitante.id}:placar`,
     );
-    const elencoCasa = jogadoresPorClube.get(mandante.id) || [];
-    const elencoFora = jogadoresPorClube.get(visitante.id) || [];
-    const escalaCasa = obterEscalacaoNpc(elencoCasa, mandante.id, rodada, ano);
-    const escalaFora = obterEscalacaoNpc(elencoFora, visitante.id, rodada, ano);
-    if (!escalaCasa.length || !escalaFora.length) return;
-
     const fatorCasa = obterForcaRelativaNpc(mandante, mediaForca);
     const fatorFora = obterForcaRelativaNpc(visitante, mediaForca);
     const equilibrio = limitarNumeroRanking(fatorCasa / fatorFora, 0.78, 1.28);
-    // Os gols são sorteados uma única vez por equipe e partida. Depois são
-    // distribuídos entre os titulares: a soma individual nunca supera o placar.
     const golsCasa = Math.min(
       7,
       sortearPoissonRanking(1.42 * 1.07 * equilibrio, sorteador),
@@ -8349,86 +8311,367 @@
       7,
       sortearPoissonRanking(1.16 / equilibrio, sorteador),
     );
+
+    const registrarDesempenho = (clube, golsFeitos, golsSofridos, lado) => {
+      if (!estatisticasPorClube.has(clube.id)) {
+        estatisticasPorClube.set(clube.id, {
+          gols: 0,
+          golsSofridos: 0,
+          jogos: 0,
+          vitorias: 0,
+          jogosSemSofrer: 0,
+          desarmes: 0,
+          defesas: 0,
+        });
+      }
+      const resumo = estatisticasPorClube.get(clube.id);
+      resumo.gols += golsFeitos;
+      resumo.golsSofridos += golsSofridos;
+      resumo.jogos++;
+      if (golsFeitos > golsSofridos) resumo.vitorias++;
+      if (golsSofridos === 0) resumo.jogosSemSofrer++;
+
+      const sorteadorAcoes = criarSorteadorRanking(
+        `${ano}:${rodada}:${clube.id}:${lado}:acoes-coletivas`,
+      );
+      resumo.desarmes += sortearPoissonRanking(5.2, sorteadorAcoes);
+      resumo.defesas += Math.max(
+        0,
+        sortearPoissonRanking(3.1 + golsSofridos * 0.75, sorteadorAcoes) - golsSofridos,
+      );
+    };
+
+    registrarDesempenho(mandante, golsCasa, golsFora, "casa");
+    registrarDesempenho(visitante, golsFora, golsCasa, "fora");
+  }
+
+  // A simulação em lote registra somente placares. Os atletas são escolhidos
+  // uma única vez, no fechamento da temporada, sem montar escalações por jogo.
+  function obterChavePartidaDistribuicao(partida) {
+    const casaId = partida.casaId || partida.clubeCasaId || (partida.casa ? estado?.clubeId : partida.adversarioId) || "";
+    const foraId = partida.foraId || partida.clubeForaId || (partida.casa ? partida.adversarioId : estado?.clubeId) || "";
+    const competicao = partida.torneioId || partida.competicao || estado?.liga || "competicao";
+    const ehLiga =
+      partida.tipo === "liga" ||
+      partida.competicao === estado?.liga ||
+      (!partida.tipo && !partida.competicao && !!casaId && !!foraId);
+    if (ehLiga) return `liga:${estado?.ano}:${competicao}:${casaId}:${foraId}`;
+    return `jogo:${partida.id || `${estado?.ano}:${competicao}:${partida.tipo || ""}:${partida.fase || ""}:${partida.numero ?? partida.rodadaGrupo ?? partida.rodadaLiga ?? ""}:${casaId}:${foraId}`}`;
+  }
+
+  function obterJogadoresPosicaoDistribuicao(clubeId, posicao) {
+    estado.jogadoresDistribuicaoColetiva ||= {};
+    const chave = `${estado.ano}:${clubeId}:${posicao}:candidatos`;
+    const cache = estado.jogadoresDistribuicaoColetiva[chave];
+    if (Array.isArray(cache)) return cache;
+
+    const registrados = estado.elencosLiga?.[clubeId] || [];
+    const reais = obterJogadoresReaisDoClube(clubeId, estado.ano).map((jogador) => ({
+      ...jogador,
+      clubeId,
+    }));
+    const porId = new Map();
+    [...registrados, ...reais].forEach((jogador) => {
+      if (!jogador?.id || String(jogador.id) === String(estado.carreiraId)) return;
+      if (String(jogador.posicao || "").toUpperCase() !== posicao) return;
+      const candidato = { ...jogador };
+      candidato.pesoRanking = Number(candidato.pesoRanking) || 1;
+      porId.set(String(candidato.id), candidato);
+    });
+
+    // O ranking NPC não monta elencos completos. Mantém, porém, dois atletas
+    // genéricos por posição para que um único jogador real não receba sozinho
+    // todos os gols daquela posição no rateio da temporada.
+    const indicePosicao = Math.max(0, POSICOES_ELENCO_LIGA.indexOf(posicao));
+    const clube = obterClube(clubeId);
+    const forca = clube ? forcaClube(clube) : 60;
+    const registradosNaPosicao = registrados.filter(
+      (jogador) => String(jogador.posicao || "").toUpperCase() === posicao,
+    ).length;
+    const quantidadeFicticios = Math.max(0, 2 - registradosNaPosicao);
+    const ficticios = Array.from({ length: quantidadeFicticios }, (_, indice) => {
+      const idade = 19 + (hashIdentificador(`${estado.ano}:${clubeId}:${posicao}:${indice}`) % 14);
+      const overall = Math.max(40, Math.min(89, Math.round(53 + (forca - 65) * 0.48 + (1 - indice) * 2)));
+      return {
+        id: `coletivo:${estado.ano}:${clubeId}:${posicao}:${indice}`,
+        nome: obterNomeFicticio(
+          clubeId,
+          POSICOES_ELENCO_LIGA.length + POSICOES_RESERVAS_ELENCO.length + indicePosicao * 2 + indice,
+          estado.ano,
+        ),
+        posicao,
+        clubeId,
+        idade,
+        overall,
+        statusElenco: indice === 0 ? "titular" : "reserva",
+        pesoRanking:
+          calcularMultiplicadorAuge(idade) *
+          calcularMultiplicadorFormaTemporada(
+            `coletivo:${estado.ano}:${clubeId}:${posicao}:${indice}`,
+            estado.ano,
+            posicao,
+          ),
+      };
+    });
+    const candidatos = [...porId.values(), ...ficticios].sort(
+      (a, b) => (Number(b.pesoRanking) || 1) - (Number(a.pesoRanking) || 1),
+    );
+    candidatos.forEach((jogador, indice) => {
+      jogador.statusElenco ||= indice === 0 ? "titular" : "reserva";
+    });
+    estado.jogadoresDistribuicaoColetiva[chave] = candidatos;
+    return candidatos;
+  }
+
+  function obterQualidadeDistribuicao(jogador) {
+    // pesoRanking já contém forma e auge. Use o ajuste logarítmico limitado,
+    // sem multiplicar o valor bruto novamente no sorteio dos gols.
+    return obterPesoQualidadeNpc(jogador);
+  }
+
+  function escolherJogadorDistribuicao(clubeId, tipo, aleatorio, excluidos = new Set()) {
+    const pesosPosicao = tipo === "assistencia"
+      ? { GOL: 0.02, ZCE: 0.2, ZCD: 0.2, LE: 0.9, LD: 0.9, ME: 2.35, MC: 2.5, MD: 2.35, PE: 2.0, CA: 0.85, PD: 2.0 }
+      : { GOL: 0.015, ZCE: 0.16, ZCD: 0.16, LE: 0.28, LD: 0.28, ME: 0.78, MC: 0.68, MD: 0.78, PE: 2.0, CA: 2.8, PD: 2.0 };
+    const posicoes = Object.keys(pesosPosicao);
+    const posicao = escolherComPesoRanking(
+      posicoes.map((item) => ({ posicao: item })),
+      (item) => pesosPosicao[item.posicao],
+      aleatorio,
+    )?.posicao;
+    if (!posicao) return null;
+
+    let candidatos = obterJogadoresPosicaoDistribuicao(clubeId, posicao)
+      .filter((jogador) => !excluidos.has(String(jogador.id)));
+    if (!candidatos.length) {
+      // Caso o único atleta cadastrado seja o autor do gol, busca uma alternativa
+      // virtual na mesma posição para permitir uma assistência válida.
+      estado.jogadoresDistribuicaoColetiva ||= {};
+      const chave = `${clubeId}:${posicao}:alternativas`;
+      if (!estado.jogadoresDistribuicaoColetiva[chave]) {
+        const indicePosicao = Math.max(0, POSICOES_ELENCO_LIGA.indexOf(posicao));
+        estado.jogadoresDistribuicaoColetiva[chave] = [0, 1].map((indice) => ({
+          id: `coletivo:${estado.ano}:${clubeId}:${posicao}:alt:${indice}`,
+          nome: obterNomeFicticio(
+            clubeId,
+            POSICOES_ELENCO_LIGA.length + POSICOES_RESERVAS_ELENCO.length + 40 + indicePosicao * 2 + indice,
+            estado.ano,
+          ),
+          posicao,
+          clubeId,
+          overall: 58 + indice * 3,
+          pesoRanking: 1,
+        }));
+      }
+      candidatos = estado.jogadoresDistribuicaoColetiva[chave]
+        .filter((jogador) => !excluidos.has(String(jogador.id)));
+    }
+    return escolherComPesoRanking(
+      candidatos,
+      obterQualidadeDistribuicao,
+      aleatorio,
+    );
+  }
+
+  function gerarEventosColetivosPartida(partida, chavePartida, dadosJogador) {
+    const casaId = partida.casaId || partida.clubeCasaId || (partida.casa ? estado.clubeId : partida.adversarioId);
+    const foraId = partida.foraId || partida.clubeForaId || (partida.casa ? partida.adversarioId : estado.clubeId);
+    if (!casaId || !foraId) {
+      throw new Error(`Não foi possível identificar os clubes da partida ${chavePartida}.`);
+    }
+    const eventos = [];
     const times = [
-      {
-        clube: mandante,
-        escalacao: escalaCasa,
-        gols: golsCasa,
-        golsSofridos: golsFora,
-        lado: "casa",
-      },
-      {
-        clube: visitante,
-        escalacao: escalaFora,
-        gols: golsFora,
-        golsSofridos: golsCasa,
-        lado: "fora",
-      },
+      { lado: "casa", clubeId: casaId, gols: Math.max(0, Math.floor(Number(partida.golsCasa) || 0)) },
+      { lado: "fora", clubeId: foraId, gols: Math.max(0, Math.floor(Number(partida.golsFora) || 0)) },
     ];
-
     times.forEach((time) => {
-      time.escalacao.forEach((jogador) => {
-        jogador.jogos++;
-        jogador.jogosLiga++;
-        if (time.gols > time.golsSofridos) jogador.vitorias++;
-        const posicao = String(jogador.posicao || "").toUpperCase();
-        if (
-          time.golsSofridos === 0 &&
-          ["GOL", "ZCE", "ZCD", "LE", "LD"].includes(posicao)
-        ) {
-          jogador.jogosSemSofrer++;
-        }
-        const sorteadorAcao = criarSorteadorRanking(
-          `${ano}:${rodada}:${time.clube.id}:${jogador.id}:acoes`,
-        );
-        if (["ZCE", "ZCD", "LE", "LD"].includes(posicao)) {
-          jogador.desarmes += sortearPoissonRanking(1.45, sorteadorAcao);
-        } else if (["ME", "MC", "MD"].includes(posicao)) {
-          jogador.desarmes += sortearPoissonRanking(0.85, sorteadorAcao);
-        } else if (["PE", "CA", "PD"].includes(posicao)) {
-          jogador.desarmes += sortearPoissonRanking(0.28, sorteadorAcao);
-        }
-        if (posicao === "GOL") {
-          jogador.defesas += Math.max(
-            0,
-            sortearPoissonRanking(
-              2.15 + time.golsSofridos * 0.45,
-              sorteadorAcao,
-            ) - time.golsSofridos,
-          );
-        }
-      });
-
+      const dadosUsuario = dadosJogador && String(dadosJogador.clubeId) === String(time.clubeId) && dadosJogador.participou
+        ? dadosJogador
+        : null;
+      const jogadorUsuario = dadosUsuario
+        ? {
+            id: dadosUsuario.id,
+            nome: dadosUsuario.nome || "Jogador",
+            posicao: dadosUsuario.posicao || "CA",
+            clubeId: time.clubeId,
+          }
+        : null;
+      const golsUsuario = jogadorUsuario
+        ? Math.min(time.gols, Math.max(0, Math.floor(Number(dadosUsuario.gols) || 0)))
+        : 0;
+      const assistenciasUsuario = jogadorUsuario
+        ? Math.min(time.gols - golsUsuario, Math.max(0, Math.floor(Number(dadosUsuario.assistencias) || 0)))
+        : 0;
       const golsDaEquipe = [];
+
       for (let indice = 0; indice < time.gols; indice++) {
-        const sorteadorGol = criarSorteadorRanking(
-          `${ano}:${rodada}:${time.clube.id}:gol:${indice}`,
-        );
-        const autor = escolherComPesoRanking(
-          time.escalacao,
-          (jogador) => obterPesosGolsNpc(jogador, ano),
-          sorteadorGol,
-        );
-        if (!autor) continue;
-        autor.gols++;
-        golsDaEquipe.push(autor);
+        let autor;
+        if (indice < golsUsuario) {
+          autor = jogadorUsuario;
+        } else {
+          const sorteador = criarSorteadorRanking(`${chavePartida}:${time.clubeId}:gol:${indice}`);
+          autor = escolherJogadorDistribuicao(time.clubeId, "gol", sorteador, new Set(jogadorUsuario ? [String(jogadorUsuario.id)] : []));
+        }
+        if (!autor) {
+          const clube = obterClube(time.clubeId);
+          autor = {
+            id: `coletivo:${estado.ano}:${time.clubeId}:sem-atleta:${time.lado}:${indice}`,
+            nome: `Jogador do ${clube?.nome || time.clubeId}`,
+            posicao: "CA",
+            clubeId: time.clubeId,
+          };
+        }
+        golsDaEquipe.push({
+          id: `${chavePartida}:${time.lado}:${indice + 1}`,
+          partidaId: chavePartida,
+          clubeId: time.clubeId,
+          autorId: autor.id,
+          autorNome: autor.nome,
+          autorPosicao: autor.posicao,
+          assistenteId: null,
+          assistenteNome: null,
+          assistentePosicao: null,
+        });
       }
 
-      golsDaEquipe.forEach((autor, indice) => {
-        const sorteadorAssistencia = criarSorteadorRanking(
-          `${ano}:${rodada}:${time.clube.id}:assistencia:${indice}`,
-        );
-        if (sorteadorAssistencia() >= 0.66) return;
-        const candidatos = time.escalacao.filter(
-          (jogador) => jogador.id !== autor.id,
-        );
-        const assistente = escolherComPesoRanking(
-          candidatos,
-          obterPesosAssistenciasNpc,
-          sorteadorAssistencia,
-        );
-        if (assistente) assistente.assistencias++;
+      let assistenciasUsuarioRestantes = assistenciasUsuario;
+      golsDaEquipe.forEach((gol, indice) => {
+        const autorUsuario = jogadorUsuario && String(gol.autorId) === String(jogadorUsuario.id);
+        const sorteador = criarSorteadorRanking(`${chavePartida}:${time.clubeId}:assistencia:${indice}`);
+        let assistente = null;
+        if (assistenciasUsuarioRestantes > 0 && jogadorUsuario && !autorUsuario) {
+          assistente = jogadorUsuario;
+          assistenciasUsuarioRestantes--;
+        } else if (sorteador() < 0.66) {
+          assistente = escolherJogadorDistribuicao(
+            time.clubeId,
+            "assistencia",
+            sorteador,
+            new Set([String(gol.autorId), ...(jogadorUsuario ? [String(jogadorUsuario.id)] : [])]),
+          );
+        }
+        if (assistente) {
+          gol.assistenteId = assistente.id;
+          gol.assistenteNome = assistente.nome;
+          gol.assistentePosicao = assistente.posicao;
+        }
       });
+      if (golsDaEquipe.length !== time.gols) {
+        throw new Error(
+          `Distribuição coletiva inconsistente em ${time.clubeId}: ` +
+          `${golsDaEquipe.length} eventos para ${time.gols} gols.`,
+        );
+      }
+      eventos.push(...golsDaEquipe);
+    });
+    const totalEsperado = times.reduce((soma, time) => soma + time.gols, 0);
+    if (eventos.length !== totalEsperado) {
+      throw new Error(
+        `A partida ${chavePartida} terminou com ${totalEsperado} gols, ` +
+        `mas recebeu ${eventos.length} registros individuais.`,
+      );
+    }
+    return eventos;
+  }
+
+  async function distribuirEstatisticasColetivasTemporada() {
+    if (!estado || estado.estatisticasColetivasDistribuidas) return;
+    const finalizarMedicao = window.FootMainPerformance?.start(
+      "distribuicao_coletiva_temporada",
+    );
+    const partidas = [
+      ...(estado.rodadas || []).flat(),
+      ...(estado.partidas || []),
+    ];
+    const grupos = new Map();
+    partidas.forEach((partida) => {
+      if (!partida || (partida.status !== "concluida" && partida.status !== "concluido")) return;
+      const chave = obterChavePartidaDistribuicao(partida);
+      if (!grupos.has(chave)) grupos.set(chave, []);
+      if (!grupos.get(chave).includes(partida)) grupos.get(chave).push(partida);
+    });
+
+    let partidasProcessadas = 0;
+    let golsEsperados = 0;
+    let golsDistribuidos = 0;
+    let gruposProcessados = 0;
+    for (const [chave, referencias] of grupos) {
+      const pendente = referencias.find((partida) => partida.estatisticasColetivasPendentes);
+      if (!pendente) continue;
+      const dadosJogador = referencias
+        .map((partida) => partida.estatisticasJogadorTemporarias)
+        .find(Boolean) || null;
+      const eventos = gerarEventosColetivosPartida(pendente, chave, dadosJogador);
+      const golsDaPartida =
+        Math.max(0, Math.floor(Number(pendente.golsCasa) || 0)) +
+        Math.max(0, Math.floor(Number(pendente.golsFora) || 0));
+      if (eventos.length !== golsDaPartida) {
+        throw new Error(
+          `A partida ${chave} tem ${golsDaPartida} gols coletivos e ` +
+          `${eventos.length} eventos individuais.`,
+        );
+      }
+      golsEsperados += golsDaPartida;
+      golsDistribuidos += eventos.length;
+      const participantesPorId = new Map();
+      eventos.forEach((evento) => {
+        [
+          { id: evento.autorId, nome: evento.autorNome, posicao: evento.autorPosicao },
+          { id: evento.assistenteId, nome: evento.assistenteNome, posicao: evento.assistentePosicao },
+        ].forEach((jogador) => {
+          if (!jogador.id) return;
+          const id = String(jogador.id);
+          if (!participantesPorId.has(id)) {
+            participantesPorId.set(id, {
+              id: jogador.id,
+              nome: jogador.nome,
+              posicao: jogador.posicao,
+              clubeId: evento.clubeId,
+              desarmes: 0,
+              defesas: 0,
+            });
+          }
+        });
+      });
+      referencias.forEach((partida) => {
+        partida.eventosIndividuais = eventos.map((evento) => ({ ...evento }));
+        partida.jogadoresParticipantes = [...participantesPorId.values()].map((jogador) => ({ ...jogador }));
+        partida.estatisticasColetivasPendentes = false;
+        partida.estatisticasColetivasProcessadas = true;
+        partida.estatisticasJogadorTemporarias = null;
+      });
+      partidasProcessadas++;
+      gruposProcessados++;
+      if (gruposProcessados % 12 === 0) await cederTempoAoNavegador();
+    }
+
+    const partidasPendentesRestantes = [...grupos.values()].filter((referencias) =>
+      referencias.some((partida) => partida.estatisticasColetivasPendentes),
+    ).length;
+    if (partidasPendentesRestantes > 0 || golsEsperados !== golsDistribuidos) {
+      throw new Error(
+        `Distribuição coletiva incompleta: ${partidasPendentesRestantes} partida(s) pendente(s), ` +
+        `${golsDistribuidos}/${golsEsperados} gols registrados.`,
+      );
+    }
+    estado.estatisticasColetivasDistribuidas = true;
+    estado.resumoDistribuicaoColetiva = {
+      partidas: partidasProcessadas,
+      golsEsperados,
+      golsDistribuidos,
+      ano: Number(estado.ano),
+    };
+    invalidarCachesDerivados();
+    finalizarMedicao?.();
+  }
+
+  function cederTempoAoNavegador() {
+    return new Promise((resolver) => {
+      if (document.visibilityState === "hidden") {
+        setTimeout(resolver, 0);
+        return;
+      }
+      requestAnimationFrame(() => setTimeout(resolver, 0));
     });
   }
 
@@ -8451,6 +8694,116 @@
     return jogosLiga + jogosOutrasCompeticoes;
   }
 
+  function distribuirRankingNpcColetivo(clube, resumo, fatorEscala, jogosReferencia) {
+    const jogadoresPorId = new Map();
+    const obterRegistro = (jogador) => {
+      if (!jogador?.id) return null;
+      const id = String(jogador.id);
+      if (!jogadoresPorId.has(id)) {
+        jogadoresPorId.set(id, {
+          ...jogador,
+          clubeId: clube.id,
+          gols: 0,
+          assistencias: 0,
+          jogos: 0,
+          jogosLiga: 0,
+          vitorias: 0,
+          jogosSemSofrer: 0,
+          desarmes: 0,
+          defesas: 0,
+          titulosIndividuais: [],
+        });
+      }
+      return jogadoresPorId.get(id);
+    };
+
+    const totalGols = Math.max(0, Math.round((Number(resumo.gols) || 0) * fatorEscala));
+    const vitorias = Math.max(0, Math.round((Number(resumo.vitorias) || 0) * fatorEscala));
+    const jogosSemSofrer = Math.max(0, Math.round((Number(resumo.jogosSemSofrer) || 0) * fatorEscala));
+    const desarmes = Math.max(0, Math.round((Number(resumo.desarmes) || 0) * fatorEscala));
+    const defesas = Math.max(0, Math.round((Number(resumo.defesas) || 0) * fatorEscala));
+
+    // Mantém candidatos defensivos mínimos para as premiações, sem criar um
+    // elenco completo. Os demais atletas surgem somente se receberem um evento.
+    const candidatosDefensivos = [
+      { posicao: "GOL", papel: "goleiro" },
+      { posicao: "ZCE", papel: "defensor" },
+      { posicao: "MC", papel: "meio" },
+    ];
+    candidatosDefensivos.forEach(({ posicao }) => {
+      const candidato = obterJogadoresPosicaoDistribuicao(clube.id, posicao)[0];
+      if (candidato) obterRegistro(candidato);
+    });
+
+    let golsDistribuidos = 0;
+    for (let indice = 0; indice < totalGols; indice++) {
+      const sorteadorGol = criarSorteadorRanking(
+        `${estado.ano}:${clube.id}:npc:gol:${indice}`,
+      );
+      let autor = escolherJogadorDistribuicao(clube.id, "gol", sorteadorGol);
+      if (!autor) {
+        autor = {
+          id: `coletivo:${estado.ano}:${clube.id}:npc:sem-atleta:${indice}`,
+          nome: `Jogador do ${clube.nome || clube.id}`,
+          posicao: "CA",
+          clubeId: clube.id,
+          statusElenco: "titular",
+        };
+      }
+      const registroAutor = obterRegistro(autor);
+      if (registroAutor) {
+        registroAutor.gols++;
+        golsDistribuidos++;
+      }
+
+      const sorteadorAssistencia = criarSorteadorRanking(
+        `${estado.ano}:${clube.id}:npc:assistencia:${indice}`,
+      );
+      if (sorteadorAssistencia() < 0.66) {
+        const assistente = escolherJogadorDistribuicao(
+          clube.id,
+          "assistencia",
+          sorteadorAssistencia,
+          new Set([String(autor.id)]),
+        );
+        const registroAssistente = obterRegistro(assistente);
+        if (registroAssistente) registroAssistente.assistencias++;
+      }
+    }
+
+    if (golsDistribuidos !== totalGols) {
+      throw new Error(
+        `Distribuição NPC inconsistente em ${clube.id}: ${golsDistribuidos}/${totalGols} gols.`,
+      );
+    }
+
+    const jogosTime = Math.max(0, Math.round(jogosReferencia));
+    const jogosTitular = Math.round(jogosTime * 0.88);
+    const jogosReserva = Math.round(jogosTime * 0.32);
+    jogadoresPorId.forEach((jogador) => {
+      const reserva = jogador.statusElenco === "reserva";
+      const proporcao = reserva ? 0.32 : 0.88;
+      const aparicoes = reserva ? jogosReserva : jogosTitular;
+      jogador.jogos = aparicoes;
+      jogador.jogosLiga = aparicoes;
+      jogador.jogosReferencia = jogosTime;
+      jogador.vitorias = Math.round(vitorias * proporcao);
+
+      const posicao = String(jogador.posicao || "").toUpperCase();
+      if (["GOL", "ZCE", "ZCD", "LE", "LD"].includes(posicao)) {
+        jogador.jogosSemSofrer = Math.round(jogosSemSofrer * proporcao);
+        jogador.desarmes = Math.round(desarmes * proporcao * (posicao === "GOL" ? 0.12 : 0.36));
+      } else if (["ME", "MC", "MD"].includes(posicao)) {
+        jogador.desarmes = Math.round(desarmes * proporcao * 0.22);
+      } else if (["PE", "CA", "PD"].includes(posicao)) {
+        jogador.desarmes = Math.round(desarmes * proporcao * 0.08);
+      }
+      if (posicao === "GOL") jogador.defesas = defesas;
+    });
+
+    return [...jogadoresPorId.values()];
+  }
+
   function obterRankingOutrasLigas() {
     const finalizarMedicao = window.FootMainPerformance?.start(
       "simulacao_outras_ligas_e_clubes",
@@ -8460,7 +8813,7 @@
     const jogosUsuario = contarJogosConcluidosTemporada();
     const cache = estado.rankingGlobalOutrasLigas;
     const cacheValido =
-      cache?.versao === 17 &&
+      cache?.versao === 19 &&
       cache?.ano === estado.ano &&
       Array.isArray(cache.jogadores);
     if (cacheValido && cache.jogosUsuario === jogosUsuario) {
@@ -8469,11 +8822,10 @@
     }
 
     // Antes da primeira partida não existem estatísticas de outras ligas
-    // para comparar. Evita montar centenas de elencos e simular temporadas
-    // inteiras apenas porque o usuário abriu o ranking no início da carreira.
+    // para comparar. Evita simulações e criação de atletas desnecessárias.
     if (jogosUsuario === 0) {
       estado.rankingGlobalOutrasLigas = {
-        versao: 17,
+        versao: 19,
         ano: estado.ano,
         jogosUsuario: 0,
         jogadores: [],
@@ -8493,85 +8845,24 @@
             LIGAS_PRINCIPAIS_NPCS.has(clube.liga),
         );
 
-    const clubesPorId = new Map(clubesAlvo.map((clube) => [clube.id, clube]));
-    const jogadoresPorClube = new Map();
-    const jogadores = [];
-    clubesAlvo.forEach((clube) => {
-      const elenco = criarElencoLiga(clube);
-      jogadoresPorClube.set(clube.id, elenco);
-      jogadores.push(...elenco);
-    });
-
-    if (!base) {
-      JOGADORES_REAIS.filter((jogador) =>
-        JOGADORES_FAMOSOS_NPCS.has(jogador.id),
-      ).forEach((jogador) => {
-        const clubeId = clubeJogadorRealNaTemporada(jogador, estado.ano);
-        const clube = obterClube(clubeId);
-        if (!clube || clube.liga === estado.liga || !clubesPorId.has(clubeId))
-          return;
-        const id = `real:${jogador.id}`;
-        if (jogadores.some((item) => item.id === id)) return;
-        const real = {
-          id,
-          nome: jogador.nome,
-          posicao: jogador.posicao,
-          clubeId,
-          idade: Number(estado.ano) - jogador.anoNascimento,
-          pesoRanking:
-            calcularPesoRankingReal(jogador, estado.ano) *
-            calcularMultiplicadorFormaTemporada(
-              id,
-              estado.ano,
-              jogador.posicao,
-            ),
+    const estatisticasPorClube = new Map(
+      clubesAlvo.map((clube) => [
+        clube.id,
+        {
           gols: 0,
-          assistencias: 0,
+          golsSofridos: 0,
           jogos: 0,
           vitorias: 0,
           jogosSemSofrer: 0,
           desarmes: 0,
           defesas: 0,
-          titulosIndividuais: [],
-        };
-        jogadores.push(real);
-        jogadoresPorClube.get(clubeId)?.push(real);
-      });
-    }
-
-    // Zera estatísticas calculadas: o resultado é reconstruído deterministicamente
-    // para o número atual de partidas, sem acumular uma simulação antiga.
-    const jogadoresAntigos = new Map(
-      (cache?.ano === estado.ano && Array.isArray(cache.jogadores)
-        ? cache.jogadores
-        : []
-      ).map((jogador) => [jogador.id, jogador]),
+        },
+      ]),
     );
-    jogadores.forEach((jogador) => {
-      const antigo = jogadoresAntigos.get(jogador.id);
-      jogador.gols = 0;
-      jogador.assistencias = 0;
-      jogador.jogos = 0;
-      jogador.jogosLiga = 0;
-      jogador.vitorias = 0;
-      jogador.jogosSemSofrer = 0;
-      jogador.desarmes = 0;
-      jogador.defesas = 0;
-      jogador.titulosIndividuais = Array.isArray(antigo?.titulosIndividuais)
-        ? antigo.titulosIndividuais
-        : [];
-    });
 
-    // A amostra das outras ligas é limitada para não bloquear a thread principal
-    // em celulares. As estatísticas são normalizadas para a quantidade de jogos
-    // da carreira, preservando a comparação por ritmo de produção.
+    // A amostra é coletiva: não monta elencos nem escalações por partida.
     const jogosReferencia = Math.min(55, Math.max(0, jogosUsuario));
-    // O ranking mundial é calculado no fechamento da temporada. Uma amostra
-    // curta reduz o custo no celular; os números são escalados para jogosReferencia.
     const quantidadeRodadas = Math.min(10, jogosReferencia);
-    jogadores.forEach((jogador) => {
-      jogador.jogosReferencia = quantidadeRodadas;
-    });
     const ligas = new Map();
     clubesAlvo.forEach((clube) => {
       const chaveLiga = clube.liga || (base ? "base" : "outras");
@@ -8602,7 +8893,7 @@
             visitante,
             rodada,
             estado.ano,
-            jogadoresPorClube,
+            estatisticasPorClube,
             mediaForca,
           );
         }
@@ -8615,33 +8906,132 @@
       }
     });
 
-    if (quantidadeRodadas > 0 && jogosReferencia > quantidadeRodadas) {
-      const fatorEscala = jogosReferencia / quantidadeRodadas;
-      jogadores.forEach((jogador) => {
-        [
-          "gols",
-          "assistencias",
-          "vitorias",
-          "jogosSemSofrer",
-          "desarmes",
-          "defesas",
-        ].forEach((chave) => {
-          jogador[chave] = Math.round((Number(jogador[chave]) || 0) * fatorEscala);
-        });
-        jogador.jogos = jogosReferencia;
-        jogador.jogosLiga = jogosReferencia;
-        jogador.jogosReferencia = jogosReferencia;
-      });
-    }
+    const fatorEscala = quantidadeRodadas > 0
+      ? jogosReferencia / quantidadeRodadas
+      : 0;
+    const jogadores = [];
+    clubesAlvo.forEach((clube) => {
+      const resumo = estatisticasPorClube.get(clube.id);
+      if (!resumo || !resumo.jogos) return;
+      jogadores.push(
+        ...distribuirRankingNpcColetivo(
+          clube,
+          resumo,
+          fatorEscala,
+          jogosReferencia,
+        ),
+      );
+    });
 
     estado.rankingGlobalOutrasLigas = {
-      versao: 17,
+      versao: 19,
       ano: estado.ano,
       jogosUsuario,
       jogadores,
     };
     finalizarMedicao?.();
     return jogadores;
+  }
+
+  // O fechamento oficial usa esta variante cooperativa para que a geração do
+  // ranking mundial não monopolize a thread logo após o último jogo.
+  async function prepararRankingOutrasLigasCooperativo() {
+    if (!estado) return;
+    const jogosUsuario = contarJogosConcluidosTemporada();
+    const cache = estado.rankingGlobalOutrasLigas;
+    if (
+      cache?.versao === 19 &&
+      cache?.ano === estado.ano &&
+      cache?.jogosUsuario === jogosUsuario &&
+      Array.isArray(cache.jogadores)
+    ) return;
+
+    const finalizarMedicao = window.FootMainPerformance?.start(
+      "simulacao_outras_ligas_cooperativa",
+    );
+    const base = typeof ehClubeBase === "function" && ehClubeBase(estado.clubeId);
+    if (jogosUsuario === 0) {
+      estado.rankingGlobalOutrasLigas = {
+        versao: 19, ano: estado.ano, jogosUsuario: 0, jogadores: [],
+      };
+      finalizarMedicao?.();
+      return;
+    }
+
+    const clubesAlvo = base
+      ? (estado.tabela || [])
+          .map((time) => obterClube(time.id) || time)
+          .filter((clube) => clube.tipo === "base" && clube.id)
+      : clubesDisponiveis().filter(
+          (clube) => clube.tipo !== "base" && clube.liga !== estado.liga &&
+            LIGAS_PRINCIPAIS_NPCS.has(clube.liga),
+        );
+    const estatisticasPorClube = new Map(
+      clubesAlvo.map((clube) => [clube.id, {
+        gols: 0, golsSofridos: 0, jogos: 0, vitorias: 0,
+        jogosSemSofrer: 0, desarmes: 0, defesas: 0,
+      }]),
+    );
+    const jogosReferencia = Math.min(55, Math.max(0, jogosUsuario));
+    const quantidadeRodadas = Math.min(10, jogosReferencia);
+    const ligas = new Map();
+    clubesAlvo.forEach((clube) => {
+      const chaveLiga = clube.liga || (base ? "base" : "outras");
+      if (!ligas.has(chaveLiga)) ligas.set(chaveLiga, []);
+      ligas.get(chaveLiga).push(clube);
+    });
+    const mediaForca = clubesAlvo.length
+      ? clubesAlvo.reduce((soma, clube) => soma + forcaClube(clube), 0) / clubesAlvo.length
+      : 65;
+
+    let rodadasProcessadas = 0;
+    for (const clubesLiga of ligas.values()) {
+      const participantes = [...clubesLiga].sort((a, b) =>
+        String(a.id).localeCompare(String(b.id)),
+      );
+      if (participantes.length < 2) continue;
+      if (participantes.length % 2 !== 0) participantes.push(null);
+      const tamanho = participantes.length;
+      let rotacao = [...participantes];
+      for (let rodada = 0; rodada < quantidadeRodadas; rodada++) {
+        for (let indice = 0; indice < tamanho / 2; indice++) {
+          let mandante = rotacao[indice];
+          let visitante = rotacao[tamanho - 1 - indice];
+          if (!mandante || !visitante) continue;
+          if (rodada % 2 === 1) [mandante, visitante] = [visitante, mandante];
+          simularPartidaNpc(
+            mandante, visitante, rodada, estado.ano, estatisticasPorClube, mediaForca,
+          );
+        }
+        rotacao = [rotacao[0], rotacao[tamanho - 1], ...rotacao.slice(1, tamanho - 1)];
+        rodadasProcessadas++;
+        if (rodadasProcessadas % 2 === 0) {
+          atualizarProgressoCarregamento(80 + Math.min(10, rodadasProcessadas / Math.max(1, ligas.size * quantidadeRodadas) * 10), `Fechando a temporada ${estado.ano}... Calculando ligas (${rodadasProcessadas} etapas)`);
+          await cederTempoAoNavegador();
+        }
+      }
+    }
+
+    const fatorEscala = quantidadeRodadas > 0 ? jogosReferencia / quantidadeRodadas : 0;
+    const jogadores = [];
+    let clubesProcessados = 0;
+    for (const clube of clubesAlvo) {
+      const resumo = estatisticasPorClube.get(clube.id);
+      if (resumo?.jogos) {
+        jogadores.push(...distribuirRankingNpcColetivo(
+          clube, resumo, fatorEscala, jogosReferencia,
+        ));
+      }
+      clubesProcessados++;
+      if (clubesProcessados % 6 === 0) {
+        atualizarProgressoCarregamento(90 + clubesProcessados / Math.max(1, clubesAlvo.length) * 9, `Fechando a temporada ${estado.ano}... Montando ranking (${clubesProcessados}/${clubesAlvo.length})`);
+        await cederTempoAoNavegador();
+      }
+    }
+    estado.rankingGlobalOutrasLigas = {
+      versao: 19, ano: estado.ano, jogosUsuario, jogadores,
+    };
+    finalizarMedicao?.();
   }
 
   function eventosDaPartidaRanking(partidas) {
@@ -10451,13 +10841,19 @@
         confrontoLiga.eventosIndividuais = eventosIndividuais;
         confrontoLiga.jogadoresParticipantes =
           partida.jogadoresParticipantes || [];
+        if (partida.estatisticasColetivasPendentes) {
+          confrontoLiga.estatisticasColetivasPendentes = true;
+          confrontoLiga.estatisticasJogadorTemporarias = partida.estatisticasJogadorTemporarias;
+        }
       }
-      golsJogador = eventosIndividuais.filter(
-        (evento) => evento.autorId === estado.carreiraId,
-      ).length;
-      assistJogador = eventosIndividuais.filter(
-        (evento) => evento.assistenteId === estado.carreiraId,
-      ).length;
+      if (!partida.estatisticasColetivasPendentes) {
+        golsJogador = eventosIndividuais.filter(
+          (evento) => evento.autorId === estado.carreiraId,
+        ).length;
+        assistJogador = eventosIndividuais.filter(
+          (evento) => evento.assistenteId === estado.carreiraId,
+        ).length;
+      }
     } else {
       const clubeCasaId = partida.casa
         ? pelaSelecao
@@ -10488,12 +10884,14 @@
         },
       );
       partida.eventosIndividuais = eventosIndividuais;
-      golsJogador = eventosIndividuais.filter(
-        (evento) => evento.autorId === estado.carreiraId,
-      ).length;
-      assistJogador = eventosIndividuais.filter(
-        (evento) => evento.assistenteId === estado.carreiraId,
-      ).length;
+      if (!partida.estatisticasColetivasPendentes) {
+        golsJogador = eventosIndividuais.filter(
+          (evento) => evento.autorId === estado.carreiraId,
+        ).length;
+        assistJogador = eventosIndividuais.filter(
+          (evento) => evento.assistenteId === estado.carreiraId,
+        ).length;
+      }
     }
     if (participou) {
       const prefixo = pelaSelecao ? "Selecao" : "Clube";
@@ -12123,7 +12521,13 @@
       informar("Inicie sua carreira primeiro.", true);
       return;
     }
-    if (!estado.partidas.some((p) => p.status === "agendada")) {
+    const existemPartidasAgendadas = estado.partidas.some(
+      (partida) => partida.status === "agendada",
+    );
+    const existeDistribuicaoColetivaPendente =
+      estado.modoSimulacaoTemporada === "coletiva" &&
+      !estado.salvaOficialmente;
+    if (!existemPartidasAgendadas && !existeDistribuicaoColetivaPendente) {
       informar("A temporada já foi concluída.");
       return;
     }
@@ -12140,7 +12544,13 @@
 
     if (comLoading)
       await mostrarCarregamento("Simulando o restante da temporada...");
+    const finalizarMedicaoTemporada = window.FootMainPerformance?.start(
+      "simular_temporada_completa",
+    );
     simulandoTemporada = true;
+    estado.modoSimulacaoTemporada = "coletiva";
+    estado.estatisticasColetivasDistribuidas = false;
+    estado.jogadoresDistribuicaoColetiva = {};
     adiarPromocaoBaseAteFim = !simulacaoAutomatica && !simulandoCarreira;
     promocaoBasePendente = null;
     bloqueioAcoesPartida = true;
@@ -12164,6 +12574,7 @@
         await simularPartida(indice, false, null, {
           interativo: false,
           simulacaoEmLote: true,
+          simulacaoColetiva: true,
         });
         if (partida.status === "agendada") {
           informar(
@@ -12173,7 +12584,12 @@
           return;
         }
         partidasSimuladas++;
-        if (partidasSimuladas % 20 === 0) {
+        if (partidasSimuladas % 5 === 0) {
+          const agendadas = estado.partidas.filter((p) => p.status === "agendada" && !ehPartidaDeIA(p)).length;
+          atualizarProgressoCarregamento(
+            Math.min(65, partidasSimuladas / Math.max(1, partidasSimuladas + agendadas) * 65),
+            `Simulando a temporada ${estado.ano}... (${partidasSimuladas} partidas concluídas)`,
+          );
           const textoCarregamento = loadingEl?.querySelector(
             ".footmain-loading-texto",
           );
@@ -12181,13 +12597,7 @@
             textoCarregamento.textContent = `Simulando a temporada ${estado.ano}... (${partidasSimuladas} partidas concluídas)`;
           }
           salvar();
-          await new Promise((resolver) => {
-            if (document.visibilityState === "hidden") {
-              setTimeout(resolver, 0);
-              return;
-            }
-            requestAnimationFrame(resolver);
-          });
+          await cederTempoAoNavegador();
         }
       }
 
@@ -12198,6 +12608,7 @@
       )
         await finalizarTemporadaOficial();
     } finally {
+      finalizarMedicaoTemporada?.();
       bloqueioAcoesPartida = false;
       simulandoTemporada = false;
       adiarPromocaoBaseAteFim = false;
@@ -12233,6 +12644,9 @@
       return;
     }
     try {
+      if (estado.modoSimulacaoTemporada === "coletiva") {
+        await distribuirEstatisticasColetivasTemporada();
+      }
       const carreira =
         typeof obterCarreiraAtual === "function" ? obterCarreiraAtual() : {};
       if (String(carreira.id) !== String(estado.carreiraId))
@@ -12246,8 +12660,24 @@
       );
       if (historicoCarreira.some((t) => Number(t.ano) === Number(estado.ano))) {
         estado.salvaOficialmente = true;
+        if (estado.modoSimulacaoTemporada === "coletiva") {
+          estado.modoSimulacaoTemporada = "coletiva-finalizada";
+        }
+        delete estado.jogadoresDistribuicaoColetiva;
         salvar();
         return;
+      }
+      const clubeTemporada = obterClube(estado.clubeId);
+      if (clubeTemporada && clubeTemporada.tipo !== "base") {
+        const textoCarregamento = loadingEl?.querySelector(
+          ".footmain-loading-texto",
+        );
+        if (textoCarregamento) {
+          textoCarregamento.textContent =
+            `Fechando a temporada ${estado.ano}... preparando o ranking mundial`;
+        }
+        atualizarProgressoCarregamento(80, `Fechando a temporada ${estado.ano}... preparando o ranking mundial`);
+        await prepararRankingOutrasLigasCooperativo();
       }
       const posRadio = document.querySelector(
         `input[name="posicao"]#${estado.posicao}`,
@@ -12549,6 +12979,12 @@
       if (typeof salvarCarreiraAtual === "function")
         salvarCarreiraAtual(carreira);
       estado.salvaOficialmente = true;
+      if (estado.modoSimulacaoTemporada === "coletiva") {
+        estado.modoSimulacaoTemporada = "coletiva-finalizada";
+      }
+      // Pools temporários servem apenas durante a distribuição; os eventos e
+      // os rankings finais já guardam os dados persistentes necessários.
+      delete estado.jogadoresDistribuicaoColetiva;
       salvar();
       if (typeof renderHistorico === "function") renderHistorico();
       if (typeof renderAtributos === "function") renderAtributos(temporada);
