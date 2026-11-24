@@ -1935,18 +1935,27 @@
     ) {
       adaptacao.fase = "confirmado";
     }
+    // A avaliação inicial não deve impedir o jogador de entrar em campo:
+    // ele precisa de oportunidades reais para conquistar a titularidade.
     if (adaptacao.partidasClube < 5 && adaptacao.fase === "avaliacao") {
-      return Math.max(0.16, Math.min(0.55, chanceBase * 0.62));
+      return Math.max(0.58, Math.min(0.92, chanceBase * 0.9));
     }
     if (adaptacao.fase === "afastado") {
-      return Math.max(0.12, Math.min(0.45, chanceBase * 0.5));
+      return Math.max(0.62, Math.min(0.86, chanceBase * 0.82));
     }
     return chanceBase;
   }
 
   function estimarOverallElenco(jogador) {
     if (String(jogador.id) === String(estado.carreiraId))
-      return Math.max(1, Math.min(99, Number(estado.overall) || 50));
+      return Math.max(
+        1,
+        Math.min(
+          99,
+          (Number(estado.overall) || 50) +
+            Math.max(0, Number(jogador.bonusTitularidade) || 0),
+        ),
+      );
     const pesoRanking = Math.max(0.5, Number(jogador.pesoRanking) || 1);
     return Math.max(
       35,
@@ -1961,16 +1970,27 @@
     );
   }
 
+  function titularidadeProfissionalAtiva(clubeId = estado?.clubeId) {
+    if (!estado || !clubeId) return false;
+    const clube = obterClube(clubeId);
+    if (!clube || clube.tipo === "base") return false;
+    return !(typeof ehClubeBase === "function" && ehClubeBase(clubeId));
+  }
+
   function obterChanceJogarComDisputaPosicao(
     chanceBase,
     partida,
     clubeId,
   ) {
-    if (!estado || partida?.tipo === "selecao") return chanceBase;
+    if (
+      !estado ||
+      partida?.tipo === "selecao" ||
+      !titularidadeProfissionalAtiva(clubeId)
+    ) return chanceBase;
 
     normalizarAdaptacaoTreinador();
     const chanceComAdaptacao = obterChanceJogarComAdaptacao(chanceBase);
-    prepararElencosLiga();
+    prepararElencosLiga([clubeId]);
 
     const posicao = String(estado.posicao || "CA").toUpperCase();
     const concorrentes = (estado.elencosLiga?.[clubeId] || []).filter(
@@ -2001,7 +2021,7 @@
       partida.chanceTitularJogador = chanceSerTitular;
 
     const jogoImportante = ehPartidaImportanteParaEscalacao(partida);
-    const chanceEntrarComoReserva = jogoImportante ? 0.08 : 0.32;
+    const chanceEntrarComoReserva = jogoImportante ? 0.18 : 0.42;
     const chanceParticipar =
       chanceSerTitular +
       (1 - chanceSerTitular) * chanceEntrarComoReserva;
@@ -2029,7 +2049,7 @@
     pelaSelecao,
     motm = false,
   ) {
-    if (pelaSelecao) return;
+    if (pelaSelecao || !titularidadeProfissionalAtiva(estado?.clubeId)) return;
     normalizarAdaptacaoTreinador();
     const adaptacao = estado.adaptacaoTreinador;
     adaptacao.partidasClube++;
@@ -2065,6 +2085,50 @@
     }
   }
 
+  function atualizarTitularidadePorDesempenho(participou, gols, assistencias, motm) {
+    if (!participou || !titularidadeProfissionalAtiva(estado?.clubeId)) return;
+    prepararElencosLiga([estado.clubeId]);
+    const elenco = estado.elencosLiga?.[estado.clubeId] || [];
+    const jogador = elenco.find(
+      (item) => String(item.id) === String(estado.carreiraId),
+    );
+    if (!jogador) return;
+
+    jogador.aparicoesTitularidade = (Number(jogador.aparicoesTitularidade) || 0) + 1;
+    const pontosPartida = 0.7 +
+      Math.max(0, Number(gols) || 0) * 2.4 +
+      Math.max(0, Number(assistencias) || 0) * 1.6 +
+      (motm ? 2.2 : 0);
+    jogador.bonusTitularidade = Math.min(
+      18,
+      (Number(jogador.bonusTitularidade) || 0) + pontosPartida,
+    );
+
+    const posicao = String(jogador.posicao || estado.posicao || "CA").toUpperCase();
+    const concorrentes = elenco.filter(
+      (item) => String(item.id) !== String(jogador.id) &&
+        String(item.posicao || "").toUpperCase() === posicao,
+    );
+    const melhorConcorrente = concorrentes.reduce(
+      (melhor, item) => Math.max(melhor, estimarOverallElenco(item)),
+      0,
+    );
+    const overallEfetivo = estimarOverallElenco(jogador);
+
+    // Uma titularidade conquistada não é perdida por um sorteio isolado.
+    // A promoção exige superar o concorrente direto; o desempenho acumulado
+    // ajuda o jogador a ultrapassar atletas com overall maior.
+    if (jogador.statusElenco !== "titular" && overallEfetivo >= melhorConcorrente + 0.5) {
+      definirStatusElencoJogador(estado.clubeId, estado.carreiraId, "titular");
+    } else if (
+      jogador.statusElenco === "titular" &&
+      melhorConcorrente > overallEfetivo + 8 &&
+      jogador.aparicoesTitularidade >= 8
+    ) {
+      definirStatusElencoJogador(estado.clubeId, estado.carreiraId, "reserva");
+    }
+  }
+
   function sortearEstatisticasJogador(
     partida,
     meuClube,
@@ -2076,7 +2140,15 @@
     const forcaTime = forcaClube(meuClube);
     // O titular depende do nível do jogador em relação ao clube, não só do overall isolado.
     const relacaoTreinador = Number(estado.relacaoTreinador ?? 60);
-    const fatorRelacaoTreinador = relacaoTreinador < 20 ? 0.78 : relacaoTreinador < 35 ? 0.86 : relacaoTreinador < 50 ? 0.93 : 1;
+    const fatorRelacaoTreinador = !titularidadeProfissionalAtiva(meuClube?.id)
+      ? 1
+      : relacaoTreinador < 20
+        ? 0.78
+        : relacaoTreinador < 35
+          ? 0.86
+          : relacaoTreinador < 50
+            ? 0.93
+            : 1;
     const chanceJogarBase = Math.max(
       0.68,
       Math.min(0.99, (0.9 + (estado.overall - forcaTime) * 0.006) * fatorRelacaoTreinador),
@@ -2090,20 +2162,6 @@
       participacaoForcada === null
         ? Math.random() < chanceJogar
         : participacaoForcada;
-    if (
-      partida?.tipo !== "selecao" &&
-      meuClube.id === estado.clubeId
-    ) {
-      definirStatusElencoJogador(
-        meuClube.id,
-        estado.carreiraId,
-        participou &&
-          Math.random() <
-            (Number(partida.chanceTitularJogador) || 0)
-          ? "titular"
-          : "reserva",
-      );
-    }
     if (!participou)
       return {
         participou: false,
@@ -7547,12 +7605,12 @@
     POSICOES_ELENCO_LIGA.forEach((posicao) => {
       const candidatos = elenco.filter(
         (jogador) =>
-          jogador.id !== estado.carreiraId &&
+          String(jogador.id) !== String(estado.carreiraId) &&
           String(jogador.posicao || "").toUpperCase() === posicao,
       );
       const titularUsuario = elenco.find(
         (jogador) =>
-          jogador.id === estado.carreiraId &&
+          String(jogador.id) === String(estado.carreiraId) &&
           jogador.statusElenco === "titular" &&
           String(jogador.posicao || "").toUpperCase() === posicao,
       );
@@ -7576,12 +7634,12 @@
 
   function definirStatusElencoJogador(clubeId, jogadorId, status) {
     const elenco = estado.elencosLiga?.[clubeId] || [];
-    const jogador = elenco.find((item) => item.id === jogadorId);
+    const jogador = elenco.find((item) => String(item.id) === String(jogadorId));
     if (!jogador) return;
     const posicao = String(jogador.posicao || "").toUpperCase();
     const concorrentes = elenco.filter(
       (item) =>
-        item.id !== jogadorId &&
+        String(item.id) !== String(jogadorId) &&
         String(item.posicao || "").toUpperCase() === posicao,
     );
 
@@ -7800,85 +7858,90 @@
 
   const anoElencosPreparadosPorEstado = new WeakMap();
 
-  function prepararElencosLiga() {
-    if (
-      !estado ||
-      (typeof ehClubeBase === "function" && ehClubeBase(estado.clubeId))
-    )
+  function prepararElencosLiga(clubesSolicitados = null) {
+    if (!estado || !estado.clubeId || !titularidadeProfissionalAtiva(estado.clubeId))
       return;
-    estado.elencosLiga ||= {};
-    if (
-      !anoElencosPreparadosPorEstado.has(estado) ||
-      anoElencosPreparadosPorEstado.get(estado) !== estado.ano
-    ) {
-      const clubesLiga = estado.tabela
-        .filter((time) => !String(time.id).startsWith("__rodada__"))
-        .map((time) => obterClube(time.id) || time)
-        .filter((clube) => clube.id);
 
-      clubesLiga.forEach((clube) => {
-        if (
-          !Array.isArray(estado.elencosLiga[clube.id]) ||
-          !estado.elencosLiga[clube.id].length
-        )
-          estado.elencosLiga[clube.id] = criarElencoLiga(clube);
-        estado.elencosLiga[clube.id] = estado.elencosLiga[clube.id]
+    estado.elencosLiga ||= {};
+    let controle = anoElencosPreparadosPorEstado.get(estado);
+    if (!controle || controle.ano !== Number(estado.ano)) {
+      controle = { ano: Number(estado.ano), clubes: new Set() };
+      anoElencosPreparadosPorEstado.set(estado, controle);
+    }
+
+    // Preparar somente os clubes envolvidos na partida atual. A versão anterior
+    // montava todos os elencos da liga na primeira partida da temporada.
+    const idsSolicitados = Array.isArray(clubesSolicitados)
+      ? clubesSolicitados
+      : [estado.clubeId];
+    const ids = [...new Set(idsSolicitados.filter(Boolean))];
+
+    ids.forEach((clubeId) => {
+      if (!titularidadeProfissionalAtiva(clubeId) || controle.clubes.has(String(clubeId)))
+        return;
+      const clube = obterClube(clubeId) || { id: clubeId };
+      if (!Array.isArray(estado.elencosLiga[clubeId]) || !estado.elencosLiga[clubeId].length) {
+        estado.elencosLiga[clubeId] = criarElencoLiga(clube);
+      } else {
+        estado.elencosLiga[clubeId] = estado.elencosLiga[clubeId]
           .filter((jogador) => !String(jogador.id).startsWith("real:"))
           .concat(
-            obterJogadoresReaisDoClube(clube.id, estado.ano).map((jogador) => ({
+            obterJogadoresReaisDoClube(clubeId, estado.ano).map((jogador) => ({
               ...jogador,
               statusElenco: "reserva",
             })),
           );
-        const idsReservaExistentes = new Set(
-          estado.elencosLiga[clube.id].map((jogador) => jogador.id),
-        );
+        const idsExistentes = new Set(estado.elencosLiga[clubeId].map((jogador) => jogador.id));
         criarReservasElenco(clube).forEach((jogador) => {
-          if (!idsReservaExistentes.has(jogador.id))
-            estado.elencosLiga[clube.id].push(jogador);
+          if (!idsExistentes.has(jogador.id)) estado.elencosLiga[clubeId].push(jogador);
         });
-        estado.elencosLiga[clube.id].forEach((jogador, indice) => {
-          const id = String(jogador.id || "");
-          if (id.startsWith("liga:")) {
-            const indiceOriginal = Number(id.split(":").at(-1));
-            jogador.nome = obterNomeFicticio(
-              clube.id,
-              Number.isInteger(indiceOriginal) ? indiceOriginal : indice,
-              estado.ano,
-            );
-          }
-          if (id.startsWith("reserva:")) {
-            jogador.nome = obterNomeFicticio(
-              clube.id,
-              POSICOES_ELENCO_LIGA.length +
-                Number(id.split(":").at(-1)),
-              estado.ano,
-            );
-            jogador.statusElenco = "reserva";
-          }
-        });
-        organizarElencoTitulares(estado.elencosLiga[clube.id]);
+      }
+
+      estado.elencosLiga[clubeId].forEach((jogador, indice) => {
+        const id = String(jogador.id || "");
+        if (id.startsWith("liga:")) {
+          const indiceOriginal = Number(id.split(":").at(-1));
+          jogador.nome = obterNomeFicticio(
+            clubeId,
+            Number.isInteger(indiceOriginal) ? indiceOriginal : indice,
+            estado.ano,
+          );
+        } else if (id.startsWith("reserva:")) {
+          jogador.nome = obterNomeFicticio(
+            clubeId,
+            POSICOES_ELENCO_LIGA.length + Number(id.split(":").at(-1)),
+            estado.ano,
+          );
+          jogador.statusElenco = "reserva";
+        }
       });
-      anoElencosPreparadosPorEstado.set(estado, estado.ano);
-    }
+      organizarElencoTitulares(estado.elencosLiga[clubeId]);
+      controle.clubes.add(String(clubeId));
+    });
 
     const elencoMeuClube = estado.elencosLiga[estado.clubeId];
     if (!elencoMeuClube || !estado.carreiraId) return;
-    let jogador = elencoMeuClube.find((item) => item.id === estado.carreiraId);
+    let jogador = elencoMeuClube.find(
+      (item) => String(item.id) === String(estado.carreiraId),
+    );
     if (!jogador) {
-      const posicao = String(estado.posicao || "CA").toUpperCase();
-      jogador = { id: estado.carreiraId, posicao, clubeId: estado.clubeId };
+      jogador = {
+        id: estado.carreiraId,
+        posicao: String(estado.posicao || "CA").toUpperCase(),
+        clubeId: estado.clubeId,
+        statusElenco: "reserva",
+        bonusTitularidade: 0,
+        aparicoesTitularidade: 0,
+      };
       elencoMeuClube.push(jogador);
     }
     jogador.nome = estado.nome || jogador.nome || "Jogador";
     jogador.posicao = String(estado.posicao || jogador.posicao || "CA").toUpperCase();
     jogador.clubeId = estado.clubeId;
     jogador.statusElenco ||= "reserva";
-    definirStatusElencoJogador(
-      estado.clubeId,
-      estado.carreiraId,
-      jogador.statusElenco,
-    );
+    jogador.bonusTitularidade = Math.max(0, Number(jogador.bonusTitularidade) || 0);
+    jogador.aparicoesTitularidade = Math.max(0, Number(jogador.aparicoesTitularidade) || 0);
+    definirStatusElencoJogador(estado.clubeId, estado.carreiraId, jogador.statusElenco);
   }
 
   function escolherJogadorLiga(jogadores, pesos) {
@@ -7906,11 +7969,11 @@
     golsFora,
     opcoes = {},
   ) {
-    prepararElencosLiga();
     estado.elencosLiga ||= {};
     const jogadorId = opcoes.jogadorId ?? estado.carreiraId;
     const clubeJogadorId = opcoes.clubeJogadorId ?? estado.clubeId;
     const nomeJogador = opcoes.nomeJogador || estado.nome;
+    prepararElencosLiga([casaId, foraId, clubeJogadorId]);
     const eventos = [];
     const pesosGols = {
       GOL: 0.01,
@@ -8016,7 +8079,7 @@
         });
       });
       const goleadoresAleatorios = escalacao.filter(
-        (jogador) => jogador.id !== estado.carreiraId,
+        (jogador) => String(jogador.id) !== String(estado.carreiraId),
       );
       const gols = Math.max(0, Math.floor(Number(time.gols) || 0));
       const golsForcadosUsuario = podeJogar
@@ -8028,13 +8091,15 @@
       const golsTime = [];
 
       for (let indice = 0; indice < gols; indice++) {
+        const opcoesGoleadores = goleadoresAleatorios.length
+          ? goleadoresAleatorios
+          : escalacao;
         const autor =
-          indice < golsForcadosUsuario
+          indice < golsForcadosUsuario && jogadorDoUsuario
             ? jogadorDoUsuario
-            : escolherJogadorLiga(
-                goleadoresAleatorios.length ? goleadoresAleatorios : escalacao,
-                pesosGols,
-              );
+            : escolherJogadorLiga(opcoesGoleadores, pesosGols) ||
+              opcoesGoleadores[0] || escalacao[0];
+        if (!autor) continue;
         golsTime.push({
           id: `${partidaId}:${time.lado}:${indice + 1}`,
           partidaId,
@@ -8368,12 +8433,26 @@
     const jogosUsuario = contarJogosConcluidosTemporada();
     const cache = estado.rankingGlobalOutrasLigas;
     const cacheValido =
-      cache?.versao === 16 &&
+      cache?.versao === 17 &&
       cache?.ano === estado.ano &&
       Array.isArray(cache.jogadores);
     if (cacheValido && cache.jogosUsuario === jogosUsuario) {
       finalizarMedicao?.();
       return cache.jogadores;
+    }
+
+    // Antes da primeira partida não existem estatísticas de outras ligas
+    // para comparar. Evita montar centenas de elencos e simular temporadas
+    // inteiras apenas porque o usuário abriu o ranking no início da carreira.
+    if (jogosUsuario === 0) {
+      estado.rankingGlobalOutrasLigas = {
+        versao: 17,
+        ano: estado.ano,
+        jogosUsuario: 0,
+        jogadores: [],
+      };
+      finalizarMedicao?.();
+      return [];
     }
 
     const clubesAlvo = base
@@ -8456,9 +8535,11 @@
         : [];
     });
 
-    // NPCs não recebem automaticamente a mesma quantidade ilimitada de jogos
-    // de uma carreira: usamos um calendário de até 55 partidas por temporada.
-    const quantidadeRodadas = Math.min(55, Math.max(0, jogosUsuario));
+    // A amostra das outras ligas é limitada para não bloquear a thread principal
+    // em celulares. As estatísticas são normalizadas para a quantidade de jogos
+    // da carreira, preservando a comparação por ritmo de produção.
+    const jogosReferencia = Math.min(55, Math.max(0, jogosUsuario));
+    const quantidadeRodadas = Math.min(18, jogosReferencia);
     jogadores.forEach((jogador) => {
       jogador.jogosReferencia = quantidadeRodadas;
     });
@@ -8505,8 +8586,27 @@
       }
     });
 
+    if (quantidadeRodadas > 0 && jogosReferencia > quantidadeRodadas) {
+      const fatorEscala = jogosReferencia / quantidadeRodadas;
+      jogadores.forEach((jogador) => {
+        [
+          "gols",
+          "assistencias",
+          "vitorias",
+          "jogosSemSofrer",
+          "desarmes",
+          "defesas",
+        ].forEach((chave) => {
+          jogador[chave] = Math.round((Number(jogador[chave]) || 0) * fatorEscala);
+        });
+        jogador.jogos = jogosReferencia;
+        jogador.jogosLiga = jogosReferencia;
+        jogador.jogosReferencia = jogosReferencia;
+      });
+    }
+
     estado.rankingGlobalOutrasLigas = {
-      versao: 16,
+      versao: 17,
       ano: estado.ano,
       jogosUsuario,
       jogadores,
@@ -8545,10 +8645,25 @@
       return jogador;
     };
 
-    const partidasLiga = (estado?.rodadas || []).flatMap((rodada) => rodada);
+    const partidasLigaBrutas = [
+      ...(estado?.rodadas || []).flatMap((rodada) => rodada),
+      ...(estado?.partidas || []).filter((partida) => partida.tipo === "liga"),
+    ];
+    const partidasLigaPorChave = new Map();
+    partidasLigaBrutas.forEach((partida) => {
+      // O confronto da rodada e o item do calendário são cópias do mesmo jogo.
+      // O par mandante/visitante identifica a partida sem duplicar seus gols.
+      const chave = `${partida.torneioId || estado?.liga}:${partida.casaId || ""}:${partida.foraId || ""}`;
+      const existente = partidasLigaPorChave.get(chave);
+      if (!existente || (partida.eventosIndividuais || []).length > (existente.eventosIndividuais || []).length)
+        partidasLigaPorChave.set(chave, partida);
+    });
+    const partidasLiga = [...partidasLigaPorChave.values()];
+    const partidaConcluida = (partida) =>
+      partida?.status === "concluida" || partida?.status === "concluido";
     const partidasOutras = (estado?.partidas || []).filter(
       (partida) =>
-        partida.status === "concluida" && partida.competicao !== estado?.liga,
+        partidaConcluida(partida) && partida.competicao !== estado?.liga,
     );
     let eventos = [];
     if (competicao === "global") {
@@ -8563,9 +8678,21 @@
         agregado.gols += jogador.gols;
         agregado.assistencias += jogador.assistencias;
       });
+    } else if (competicao === "clube") {
+      // Estatísticas do elenco abrangem todas as competições do clube,
+      // sem acionar a simulação pesada de outras ligas do ranking global.
+      const partidasDoClube = [...partidasLiga, ...partidasOutras].filter(
+        (partida) =>
+          partidaConcluida(partida) &&
+          ((partida.casaId || partida.clubeCasaId) === estado?.clubeId ||
+            (partida.foraId || partida.clubeForaId) === estado?.clubeId),
+      );
+      eventos = eventosDaPartidaRanking(partidasDoClube).filter(
+        (evento) => evento.clubeId === estado?.clubeId,
+      );
     } else if (competicao === estado?.liga) {
       eventos = eventosDaPartidaRanking(
-        partidasLiga.filter((partida) => partida.status === "concluido"),
+        partidasLiga.filter(partidaConcluida),
       );
     } else {
       eventos = eventosDaPartidaRanking(
@@ -10416,6 +10543,14 @@
       !!pelaSelecao,
       motm,
     );
+    if (!pelaSelecao && partida.tipo !== "selecao") {
+      atualizarTitularidadePorDesempenho(
+        participou,
+        golsJogador,
+        assistJogador,
+        motm,
+      );
+    }
 
     if (participou) {
       const desempenho = (estado.desempenhoPosicional ||=
@@ -10638,7 +10773,9 @@
     }
     estado.feed = estado.feed.slice(0, 12);
     if (partida.tipo === "liga") simularOutrosJogosDaRodada(partida.rodadaLiga);
-    if (!opcoesPenaltis?.simulacaoEmLote) obterRankingOutrasLigas();
+    // Não recalcular estatísticas de todas as ligas a cada partida do usuário.
+    // O ranking global é calculado sob demanda ao abrir o ranking ou ao premiar
+    // a Bola de Ouro, e seu resultado fica em cache até mudar o número de jogos.
 
     // ─── NOVO: enfileirar eventos para modal (só quando o jogador está acompanhando) ───
     if (mostrarResultado) {
@@ -13023,7 +13160,10 @@
 
     prepararElencosLiga();
     const elenco = estado.elencosLiga?.[estado.clubeId] || [];
-    const rankings = obterRankingsCompeticao("global");
+    // O painel do elenco só precisa das estatísticas da liga atual.
+    // Usar "global" aqui disparava a simulação de todas as outras ligas
+    // ao abrir o elenco, mesmo sem o usuário ter disputado uma partida.
+    const rankings = obterRankingsCompeticao("clube");
     const estatisticas = new Map();
     [...rankings.artilharia, ...rankings.assistencias].forEach((jogador) => {
       if (jogador.clubeId !== estado.clubeId) return;
