@@ -7804,44 +7804,71 @@
     return clubeId;
   }
 
+  // Índice anual: antes, cada clube percorria JOGADORES_REAIS inteiro.
+  // Ao montar o ranking mundial isso repetia o mesmo trabalho dezenas de vezes.
+  const cacheJogadoresReaisPorAno = new Map();
+
   function obterJogadoresReaisDoClube(clubeId, ano) {
     const anoNumerico = Number(ano);
-    const porNome = new Map();
-    JOGADORES_REAIS.forEach((jogador) => {
-      const clubeTemporada = clubeJogadorRealNaTemporada(jogador, anoNumerico);
-      if (!clubeTemporada) return;
-      const nomeNormalizado = String(jogador.nome || "")
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLocaleLowerCase("pt-BR")
-        .replace(/[^a-z0-9]+/g, " ")
-        .trim();
-      const existente = porNome.get(nomeNormalizado);
-      const preferirCadastroAtual =
-        anoNumerico >= 2026 && !jogador.clubesHistoricos;
-      if (
-        !existente ||
-        (preferirCadastroAtual && existente.jogador.clubesHistoricos)
-      ) {
-        porNome.set(nomeNormalizado, { jogador, clubeId: clubeTemporada });
+    let indiceAno = cacheJogadoresReaisPorAno.get(anoNumerico);
+
+    if (!indiceAno) {
+      const porNome = new Map();
+      JOGADORES_REAIS.forEach((jogador) => {
+        const clubeTemporada = clubeJogadorRealNaTemporada(
+          jogador,
+          anoNumerico,
+        );
+        if (!clubeTemporada) return;
+        const nomeNormalizado = String(jogador.nome || "")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLocaleLowerCase("pt-BR")
+          .replace(/[^a-z0-9]+/g, " ")
+          .trim();
+        const existente = porNome.get(nomeNormalizado);
+        const preferirCadastroAtual =
+          anoNumerico >= 2026 && !jogador.clubesHistoricos;
+        if (
+          !existente ||
+          (preferirCadastroAtual && existente.jogador.clubesHistoricos)
+        ) {
+          porNome.set(nomeNormalizado, {
+            jogador,
+            clubeId: clubeTemporada,
+          });
+        }
+      });
+
+      indiceAno = new Map();
+      porNome.forEach(({ jogador, clubeId: clubeTemporada }) => {
+        if (!indiceAno.has(clubeTemporada)) indiceAno.set(clubeTemporada, []);
+        indiceAno.get(clubeTemporada).push({
+          id: `real:${jogador.id}`,
+          nome: jogador.nome,
+          posicao: jogador.posicao,
+          clubeId: clubeTemporada,
+          idade: anoNumerico - jogador.anoNascimento,
+          pesoRanking:
+            calcularPesoRankingReal(jogador, anoNumerico) *
+            calcularMultiplicadorFormaTemporada(
+              `real:${jogador.id}`,
+              anoNumerico,
+              jogador.posicao,
+            ),
+        });
+      });
+
+      cacheJogadoresReaisPorAno.set(anoNumerico, indiceAno);
+      // Evita acumular índices de muitos anos em carreiras longas.
+      while (cacheJogadoresReaisPorAno.size > 2) {
+        cacheJogadoresReaisPorAno.delete(
+          cacheJogadoresReaisPorAno.keys().next().value,
+        );
       }
-    });
-    return [...porNome.values()]
-      .filter((registro) => registro.clubeId === clubeId)
-      .map(({ jogador }) => ({
-        id: `real:${jogador.id}`,
-        nome: jogador.nome,
-        posicao: jogador.posicao,
-        clubeId,
-        idade: anoNumerico - jogador.anoNascimento,
-        pesoRanking:
-          calcularPesoRankingReal(jogador, anoNumerico) *
-          calcularMultiplicadorFormaTemporada(
-            `real:${jogador.id}`,
-            anoNumerico,
-            jogador.posicao,
-          ),
-      }));
+    }
+
+    return indiceAno.get(clubeId) || [];
   }
 
   function chaveIdentidadeRanking(jogadorId, nome) {
@@ -8539,7 +8566,9 @@
     // em celulares. As estatísticas são normalizadas para a quantidade de jogos
     // da carreira, preservando a comparação por ritmo de produção.
     const jogosReferencia = Math.min(55, Math.max(0, jogosUsuario));
-    const quantidadeRodadas = Math.min(18, jogosReferencia);
+    // O ranking mundial é calculado no fechamento da temporada. Uma amostra
+    // curta reduz o custo no celular; os números são escalados para jogosReferencia.
+    const quantidadeRodadas = Math.min(10, jogosReferencia);
     jogadores.forEach((jogador) => {
       jogador.jogosReferencia = quantidadeRodadas;
     });
