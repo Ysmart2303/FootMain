@@ -2045,7 +2045,7 @@ function obterCarreiraAtual() {
         carreira.posicaoDetalhe || carreira.posicao,
       ),
       idadeLimite: Number.isFinite(Number(carreira.idadeLimite))
-        ? Math.max(1, Math.floor(Number(carreira.idadeLimite)))
+        ? Math.max(1, Math.min(50, Math.floor(Number(carreira.idadeLimite))))
         : IDADE_LIMITE_PADRAO,
       nacionalidade: SELECOES.some(
         (selecao) => selecao.id === carreira.nacionalidade,
@@ -2147,7 +2147,7 @@ function salvarCarreiraAtual(carreira) {
         carreiraAtual.posicaoDetalhe || carreiraAtual.posicao,
       ),
       idadeLimite: Number.isFinite(Number(carreiraAtual.idadeLimite))
-        ? Math.max(1, Math.floor(Number(carreiraAtual.idadeLimite)))
+        ? Math.max(1, Math.min(50, Math.floor(Number(carreiraAtual.idadeLimite))))
         : IDADE_LIMITE_PADRAO,
       nacionalidade: SELECOES.some(
         (selecao) => selecao.id === carreiraAtual.nacionalidade,
@@ -2244,7 +2244,7 @@ function normalizarRanking(ranking) {
         : "",
       clube: obterClube(carreira.clube)?.id || "",
       idadeLimite: Number.isFinite(Number(carreira.idadeLimite))
-        ? Math.max(1, Math.floor(Number(carreira.idadeLimite)))
+        ? Math.max(1, Math.min(50, Math.floor(Number(carreira.idadeLimite))))
         : IDADE_LIMITE_PADRAO,
       jogos: Number.isFinite(Number(carreira.jogos))
         ? Math.max(0, Math.floor(Number(carreira.jogos)))
@@ -5007,7 +5007,7 @@ function obterIdadeLimite() {
     return IDADE_LIMITE_PADRAO;
   }
 
-  return Math.max(1, Math.floor(numero));
+  return Math.max(1, Math.min(50, Math.floor(numero)));
 }
 
 function somarTotaisHistorico(historico) {
@@ -5334,10 +5334,10 @@ function validarDadosJogador({
   }
 
   const idadeLimiteNumero = Number(idadeLimite);
-  if (!Number.isFinite(idadeLimiteNumero) || idadeLimiteNumero < idadeNumero) {
+  if (!Number.isFinite(idadeLimiteNumero) || idadeLimiteNumero < idadeNumero || idadeLimiteNumero > 50) {
     return {
       valido: false,
-      mensagem: "A idade limite deve ser maior que a idade inicial.",
+      mensagem: "A idade limite deve ser maior que a idade inicial e não pode passar de 50 anos.",
     };
   }
 
@@ -5359,7 +5359,7 @@ function validarDadosJogador({
     valido: true,
     nome: nomeValidado,
     idade: Math.floor(idadeNumero),
-    idadeLimite: Math.floor(idadeLimiteNumero),
+    idadeLimite: Math.min(50, Math.floor(idadeLimiteNumero)),
     posicao,
     nacionalidade,
   };

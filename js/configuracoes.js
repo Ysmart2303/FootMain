@@ -9,7 +9,7 @@ const SCHEMA_CONFIG = [
         campos: [
             { caminho: "geral.anoInicial",          label: "Ano inicial",             tipo: "number", min: 2000, max: 2026, passo: 1 },
             { caminho: "geral.idadeInicialPadrao",  label: "Idade inicial padrão",    tipo: "number", min: 10,   max: 40,   passo: 1 },
-            { caminho: "geral.idadeLimitePadrao",   label: "Idade limite padrão",     tipo: "number", min: 20,   max: 80,   passo: 1 },
+            { caminho: "geral.idadeLimitePadrao",   label: "Idade limite padrão",     tipo: "number", min: 20,   max: 50,   passo: 1 },
             { caminho: "geral.limiteRompimentosContrato", label: "Limite de rompimentos de contrato", tipo: "number", min: 0, max: 10, passo: 1 },
             { caminho: "geral.chanceNaoRenovacaoInicial", label: "Probabilidade inicial de não renovação", tipo: "range", min: 0, max: 0.5, passo: 0.01, formato: "percentual" }
         ]
@@ -319,6 +319,10 @@ function aoAlterarCampo(evento) {
     if (!Number.isFinite(valor)) return;
     if (caminho === "geral.limiteRompimentosContrato") {
         valor = Math.max(0, Math.min(10, Math.floor(valor)));
+        input.value = String(valor);
+    }
+    if (caminho === "geral.idadeLimitePadrao") {
+        valor = Math.max(20, Math.min(50, Math.floor(valor)));
         input.value = String(valor);
     }
 

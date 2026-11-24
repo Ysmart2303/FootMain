@@ -3,7 +3,7 @@
  */
 
 const STORAGE_KEY_CONFIG = "footmain_config_v1";
-const VERSAO_APP = "2.11.3";
+const VERSAO_APP = "2.11.4";
 
 /* ---------- Definições base (as "de fábrica") ---------- */
 const POSICOES_PADRAO = {
@@ -1152,6 +1152,10 @@ function carregarConfig() {
         config.geral.limiteRompimentosContrato = Number.isFinite(limiteRompimentos)
             ? Math.max(0, Math.min(10, Math.floor(limiteRompimentos)))
             : CONFIG_PADRAO.geral.limiteRompimentosContrato;
+        const idadeLimitePadrao = Number(config.geral.idadeLimitePadrao);
+        config.geral.idadeLimitePadrao = Number.isFinite(idadeLimitePadrao)
+            ? Math.max(20, Math.min(50, Math.floor(idadeLimitePadrao)))
+            : CONFIG_PADRAO.geral.idadeLimitePadrao;
 
         // Sanitize lesões
         if (!config.lesoes || typeof config.lesoes !== "object") {
@@ -1208,7 +1212,7 @@ function salvarConfig(config) {
 function aplicarConfiguracoes() {
     const config = carregarConfig();
     ANO_INICIAL = Math.min(2026, Math.max(2000, Math.floor(Number(config.geral.anoInicial) || 2026)));
-    IDADE_LIMITE_PADRAO = Math.max(1, Math.floor(Number(config.geral.idadeLimitePadrao) || 40));
+    IDADE_LIMITE_PADRAO = Math.max(1, Math.min(50, Math.floor(Number(config.geral.idadeLimitePadrao) || 40)));
     posicoes = JSON.parse(JSON.stringify(POSICOES_PADRAO));
     window.CONFIG_ATUAL = config;
     return config;
