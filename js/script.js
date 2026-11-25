@@ -5154,6 +5154,7 @@ function mostrarResumoFinal(
   document.getElementById("jogos").textContent = totais.jogos;
   document.getElementById("gols").textContent = totais.gols;
   document.getElementById("assi").textContent = totais.assistencias;
+  atualizarDivisaoEstatisticasTemporada(totais);
   document.getElementById("prem").textContent = totais.premios;
   atualizarVisibilidadeEstatisticasTemporada();
 
@@ -6121,6 +6122,7 @@ function simularTemporadaPorJogo(
   const selecao = obterSelecao(nacionalidade),
     potencia = Number(cfg.selecao?.potencias?.[nacionalidade]) || 50;
   const clubeAtual = obterClube(clubeId);
+  const clubeProfissional = !!clubeAtual && clubeAtual.tipo !== "base";
   const jogaEuropa =
     !!clubeAtual?.pais &&
     [
@@ -6142,12 +6144,14 @@ function simularTemporadaPorJogo(
   chanceConvocacao = Math.max(0, Math.min(0.95, chanceConvocacao));
 
   let convocado =
+    clubeProfissional &&
     !aposentadoSelecao &&
     !!selecao &&
     Math.random() < chanceConvocacao &&
     !lesaoCarreira;
   if (
     !convocado &&
+    clubeProfissional &&
     !aposentadoSelecao &&
     !!selecao &&
     !lesaoCarreira &&
@@ -8266,6 +8270,7 @@ async function gerar() {
     document.getElementById("jogos").textContent = temporada.jogos;
     document.getElementById("gols").textContent = temporada.gols;
     document.getElementById("assi").textContent = temporada.assistencias;
+    atualizarDivisaoEstatisticasTemporada(temporada);
     document.getElementById("prem").textContent = contarPremios(temporada);
     atualizarVisibilidadeEstatisticasTemporada();
     atualizarTitulosResultados(temporada);
@@ -8351,6 +8356,28 @@ function atualizarVisibilidadeEstatisticasTemporada() {
       const valor = Number(valorTexto);
       cartao.hidden = !Number.isFinite(valor) || valor === 0;
     });
+}
+
+function atualizarDivisaoEstatisticasTemporada(temporada) {
+  const metricas = [
+    { id: "jogos", total: "jogos", clube: "jogosClube", selecao: "jogosSelecao" },
+    { id: "gols", total: "gols", clube: "golsClube", selecao: "golsSelecao" },
+    { id: "assistencias", total: "assistencias", clube: "assistenciasClube", selecao: "assistenciasSelecao" },
+  ];
+  metricas.forEach((metrica) => {
+    const total = Number(temporada?.[metrica.total]) || 0;
+    const selecao = Number(temporada?.[metrica.selecao]) || 0;
+    const clube = temporada?.[metrica.clube] != null
+      ? Number(temporada[metrica.clube]) || 0
+      : Math.max(0, total - selecao);
+    const valorClube = document.getElementById(`desempenho-${metrica.id}-clube`);
+    const valorSelecao = document.getElementById(`desempenho-${metrica.id}-selecao`);
+    if (valorClube) valorClube.textContent = `🏟️ Clube: ${clube}`;
+    if (valorSelecao) {
+      valorSelecao.textContent = `🌍 Seleção: ${selecao}`;
+      valorSelecao.classList.toggle("stat-sub-item--vazio", selecao === 0);
+    }
+  });
 }
 
 function atualizarVisibilidadeDetalhesResultados() {

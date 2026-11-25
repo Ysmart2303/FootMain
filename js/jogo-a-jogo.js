@@ -4370,6 +4370,13 @@
     );
     if (!selecao || carreira.aposentadoriaSelecao === true) return null;
 
+    // Jogadores em clubes de base só podem receber convocação depois da
+    // promoção ao profissional. A checagem fica aqui para cobrir qualquer
+    // fluxo que reutilize esta decisão de convocação.
+    const clubeAtual =
+      typeof obterClube === "function" ? obterClube(carreira.clube) : null;
+    if (!clubeAtual || clubeAtual.tipo === "base") return null;
+
     const cfg = typeof getConfig === "function" ? getConfig() : {};
     const potencia = Number(cfg.selecao?.potencias?.[selecao.id]) || 50;
     const temporadas = Array.isArray(historico) ? historico : [];
@@ -4391,8 +4398,7 @@
     let chance = 0.12 + notaOverall * 0.76;
     chance -= Math.max(-20, Math.min(40, potencia - 50)) / 300;
 
-    const clube =
-      typeof obterClube === "function" ? obterClube(carreira.clube) : null;
+    const clube = clubeAtual;
     const jogaEuropa =
       !!clube?.pais &&
       [
@@ -4602,7 +4608,10 @@
       (ano - ANO_BASE_COPA_DO_MUNDO_SELECOES) % CICLO_COPA_DO_MUNDO_SELECOES ===
         0 &&
       obterClassificacaoCopaPorForca(perfil.nacionalidade).classificado;
-    const convocada = obterConvocacao({ ...perfil, ano }, carreira, historico);
+    const convocada =
+      clube.tipo === "base"
+        ? null
+        : obterConvocacao({ ...perfil, ano }, carreira, historico);
     const jogosSelecao = [];
     if (convocada) {
       // Eliminatórias oficiais, separadas dos amistosos e com tabela própria.
@@ -5924,6 +5933,136 @@
     }
 
     return indiceAno.get(clubeId) || [];
+  }
+
+  function obterJogadoresReaisDaSelecao(selecaoId, ano, jogadorUsuario = null) {
+    const anoAtual = Number(ano);
+    const porNome = new Map();
+    JOGADORES_REAIS.forEach((jogador) => {
+      const periodo = (jogador.selecao || []).find(
+        (item) =>
+          item.selecao === selecaoId &&
+          anoAtual >= item.inicio &&
+          anoAtual <= item.fim,
+      );
+      const anoProfissional =
+        Number(jogador.anoInicioProfissional) ||
+        Number(jogador.anoNascimento) + 17;
+      const idade = anoAtual - Number(jogador.anoNascimento);
+      if (
+        !periodo ||
+        anoAtual < anoProfissional ||
+        idade > Number(jogador.idadeAposentadoria)
+      ) return;
+      const nomeNormalizado = String(jogador.nome || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLocaleLowerCase("pt-BR")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+      const anterior = porNome.get(nomeNormalizado);
+      if (
+        !anterior ||
+        (Number(jogador.pesoRanking) || 0) >
+          (Number(anterior.pesoRanking) || 0)
+      )
+        porNome.set(nomeNormalizado, jogador);
+    });
+    const jogadores = [...porNome.values()].map((jogador) => {
+      const sorteador = criarSorteadorRanking(
+        `selecao:${selecaoId}:${jogador.id}:${anoAtual}`,
+      );
+      const posicao = String(jogador.posicao || "CA").toUpperCase();
+      const peso = Number(jogador.pesoRanking) || 1;
+      const jogos = 2 + Math.floor(sorteador() * Math.min(11, 5 + peso));
+      const fatorGols = ["CA", "PE", "PD"].includes(posicao)
+        ? 0.27
+        : ["ME", "MC", "MD"].includes(posicao)
+          ? 0.09
+          : 0.015;
+      const gols = Array.from({ length: jogos }, () =>
+        sorteador() < fatorGols * Math.min(1.6, 0.8 + peso / 8),
+      ).filter(Boolean).length;
+      const assistencias = Array.from({ length: jogos }, () =>
+        sorteador() < (posicao === "GOL" ? 0.005 : 0.12),
+      ).filter(Boolean).length;
+      return {
+        id: `real:${jogador.id}`,
+        nome: jogador.nome,
+        posicao,
+        jogos,
+        gols,
+        assistencias,
+        pesoRanking: peso,
+        real: true,
+      };
+    });
+    if (jogadorUsuario) jogadores.push(jogadorUsuario);
+    jogadores.sort(
+      (a, b) =>
+        b.pesoRanking - a.pesoRanking || a.nome.localeCompare(b.nome, "pt-BR"),
+    );
+
+    // Completa uma escalação de 11 quando o histórico real da seleção não
+    // cobre jogadores suficientes naquele ano. O sorteio usa uma semente por
+    // seleção/temporada para manter nomes e estatísticas estáveis ao reabrir.
+    const contarPosicoes = () => jogadores.reduce((contagem, jogador) => {
+      const posicao = String(jogador.posicao || "").toUpperCase();
+      contagem[posicao] = (contagem[posicao] || 0) + 1;
+      return contagem;
+    }, {});
+    while (
+      jogadores.length < POSICOES_ELENCO_LIGA.length ||
+      POSICOES_ELENCO_LIGA.some((posicao) => !jogadores.some(
+        (jogador) => String(jogador.posicao || "").toUpperCase() === posicao,
+      ))
+    ) {
+      const posicoesAtuais = contarPosicoes();
+      const posicao = POSICOES_ELENCO_LIGA.find(
+        (nome) => !posicoesAtuais[nome],
+      ) || POSICOES_ELENCO_LIGA[jogadores.length % POSICOES_ELENCO_LIGA.length];
+      const indice = jogadores.length - porNome.size;
+      const sorteador = criarSorteadorRanking(
+        `selecao-ficticio:${selecaoId}:${anoAtual}:${indice}`,
+      );
+      const jogos = 3 + Math.floor(sorteador() * 9);
+      const fatorGols = ["CA", "PE", "PD"].includes(posicao)
+        ? 0.25
+        : ["ME", "MC", "MD"].includes(posicao)
+          ? 0.08
+          : 0.01;
+      const gols = Array.from({ length: jogos }, () =>
+        sorteador() < fatorGols,
+      ).filter(Boolean).length;
+      const assistencias = Array.from({ length: jogos }, () =>
+        sorteador() < (posicao === "GOL" ? 0.005 : 0.11),
+      ).filter(Boolean).length;
+      jogadores.push({
+        id: `selecao-ficticio:${selecaoId}:${anoAtual}:${indice}`,
+        nome: obterNomeFicticio(selecaoId, indice, anoAtual),
+        posicao,
+        jogos,
+        gols,
+        assistencias,
+        pesoRanking: 0,
+        real: false,
+      });
+    }
+
+    // Escala os 11 titulares na ordem da formação; jogadores excedentes na
+    // mesma posição permanecem no elenco para serem listados como reservas.
+    const restantes = [...jogadores];
+    const titulares = POSICOES_ELENCO_LIGA.map((posicao) => {
+      const indice = restantes.findIndex(
+        (jogador) => String(jogador.posicao || "").toUpperCase() === posicao,
+      );
+      return indice < 0 ? null : restantes.splice(indice, 1)[0];
+    }).filter(Boolean);
+    restantes.sort(
+      (a, b) =>
+        b.pesoRanking - a.pesoRanking || a.nome.localeCompare(b.nome, "pt-BR"),
+    );
+    return [...titulares, ...restantes];
   }
 
   function chaveIdentidadeRanking(jogadorId, nome) {
@@ -11023,6 +11162,10 @@
       put("jogos", temporada.jogos);
       put("gols", temporada.gols);
       put("assi", temporada.assistencias);
+      if (typeof atualizarDivisaoEstatisticasTemporada === "function")
+        atualizarDivisaoEstatisticasTemporada(temporada);
+      if (typeof atualizarVisibilidadeEstatisticasTemporada === "function")
+        atualizarVisibilidadeEstatisticasTemporada();
       if (typeof atualizarTitulosResultados === "function")
         atualizarTitulosResultados(temporada);
       if (typeof atualizarMercadoResultados === "function")
@@ -11722,6 +11865,64 @@
     painel.innerHTML = `<section class="jja-elenco-grupo"><h3>Titulares</h3>${renderTabelaElenco(titulares)}</section><section class="jja-elenco-grupo"><h3>Reservas</h3>${renderTabelaElenco(reservas)}</section>`;
   }
 
+  function renderizarElencoSelecao() {
+    const secao = $("jja-elenco-selecao");
+    const painel = $("jja-elenco-selecao-painel");
+    const resumo = $("jja-elenco-selecao-resumo");
+    if (!secao || !painel || !resumo) return;
+    const selecao = (typeof SELECOES !== "undefined" ? SELECOES : []).find(
+      (item) => item.id === estado?.nacionalidade,
+    );
+    const clubeAtual = estado
+      ? clubesDisponiveis().find((clube) => clube.id === estado.clubeId)
+      : null;
+    const jogadorNaBase = !!estado && (
+      clubeAtual?.tipo === "base" ||
+      (typeof ehClubeBase === "function" && ehClubeBase(estado.clubeId))
+    );
+    secao.hidden = !estado || !selecao || jogadorNaBase;
+    if (secao.hidden || !secao.open) return;
+
+    const estatisticasUsuario = estado.estatisticas || {};
+    const usuarioConvocado =
+      estado.nacionalidade === selecao.id &&
+      (estatisticasUsuario.convocado || Number(estatisticasUsuario.jogosSelecao) > 0);
+    const jogadorUsuario = usuarioConvocado
+      ? {
+          id: `usuario:${estado.carreiraId || "carreira"}`,
+          nome: estado.nome,
+          posicao: String(estado.posicao || "CA").toUpperCase(),
+          jogos: Number(estatisticasUsuario.jogosSelecao) || 0,
+          gols: Number(estatisticasUsuario.golsSelecao) || 0,
+          assistencias: Number(estatisticasUsuario.assistenciasSelecao) || 0,
+          pesoRanking: Math.max(1, (Number(estado.overall) || 50) / 10),
+          real: false,
+          usuario: true,
+        }
+      : null;
+    const elenco = obterJogadoresReaisDaSelecao(
+      selecao.id,
+      estado.ano,
+      jogadorUsuario,
+    );
+    const quantidadeReais = elenco.filter((jogador) => jogador.real).length;
+    const quantidadeGerados = elenco.filter(
+      (jogador) => !jogador.real && !jogador.usuario,
+    ).length;
+    const renderTabela = (jogadores) => {
+      if (!jogadores.length)
+        return '<p class="jja-elenco-resumo">Sem jogadores cadastrados para esta seleção e temporada.</p>';
+      const linhas = jogadores.map((jogador) =>
+        `<tr class="${jogador.usuario ? "meu-elenco" : ""}"><td>${escapar(jogador.nome)}${jogador.real ? ' <span class="jja-elenco-real" title="Jogador real">★</span>' : ""}</td><td>${escapar(jogador.posicao)}</td><td>${jogador.jogos}</td><td>${jogador.gols}</td><td>${jogador.assistencias}</td></tr>`,
+      ).join("");
+      return `<div class="jja-elenco-wrap"><table class="jja-elenco-tabela"><thead><tr><th>Nome</th><th>Posição</th><th>Jogos</th><th>Gols</th><th>Assistências</th></tr></thead><tbody>${linhas}</tbody></table></div>`;
+    };
+    const titulares = elenco.slice(0, 11);
+    const reservas = elenco.slice(11);
+    resumo.textContent = `${selecao.nome} · Temporada ${estado.ano} · ${elenco.length} convocados (${quantidadeReais} reais, ${quantidadeGerados} gerados para completar os titulares${jogadorUsuario ? ", incluindo você" : ""}) · estatísticas simuladas por jogador e ano.`;
+    painel.innerHTML = `<section class="jja-elenco-grupo"><h3>Titulares</h3>${renderTabela(titulares)}</section><section class="jja-elenco-grupo"><h3>Reservas</h3>${renderTabela(reservas)}</section>`;
+  }
+
   function renderizarRankingLiga() {
     const secao = $("jja-ranking-liga");
     if (!secao) return;
@@ -11790,6 +11991,23 @@
   function renderizar() {
     if (simulandoCarreira) return;
     const ativo = !!estado;
+    if (ativo) {
+      const estatisticas = estado.estatisticas || {};
+      const valoresDesempenho = [
+        ["jogos", Number(estatisticas.jogos) || 0],
+        ["gols", Number(estatisticas.gols) || 0],
+        ["assi", Number(estatisticas.assistencias) || 0],
+      ];
+      valoresDesempenho.forEach(([id, valor]) => {
+        const elemento = document.getElementById(id);
+        if (!elemento) return;
+        elemento.textContent = String(valor);
+        const cartao = elemento.closest(".resultado-estatistica");
+        if (cartao) cartao.hidden = valor === 0;
+      });
+      if (typeof atualizarDivisaoEstatisticasTemporada === "function")
+        atualizarDivisaoEstatisticasTemporada(estatisticas);
+    }
     if (ativo && !estado.salvaOficialmente) {
       if (typeof atualizarTitulosResultados === "function")
         atualizarTitulosResultados(null);
@@ -11898,6 +12116,7 @@
     }
     renderizarRankingLiga();
     renderizarElencoClube();
+    renderizarElencoSelecao();
 
     const clube = clubesDisponiveis().find((c) => c.id === estado.clubeId);
     const equipeSelecao =
@@ -12149,6 +12368,8 @@
     put("jogos", temporada.jogos);
     put("gols", temporada.gols);
     put("assi", temporada.assistencias);
+    if (typeof atualizarDivisaoEstatisticasTemporada === "function")
+      atualizarDivisaoEstatisticasTemporada(temporada);
     put("prem", coletivos.size + (temporada.trofeusIndividuais || []).length);
     put("jja-motm", temporada.motm);
     put("jja-amarelos", temporada.cartaoAmarelo);
@@ -12472,6 +12693,9 @@
     });
     $("jja-elenco-clube")?.addEventListener("toggle", () => {
       if ($("jja-elenco-clube").open) renderizarElencoClube();
+    });
+    $("jja-elenco-selecao")?.addEventListener("toggle", () => {
+      if ($("jja-elenco-selecao").open) renderizarElencoSelecao();
     });
     $("jja-ranking-liga")?.addEventListener("click", (evento) => {
       const botao = evento.target.closest("[data-ranking-metrica]");

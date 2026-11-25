@@ -2323,3 +2323,74 @@ const JOGADORES_REAIS = [
   },
 ];
 
+// Períodos de convocação internacional dos jogadores do cadastro. O intervalo
+// é inclusivo; jogadores fictícios entram apenas após o início profissional.
+const HISTORICO_SELECOES_REAIS = {
+  messi: ["argentina", 2005, 2024], "cristiano-ronaldo": ["portugal", 2003, 2025],
+  neymar: ["brasil", 2010, 2023], haydex: ["brasil", 2030, 2050], ysmart: ["brasil", 2030, 2050],
+  "luis-suarez": ["uruguai", 2007, 2024], modric: ["croacia", 2006, 2024], lewandowski: ["polonia", 2008, 2025],
+  "mohamed-salah": ["egito", 2011, 2025], "virgil-van-dijk": ["holanda", 2015, 2025], "kevin-de-bruyne": ["belgica", 2010, 2025],
+  "harry-kane": ["inglaterra", 2015, 2025], "kylian-mbappe": ["franca", 2017, 2025], "vinicius-junior": ["brasil", 2019, 2025],
+  "jude-bellingham": ["inglaterra", 2020, 2025], rodrygo: ["brasil", 2019, 2025], "lamine-yamal": ["espanha", 2023, 2025],
+  pedri: ["espanha", 2020, 2025], "erling-haaland": ["noruega", 2019, 2025], "bukayo-saka": ["inglaterra", 2020, 2025],
+  "lautaro-martinez": ["argentina", 2018, 2025], endrick: ["brasil", 2024, 2025], "alisson-becker": ["brasil", 2015, 2025],
+  "alexis-mac-allister": ["argentina", 2019, 2025], "dominik-szoboszlai": ["hungria", 2017, 2025], "cody-gakpo": ["holanda", 2021, 2025],
+  "florian-wirtz": ["alemanha", 2021, 2025], "hugo-ekitike": ["franca", 2025, 2025], "gabriel-magalhaes": ["brasil", 2023, 2025],
+  "william-saliba": ["franca", 2022, 2025], "declan-rice": ["inglaterra", 2019, 2025], "martin-odegaard": ["noruega", 2014, 2025],
+  "phil-foden": ["inglaterra", 2020, 2025], rodri: ["espanha", 2018, 2025], "ruben-dias": ["portugal", 2018, 2025],
+  "bernardo-silva": ["portugal", 2015, 2025], "cole-palmer": ["inglaterra", 2023, 2025], "enzo-fernandez": ["argentina", 2022, 2025],
+  "reece-james": ["inglaterra", 2020, 2024], "bruno-fernandes": ["portugal", 2017, 2025], "kobbie-mainoo": ["inglaterra", 2024, 2025],
+  "james-maddison": ["inglaterra", 2018, 2023], "micky-van-de-ven": ["holanda", 2023, 2025], "dominic-solanke": ["inglaterra", 2017, 2025],
+  "bruno-guimaraes": ["brasil", 2020, 2025], "anthony-gordon": ["inglaterra", 2024, 2025], "sandro-tonali": ["italia", 2019, 2025],
+  "ollie-watkins": ["inglaterra", 2021, 2025], "emiliano-martinez": ["argentina", 2021, 2025], "thibaut-courtois": ["belgica", 2011, 2024],
+  "federico-valverde": ["uruguai", 2017, 2025], "eduardo-camavinga": ["franca", 2020, 2025], "aurelien-tchouameni": ["franca", 2021, 2025],
+  "arda-guler": ["turquia", 2022, 2025], raphinha: ["brasil", 2021, 2025], gavi: ["espanha", 2021, 2025],
+  "dani-olmo": ["espanha", 2019, 2025], "ronald-araujo": ["uruguai", 2020, 2025], "jules-kounde": ["franca", 2021, 2025],
+  "jan-oblak": ["eslovenia", 2012, 2025], "julian-alvarez": ["argentina", 2021, 2025], "antoine-griezmann": ["franca", 2014, 2024],
+  "manuel-neuer": ["alemanha", 2009, 2024], "sergio-ramos": ["espanha", 2005, 2021], marquinhos: ["brasil", 2013, 2025],
+  "gianluigi-donnarumma": ["italia", 2016, 2025], "antonio-rudiger": ["alemanha", 2014, 2025], "david-alaba": ["austria", 2009, 2025],
+  "joao-cancelo": ["portugal", 2016, 2025], "kim-min-jae": ["coreiaDoSul", 2017, 2025], "jamal-musiala": ["alemanha", 2021, 2025],
+  "joshua-kimmich": ["alemanha", 2016, 2025], osimhen: ["nigeria", 2017, 2025], "dusan-vlahovic": ["servia", 2020, 2025],
+  "alexander-isak": ["suecia", 2017, 2025], "heung-min-son": ["coreiaDoSul", 2010, 2025], "kieran-trippier": ["inglaterra", 2017, 2024],
+  martinelli: ["brasil", 2022, 2025], "gabriel-jesus": ["brasil", 2016, 2025], "ivan-toney": ["inglaterra", 2023, 2024],
+  "sergio-busquets": ["espanha", 2009, 2022], "alvaro-morata": ["espanha", 2014, 2025], "franck-kessie": ["costaDoMarfim", 2014, 2025],
+  "khvicha-kvaratskhelia": ["georgia", 2019, 2025], "sadio-mane": ["senegal", 2012, 2024], "michael-olise": ["franca", 2024, 2025],
+  "pedro-neto": ["portugal", 2020, 2025], "leo-paredes": ["argentina", 2017, 2025], "ruben-neves": ["portugal", 2015, 2025],
+  "samuel-umtiti": ["franca", 2016, 2019], "milan-skriniar": ["eslovaquia", 2016, 2025], "nicolas-otamendi": ["argentina", 2009, 2024],
+  "jordan-henderson": ["inglaterra", 2010, 2024],
+  "zinedine-zidane": ["franca", 1994, 2006], "ronaldo-nazario": ["brasil", 1994, 2011], "ronaldinho-gaucho": ["brasil", 1999, 2013],
+  "luis-figo": ["portugal", 1991, 2006], "thierry-henry": ["franca", 1997, 2010], "david-beckham": ["inglaterra", 1996, 2009],
+  "raul-gonzalez": ["espanha", 1996, 2006], "francesco-totti": ["italia", 1998, 2006], "alessandro-del-piero": ["italia", 1995, 2008],
+  "paolo-maldini": ["italia", 1988, 2002], "andriy-shevchenko": ["ucrania", 1995, 2012], "pavel-nedved": ["republicaTcheca", 1994, 2006],
+  "oliver-kahn": ["alemanha", 1994, 2006], "michael-ballack": ["alemanha", 1999, 2010], deco: ["portugal", 2003, 2010],
+  "roberto-carlos": ["brasil", 1992, 2006], cafu: ["brasil", 1990, 2006], "patrick-vieira": ["franca", 1997, 2009],
+  "claude-makelele": ["franca", 1995, 2008], "rio-ferdinand": ["inglaterra", 1997, 2011], "carles-puyol": ["espanha", 2000, 2013],
+  kaka: ["brasil", 2002, 2016], "xavi-hernandez": ["espanha", 2000, 2014], "andres-iniesta": ["espanha", 2006, 2018],
+  "samuel-etoo": ["camaroes", 1997, 2014], "didier-drogba": ["costaDoMarfim", 2002, 2014], "frank-lampard": ["inglaterra", 1999, 2014],
+  "steven-gerrard": ["inglaterra", 2000, 2014], "wayne-rooney": ["inglaterra", 2003, 2018], "zlatan-ibrahimovic": ["suecia", 2001, 2023],
+  "arjen-robben": ["holanda", 2003, 2017], "franck-ribery": ["franca", 2006, 2014], "david-villa": ["espanha", 2005, 2017],
+  "fernando-torres": ["espanha", 2003, 2014], "alexandre-pato": ["brasil", 2008, 2013], "cesc-fabregas": ["espanha", 2006, 2016],
+  "sergio-aguero": ["argentina", 2006, 2021], "gareth-bale": ["paisDeGales", 2006, 2022], "angel-di-maria": ["argentina", 2008, 2024],
+  "eden-hazard": ["belgica", 2008, 2022], "karim-benzema": ["franca", 2007, 2022], "philippe-coutinho": ["brasil", 2010, 2022],
+  "sergio-ramos-historico": ["espanha", 2005, 2021], "thiago-silva": ["brasil", 2008, 2022], "luka-modric-historico": ["croacia", 2006, 2024],
+  "robert-lewandowski-historico": ["polonia", 2008, 2025], "mohamed-salah-historico": ["egito", 2011, 2025], "kevin-de-bruyne-historico": ["belgica", 2010, 2025],
+  "harry-kane-historico": ["inglaterra", 2015, 2025], "antoine-griezmann-historico": ["franca", 2014, 2024], "heung-min-son-historico": ["coreiaDoSul", 2010, 2025],
+  "dani-alves": ["brasil", 2006, 2022], "jordi-alba": ["espanha", 2011, 2023], "javier-mascherano": ["argentina", 2003, 2018],
+  "gerard-pique": ["espanha", 2009, 2018], "ivan-rakitic": ["croacia", 2007, 2019], "claudio-bravo": ["chile", 2004, 2022],
+  "marc-andre-ter-stegen": ["alemanha", 2012, 2024], "pedro-rodriguez": ["espanha", 2010, 2017], "rafinha-alcantara": ["brasil", 2015, 2020],
+  "munir-el-haddadi": ["marrocos", 2021, 2025], "sergi-roberto": ["espanha", 2016, 2018], "martin-montoya": ["espanha", 2012, 2012],
+  "jeremy-mathieu": ["franca", 2015, 2016], "adriano-correia": ["brasil", 2003, 2013], "marc-bartra": ["espanha", 2013, 2013],
+  "sandro-ramirez": ["espanha", 2016, 2016], "douglas-pereira": ["brasil", 2014, 2014], "thomas-vermaelen": ["belgica", 2006, 2019],
+};
+
+JOGADORES_REAIS.forEach((jogador) => {
+  const dados = HISTORICO_SELECOES_REAIS[jogador.id];
+  if (!dados) return;
+  const [nacionalidade, inicio, fim] = dados;
+  jogador.nacionalidade = nacionalidade;
+  const fimSimulado = fim === 2025 && jogador.anoNascimento + jogador.idadeAposentadoria > 2026
+    ? jogador.anoNascimento + jogador.idadeAposentadoria
+    : fim;
+  jogador.selecao = [{ inicio, fim: fimSimulado, selecao: nacionalidade }];
+});
+

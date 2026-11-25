@@ -231,6 +231,13 @@
                         <div id="jja-elenco-painel" class="jja-elenco-painel"></div>
                     </div>
                 </details>
+                <details id="jja-elenco-selecao" class="jja-recolhivel jja-elenco-clube" aria-label="Elenco da seleção" hidden>
+                    <summary>Elenco da seleção</summary>
+                    <div class="jja-elenco-conteudo">
+                        <p id="jja-elenco-selecao-resumo" class="jja-elenco-resumo"></p>
+                        <div id="jja-elenco-selecao-painel" class="jja-elenco-painel"></div>
+                    </div>
+                </details>
                 <details class="jja-recolhivel jja-calendario-painel">
                     <summary>Calendário completo</summary>
                     <div id="jja-calendario">As partidas aparecerão aqui.</div>
@@ -245,14 +252,26 @@
                         <div class="resultado-estatistica" hidden>
                             <span>Jogos</span>
                             <strong id="jogos">0</strong>
+                            <div class="stat-sub" aria-label="Jogos por equipe">
+                                <span id="desempenho-jogos-clube" class="stat-sub-item stat-sub-item--clube">🏟️ Clube: 0</span>
+                                <span id="desempenho-jogos-selecao" class="stat-sub-item stat-sub-item--selecao stat-sub-item--vazio">🌍 Seleção: 0</span>
+                            </div>
                         </div>
                         <div class="resultado-estatistica" hidden>
                             <span>Gols</span>
                             <strong id="gols">0</strong>
+                            <div class="stat-sub" aria-label="Gols por equipe">
+                                <span id="desempenho-gols-clube" class="stat-sub-item stat-sub-item--clube">🏟️ Clube: 0</span>
+                                <span id="desempenho-gols-selecao" class="stat-sub-item stat-sub-item--selecao stat-sub-item--vazio">🌍 Seleção: 0</span>
+                            </div>
                         </div>
                         <div class="resultado-estatistica" hidden>
                             <span>Assistências</span>
                             <strong id="assi">0</strong>
+                            <div class="stat-sub" aria-label="Assistências por equipe">
+                                <span id="desempenho-assistencias-clube" class="stat-sub-item stat-sub-item--clube">🏟️ Clube: 0</span>
+                                <span id="desempenho-assistencias-selecao" class="stat-sub-item stat-sub-item--selecao stat-sub-item--vazio">🌍 Seleção: 0</span>
+                            </div>
                         </div>
                         <div class="resultado-estatistica" hidden>
                             <span>Prêmios</span>
