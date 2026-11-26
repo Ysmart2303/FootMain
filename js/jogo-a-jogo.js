@@ -766,6 +766,7 @@
   let versaoResultados = 0;
   let cacheTabelasContinentais = new Map();
   let cacheEstatisticasBolaDeOuro = null;
+  let rankingOutrasLigasPendente = null;
 
   function invalidarCachesDerivados() {
     versaoResultados++;
@@ -6430,18 +6431,26 @@
     return Math.max(minimo, Math.min(maximo, Number(valor) || 0));
   }
 
-  function escolherComPesoRanking(jogadores, obterPeso, aleatorio) {
+  function escolherComPesoRanking(jogadores, obterPeso, aleatorio, excluidos = null) {
     if (!jogadores.length) return null;
-    const pesos = jogadores.map((jogador) =>
-      Math.max(0.001, obterPeso(jogador)),
-    );
-    const total = pesos.reduce((soma, peso) => soma + peso, 0);
+    let total = 0;
+    for (const jogador of jogadores) {
+      if (excluidos && excluidos.has(String(jogador.id))) continue;
+      total += Math.max(0.001, obterPeso(jogador));
+    }
+    if (!total) return null;
     let sorteio = aleatorio() * total;
     for (let indice = 0; indice < jogadores.length; indice++) {
-      sorteio -= pesos[indice];
+      const jogador = jogadores[indice];
+      if (excluidos && excluidos.has(String(jogador.id))) continue;
+      sorteio -= Math.max(0.001, obterPeso(jogador));
       if (sorteio <= 0) return jogadores[indice];
     }
-    return jogadores[jogadores.length - 1];
+    for (let indice = jogadores.length - 1; indice >= 0; indice--) {
+      const jogador = jogadores[indice];
+      if (!excluidos || !excluidos.has(String(jogador.id))) return jogador;
+    }
+    return null;
   }
 
   function obterPesoQualidadeNpc(jogador) {
@@ -6585,6 +6594,7 @@
     );
     candidatos.forEach((jogador, indice) => {
       jogador.statusElenco ||= indice === 0 ? "titular" : "reserva";
+      jogador.pesoQualidadeRanking = obterQualidadeDistribuicao(jogador);
     });
     estado.jogadoresDistribuicaoColetiva[chave] = candidatos;
     return candidatos;
@@ -6596,21 +6606,31 @@
     return obterPesoQualidadeNpc(jogador);
   }
 
-  function escolherJogadorDistribuicao(clubeId, tipo, aleatorio, excluidos = new Set()) {
-    const pesosPosicao = tipo === "assistencia"
-      ? { GOL: 0.02, ZCE: 0.2, ZCD: 0.2, LE: 0.9, LD: 0.9, ME: 2.35, MC: 2.5, MD: 2.35, PE: 2.0, CA: 0.85, PD: 2.0 }
-      : { GOL: 0.015, ZCE: 0.16, ZCD: 0.16, LE: 0.28, LD: 0.28, ME: 0.78, MC: 0.68, MD: 0.78, PE: 2.0, CA: 2.8, PD: 2.0 };
-    const posicoes = Object.keys(pesosPosicao);
+  const POSICOES_PESO_DISTRIBUICAO = {
+    assistencia: [
+      ["GOL", 0.02], ["ZCE", 0.2], ["ZCD", 0.2], ["LE", 0.9], ["LD", 0.9],
+      ["ME", 2.35], ["MC", 2.5], ["MD", 2.35], ["PE", 2.0], ["CA", 0.85], ["PD", 2.0],
+    ],
+    gol: [
+      ["GOL", 0.015], ["ZCE", 0.16], ["ZCD", 0.16], ["LE", 0.28], ["LD", 0.28],
+      ["ME", 0.78], ["MC", 0.68], ["MD", 0.78], ["PE", 2.0], ["CA", 2.8], ["PD", 2.0],
+    ],
+  };
+
+  function escolherJogadorDistribuicao(clubeId, tipo, aleatorio, excluidos = null) {
+    const posicoes = POSICOES_PESO_DISTRIBUICAO[tipo] || POSICOES_PESO_DISTRIBUICAO.gol;
     const posicao = escolherComPesoRanking(
-      posicoes.map((item) => ({ posicao: item })),
-      (item) => pesosPosicao[item.posicao],
+      posicoes,
+      ([, peso]) => peso,
       aleatorio,
-    )?.posicao;
+    )?.[0];
     if (!posicao) return null;
 
-    let candidatos = obterJogadoresPosicaoDistribuicao(clubeId, posicao)
-      .filter((jogador) => !excluidos.has(String(jogador.id)));
-    if (!candidatos.length) {
+    let candidatos = obterJogadoresPosicaoDistribuicao(clubeId, posicao);
+    const temCandidatoDisponivel =
+      !excluidos ||
+      candidatos.some((jogador) => !excluidos.has(String(jogador.id)));
+    if (!temCandidatoDisponivel) {
       // Caso o único atleta cadastrado seja o autor do gol, busca uma alternativa
       // virtual na mesma posição para permitir uma assistência válida.
       estado.jogadoresDistribuicaoColetiva ||= {};
@@ -6628,15 +6648,19 @@
           clubeId,
           overall: 58 + indice * 3,
           pesoRanking: 1,
+          pesoQualidadeRanking: obterPesoQualidadeNpc({ pesoRanking: 1 }),
         }));
       }
-      candidatos = estado.jogadoresDistribuicaoColetiva[chave]
-        .filter((jogador) => !excluidos.has(String(jogador.id)));
+      candidatos = estado.jogadoresDistribuicaoColetiva[chave];
     }
     return escolherComPesoRanking(
       candidatos,
-      obterQualidadeDistribuicao,
+      (jogador) => {
+        jogador.pesoQualidadeRanking ||= obterQualidadeDistribuicao(jogador);
+        return jogador.pesoQualidadeRanking;
+      },
       aleatorio,
+      excluidos,
     );
   }
 
@@ -6800,6 +6824,30 @@
           }
         });
       });
+      // No modo coletivo, a lista de participantes costuma ser montada a partir
+      // dos eventos de gol. Registre também o jogador da carreira quando ele
+      // atuou, mesmo que não tenha marcado nem dado assistência, para que as
+      // partidas contem no cálculo de elegibilidade da Bola de Ouro.
+      if (dadosJogador?.participou) {
+        const clubeJogadorId = String(dadosJogador.clubeId || "");
+        const clubeParticipante = [
+          pendente.casaId || pendente.clubeCasaId,
+          pendente.foraId || pendente.clubeForaId,
+        ].find((clubeId) => String(clubeId || "") === clubeJogadorId);
+        if (clubeParticipante && dadosJogador.id) {
+          const id = String(dadosJogador.id);
+          if (!participantesPorId.has(id)) {
+            participantesPorId.set(id, {
+              id: dadosJogador.id,
+              nome: dadosJogador.nome || "Jogador",
+              posicao: dadosJogador.posicao,
+              clubeId: clubeParticipante,
+              desarmes: 0,
+              defesas: 0,
+            });
+          }
+        }
+      }
       referencias.forEach((partida) => {
         partida.eventosIndividuais = eventos.map((evento) => ({ ...evento }));
         partida.jogadoresParticipantes = [...participantesPorId.values()].map((jogador) => ({ ...jogador }));
@@ -7102,7 +7150,9 @@
 
   // O fechamento oficial usa esta variante cooperativa para que a geração do
   // ranking mundial não monopolize a thread logo após o último jogo.
-  async function prepararRankingOutrasLigasCooperativo() {
+  async function prepararRankingOutrasLigasCooperativo({
+    atualizarProgresso = true,
+  } = {}) {
     if (!estado) return;
     const jogosUsuario = contarJogosConcluidosTemporada();
     const cache = estado.rankingGlobalOutrasLigas;
@@ -7172,10 +7222,10 @@
         }
         rotacao = [rotacao[0], rotacao[tamanho - 1], ...rotacao.slice(1, tamanho - 1)];
         rodadasProcessadas++;
-        if (rodadasProcessadas % 2 === 0) {
+        if (atualizarProgresso && rodadasProcessadas % 2 === 0) {
           atualizarProgressoCarregamento(80 + Math.min(10, rodadasProcessadas / Math.max(1, ligas.size * quantidadeRodadas) * 10), `Fechando a temporada ${estado.ano}... Calculando ligas (${rodadasProcessadas} etapas)`);
-          await cederTempoAoNavegador();
         }
+        if (rodadasProcessadas % 2 === 0) await cederTempoAoNavegador();
       }
     }
 
@@ -7191,7 +7241,9 @@
       }
       clubesProcessados++;
       if (clubesProcessados % 6 === 0) {
-        atualizarProgressoCarregamento(90 + clubesProcessados / Math.max(1, clubesAlvo.length) * 9, `Fechando a temporada ${estado.ano}... Montando ranking (${clubesProcessados}/${clubesAlvo.length})`);
+        if (atualizarProgresso) {
+          atualizarProgressoCarregamento(90 + clubesProcessados / Math.max(1, clubesAlvo.length) * 9, `Fechando a temporada ${estado.ano}... Montando ranking (${clubesProcessados}/${clubesAlvo.length})`);
+        }
         await cederTempoAoNavegador();
       }
     }
@@ -11957,6 +12009,52 @@
       seletor.value = valorAnterior;
     }
     const competicao = seletor?.value || "global";
+    const cacheRankingGlobalValido =
+      estado.rankingGlobalOutrasLigas?.versao === 19 &&
+      estado.rankingGlobalOutrasLigas?.ano === estado.ano &&
+      estado.rankingGlobalOutrasLigas?.jogosUsuario ===
+        contarJogosConcluidosTemporada() &&
+      Array.isArray(estado.rankingGlobalOutrasLigas?.jogadores);
+    if (
+      competicao === "global" &&
+      contarJogosConcluidosTemporada() > 0 &&
+      !cacheRankingGlobalValido
+    ) {
+      const painel = $("jja-ranking-painel");
+      if (painel) {
+        painel.innerHTML =
+          '<p class="jja-ranking-vazio" role="status">Preparando o ranking mundial...</p>';
+      }
+      if (!rankingOutrasLigasPendente) {
+        const estadoPreparacao = estado;
+        const anoPreparacao = estado.ano;
+        rankingOutrasLigasPendente = prepararRankingOutrasLigasCooperativo({
+          atualizarProgresso: false,
+        })
+          .then(() => {
+            if (
+              estado === estadoPreparacao &&
+              estado?.ano === anoPreparacao &&
+              $("jja-ranking-liga")?.open &&
+              ($("jja-ranking-competicao")?.value || "global") === "global"
+            ) renderizarRankingLiga();
+          })
+          .catch((erro) => {
+            console.error(
+              "[FootMain] Não foi possível preparar o ranking mundial.",
+              erro,
+            );
+            if (estado === estadoPreparacao && $("jja-ranking-painel")) {
+              $("jja-ranking-painel").innerHTML =
+                '<p class="jja-ranking-vazio" role="alert">Não foi possível carregar o ranking mundial. Tente abrir novamente.</p>';
+            }
+          })
+          .finally(() => {
+            rankingOutrasLigasPendente = null;
+          });
+      }
+      return;
+    }
     const rankings = obterRankingsCompeticao(competicao);
     const metricaSelecionada =
       secao.querySelector("[data-ranking-metrica].is-active")?.dataset
